@@ -1,3 +1,11 @@
+# Úpravy po prvním reálném testování
+
+Chrome potvrdil otevření přímo přes `file://`, čtení a zápis skutečných Markdown souborů a otevření rozsáhlého kořene `knowledge-base`. Přibyl tmavý/světlý/systémový režim, nastavitelná šířka bočního panelu, zachování režimu Náhled při fulltextu a bezpečně potvrzovaná tvorba podadresářů při založení poznámky. Viz [`docs/UZIVATELSKY_TEST.md`](docs/UZIVATELSKY_TEST.md).
+
+**Mermaid a ABCjs nadále nejsou v tomto zdrojovém ZIPu přibalené.** Úplný offline build se vytváří přes GitHub Actions.
+
+---
+
 # Local StackEdit Wiki – dávka 23
 
 **Novinka: alternativní sestavení kompletní distribuce ze čtyř předem stažených oficiálních npm souborů, bez přístupu sestavovacího počítače k internetu.** Viz `docs/OFFLINE_SESTAVENI.md`. Výstup prochází beze změny kontrolou npm SHA-512, nezávislým Mermaid SHA-512 a přísným auditem. GitHub Actions online režim zůstává zachován.
