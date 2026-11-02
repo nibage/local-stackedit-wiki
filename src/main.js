@@ -241,6 +241,10 @@
     ui.count.textContent = `${count(root)} .md`;
     ui.rootName.textContent = root.name;
   }
+  function showScanProgress(progress) {
+    notice('Načítám adresáře… ' + progress.directories + ' složek, ' + progress.files + ' poznámek' +
+      (progress.skipped ? ' · nepřístupné složky: ' + progress.skipped : '') + ' (prosím vyčkej)');
+  }
   function applyOpen(result) {
     operations.invalidateReads();
     clearEditor(); expanded = new Set(['']); ui.search.value = '';
@@ -252,9 +256,16 @@
     $('fulltext-results').replaceChildren(); $('backlinks-results').replaceChildren();
     $('fulltext-status').textContent = 'Index bude vytvořen při prvním hledání. Žádná data neopustí počítač.';
     renderTree();
-    notice(result.mode === 'readwrite'
-      ? 'Wiki otevřena pro čtení i zápis. Soubor se přepisuje až po kliknutí na Uložit.'
-      : 'Wiki otevřena jen pro čtení. Náhled a odkazy fungují i bez práva zápisu.', 'success');
+    const skipped = result.scanInfo?.skipped || 0;
+    if (skipped) {
+      const sample = (result.scanInfo.skippedPaths || []).join(', ');
+      notice('Wiki otevřena, ale ' + skipped + ' podsložek se nepodařilo přečíst' +
+        (sample ? ' (např. ' + sample + ')' : '') + '. Jejich obsah se nezobrazuje; ostatní složky fungují.', 'error');
+    } else {
+      notice(result.mode === 'readwrite'
+        ? 'Wiki otevřena pro čtení i zápis (' + (result.scanInfo?.files ?? '?') + ' poznámek). Soubor se přepisuje až po kliknutí na Uložit.'
+        : 'Wiki otevřena jen pro čtení. Náhled a odkazy fungují i bez práva zápisu.', 'success');
+    }
   }
   function invalidateWikiIndex() {
     wikiIndex.invalidate(); indexPromise = null;
@@ -457,8 +468,7 @@
       if (!await recent.ensurePermission(rememberedHandle, true)) {
         throw new Error('Prohlížeč neudělil přístup. Otevři složku znovu tlačítkem Otevřít složku.');
       }
-      applyOpen(await bridge.openExisting(rememberedHandle));
-      notice('Poslední wiki byla znovu otevřena. Přístup ke složce řídí prohlížeč.', 'success');
+      applyOpen(await bridge.openExisting(rememberedHandle, showScanProgress));
     } catch (err) { notice(`Poslední wiki nelze otevřít: ${err.message}`, 'error'); }
     finally { endOperation('restore'); }
   });
@@ -474,12 +484,12 @@
   ui.open.addEventListener('click', async () => {
     if (!confirmDiscard() || !beginOperation('open')) return;
     try {
-      applyOpen(await bridge.openWritable());
+      applyOpen(await bridge.openWritable(showScanProgress));
       if (rememberCheckbox.checked) {
         try {
           await recent.remember(bridge.getRootHandle());
           await checkRemembered();
-          notice('Složka je otevřena a její výběr je zapamatován pro příští spuštění.', 'success');
+          if (bridge.getTree()) restoreButton.disabled = false;
         } catch (err) {
           notice(`Wiki je otevřená, ale výběr se nepodařilo zapamatovat: ${err.message}`, 'error');
         }
@@ -498,7 +508,7 @@
   ui.refresh.addEventListener('click', async () => {
     if (!confirmDiscard() || !beginOperation('refresh')) return;
     const old = activePath;
-    try { applyOpen(await bridge.refresh()); }
+    try { applyOpen(await bridge.refresh(showScanProgress)); }
     catch (err) { notice(`Obnovení selhalo: ${err.message}`, 'error'); }
     finally { endOperation('refresh'); }
     if (old && bridge.hasFile(old)) await selectFile(old);
