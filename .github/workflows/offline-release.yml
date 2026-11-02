@@ -1,5 +1,15 @@
 name: Build complete offline wiki ZIP
 on:
+  # Build an offline ZIP automatically when sources change on main, as well as
+  # on demand. A failed genuine renderer test never uploads an artifact.
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'assets/**'
+      - 'index.html'
+      - 'tests/**'
+      - '.github/workflows/offline-release.yml'
   workflow_dispatch:
 permissions:
   contents: read
