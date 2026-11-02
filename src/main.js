@@ -689,6 +689,10 @@
   $('diag-api').textContent = `${location.protocol} · ${typeof window.showDirectoryPicker === 'function' ? 'File System API ✓' : 'File System API nedostupné'}`;
   setView(selectedMode);
 
+  // Hide installer in fully bundled offline releases; retain for incomplete builds.
+  const bundledRenderers = window.LocalWikiDiagrams.capabilities();
+  if (bundledRenderers.mermaid && bundledRenderers.abc) $('renderer-check').hidden = true;
+
   // Diagnostics reflect actual loaded UMD objects, not the existence of placeholder files.
   $('renderer-check').addEventListener('click', () => {
     const status = window.LocalWikiDiagrams.capabilities();
