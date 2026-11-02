@@ -1,0 +1,60 @@
+/* Adjustable sidebar and persistent light/dark/system appearance. */
+.workspace{grid-template-columns:minmax(0,var(--sidebar-width,255px)) 6px minmax(0,1fr)}
+.sidebar-resizer{position:relative;cursor:col-resize;background:var(--line);touch-action:none;z-index:2}
+.sidebar-resizer::after{content:'';position:absolute;inset:0 -4px}
+.sidebar-resizer:hover,.sidebar-resizer.dragging,.sidebar-resizer:focus-visible{background:var(--accent);outline:0}
+.theme-label{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#586a7c;white-space:nowrap}
+.theme-label select{padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit}
+.markdown-preview mark.wiki-search-hit{background:#ffe278;color:#242424;border-radius:2px;padding:0 1px;box-shadow:0 0 0 2px #ffe27870}
+@media(max-width:850px){.workspace{grid-template-columns:minmax(0,var(--sidebar-width,190px)) 6px minmax(0,1fr)}}
+@media(max-width:560px){.workspace{grid-template-columns:minmax(0,var(--sidebar-width,190px)) 6px minmax(0,1fr)}}
+:root[data-theme="dark"]{color-scheme:dark;--accent:#75aefa;--line:#39465a;--surface:#222d3b;color:#dce6f3;background:#111923}
+[data-theme="dark"] .topbar,[data-theme="dark"] .editor-bar,[data-theme="dark"] .sidebar,[data-theme="dark"] .pane,[data-theme="dark"] .markdown-preview,[data-theme="dark"] .format-toolbar,[data-theme="dark"] .renderer-dialog{background:#1b2634;color:#dce6f3}
+[data-theme="dark"] .sidebar{background:#17212e}
+[data-theme="dark"] button:not(.primary):not(.tree-row):not(.toc-item):not(.result-item):not([data-format]){background:#253348;color:#e2eaf5;border-color:#43536c}
+[data-theme="dark"] button:hover:not(:disabled):not(.primary){background:#354761}
+[data-theme="dark"] .primary{background:#376aa7;border-color:#487cbb;color:#fff}
+[data-theme="dark"] .brand small,[data-theme="dark"] .search-label,[data-theme="dark"] .sidebar-head #count,[data-theme="dark"] .mode,[data-theme="dark"] .pane-title,[data-theme="dark"] .sidebar-bottom,[data-theme="dark"] .theme-label,[data-theme="dark"] .statusbar{color:#9fb0c5}
+[data-theme="dark"] .notice{background:#203b57;color:#c1dcfa;border-color:#36546c}
+[data-theme="dark"] .notice.success{background:#183d31;color:#a5e7bd}
+[data-theme="dark"] .notice.error{background:#512f36;color:#ffd1c7}
+[data-theme="dark"] .sidebar input,[data-theme="dark"] .theme-label select,[data-theme="dark"] .renderer-dialog input{background:#1a2737;color:#e5edf8;border-color:#43536c}
+[data-theme="dark"] .tree-row{color:#cedded}
+[data-theme="dark"] .tree-row:hover,[data-theme="dark"] .result-item:hover,[data-theme="dark"] .toc-item:hover{background:#293b55}
+[data-theme="dark"] .tree-row.selected{background:#25486d;color:#d1e6ff}
+[data-theme="dark"] .glyph,[data-theme="dark"] .result-item .snippet,[data-theme="dark"] .empty{color:#97aac2}
+[data-theme="dark"] .sidebar-tabs button.active,[data-theme="dark"] .view-switch button.active{background:#234b73;color:#d6eaff;border-color:#4779a5}
+[data-theme="dark"] .sidebar-panel h3,[data-theme="dark"] .result-item strong,[data-theme="dark"] .toc-item{color:#b5d8fd}
+[data-theme="dark"] .pane-title,[data-theme="dark"] .statusbar{background:#1b2634;border-color:#39465a}
+[data-theme="dark"] .markdown-preview h1,[data-theme="dark"] .markdown-preview h2,[data-theme="dark"] .markdown-preview h3{color:#ecf3fd}
+[data-theme="dark"] .markdown-preview h1,[data-theme="dark"] .result-item{border-color:#39465a}
+[data-theme="dark"] .markdown-preview a{color:#8bc2ff}
+[data-theme="dark"] .markdown-preview pre,[data-theme="dark"] .markdown-preview :not(pre)>code,[data-theme="dark"] .markdown-preview th{background:#26364a;border-color:#40556b;color:#dce6f3}
+[data-theme="dark"] .markdown-preview th,[data-theme="dark"] .markdown-preview td{border-color:#475970}
+[data-theme="dark"] .markdown-preview blockquote{background:#243548;color:#cad7e6;border-color:#7f9abc}
+[data-theme="dark"] .markdown-preview hr{border-color:#43536c}
+[data-theme="dark"] .markdown-preview .obsidian-properties{background:#243447;color:#dce6f3;border-color:#43546a}
+[data-theme="dark"] .markdown-preview .obsidian-properties summary{color:#bdd2ea}
+[data-theme="dark"] .markdown-preview .obsidian-properties pre{background:#172333}
+[data-theme="dark"] .markdown-preview .obsidian-callout{background:#1b3958;color:#d5e8fa}
+[data-theme="dark"] .markdown-preview .obsidian-callout--tip,[data-theme="dark"] .markdown-preview .obsidian-callout--success{background:#1e3d31;color:#bde8ce}
+[data-theme="dark"] .markdown-preview .obsidian-callout--warning,[data-theme="dark"] .markdown-preview .obsidian-callout--question{background:#4d3b1e;color:#ffe3ac}
+[data-theme="dark"] .markdown-preview .obsidian-callout--danger,[data-theme="dark"] .markdown-preview .obsidian-callout--failure,[data-theme="dark"] .markdown-preview .obsidian-callout--bug{background:#4c2d33;color:#ffd0d3}
+[data-theme="dark"] .markdown-preview .obsidian-callout--quote,[data-theme="dark"] .markdown-preview .obsidian-callout--abstract{background:#373047;color:#e1d5f8}
+[data-theme="dark"] .markdown-preview .unsupported{background:#4b3924;color:#ffdaa1}
+[data-theme="dark"] .format-toolbar{border-color:#39465a}
+[data-theme="dark"] .format-toolbar button{color:#cadcf0}
+[data-theme="dark"] .format-toolbar button:hover{background:#304862}
+[data-theme="dark"] .format-toolbar .toolbar-divider{background:#4b5b6c}
+[data-theme="dark"] .pane .CodeMirror{background:#192534;color:#e2eafa}
+[data-theme="dark"] .pane .CodeMirror-gutters{background:#162130;border-color:#39465a}
+[data-theme="dark"] .pane .CodeMirror-linenumber{color:#8294aa}
+[data-theme="dark"] .pane .CodeMirror-cursor{border-left-color:#aad3ff}
+[data-theme="dark"] .pane .CodeMirror-selected,[data-theme="dark"] .pane .CodeMirror-focused .CodeMirror-selected{background:#385478}
+[data-theme="dark"] .pane .cm-header,[data-theme="dark"] .pane .cm-link,[data-theme="dark"] .pane .cm-url{color:#92c6ff}
+[data-theme="dark"] .pane .cm-quote{color:#a1d1aa}
+[data-theme="dark"] .pane .cm-comment,[data-theme="dark"] .pane .cm-code{color:#e3a9b1}
+[data-theme="dark"] .pane .CodeMirror-dialog{background:#25364b;color:#e2eafa}
+[data-theme="dark"] .renderer-dialog::backdrop{background:#060b12c9}
+[data-theme="dark"] .renderer-detail{border-color:#43546a}
+[data-theme="dark"] .renderer-dialog .panel-note{color:#b9c9de}
