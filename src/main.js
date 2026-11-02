@@ -15,7 +15,58 @@
   let activePath = null, originalText = '', fingerprint = null, lineEnding = '\n', hasBOM = false;
   let expanded = new Set(['']), renderTimer = null, renderSequence = 0;
   let blobURLs = [], selectedMode = 'split';
+  const SIDEBAR_MIN = 190, SIDEBAR_MAX = 520, SIDEBAR_DEFAULT = 255;
   const SAFE_IMAGE = /\.(png|jpe?g|gif|webp|bmp|avif)$/i;
+  function safeStored(key, fallback) {
+    try { return localStorage.getItem(key) || fallback; } catch (_) { return fallback; }
+  }
+  function safeStore(key, value) {
+    try { localStorage.setItem(key, value); } catch (_) { /* file:// storage may be unavailable */ }
+  }
+  const themeSelect = $('theme-select');
+  const mediaDark = window.matchMedia('(prefers-color-scheme: dark)');
+  const initialTheme = safeStored('local-wiki-theme', 'system');
+  themeSelect.value = ['light', 'dark', 'system'].includes(initialTheme) ? initialTheme : 'system';
+  function applyTheme() {
+    document.documentElement.dataset.theme = themeSelect.value === 'system'
+      ? (mediaDark.matches ? 'dark' : 'light') : themeSelect.value;
+  }
+  themeSelect.addEventListener('change', () => { safeStore('local-wiki-theme', themeSelect.value); applyTheme(); });
+  if (mediaDark.addEventListener) mediaDark.addEventListener('change', applyTheme);
+  applyTheme();
+  const resizer = $('sidebar-resizer');
+  function setSidebarWidth(width) {
+    const value = Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, Math.round(width)));
+    document.documentElement.style.setProperty('--sidebar-width', value + 'px');
+    resizer.setAttribute('aria-valuenow', String(value));
+    safeStore('local-wiki-sidebar-width', String(value));
+  }
+  const storedWidth = Number(safeStored('local-wiki-sidebar-width', String(SIDEBAR_DEFAULT)));
+  setSidebarWidth(Number.isFinite(storedWidth) ? storedWidth : SIDEBAR_DEFAULT);
+  resizer.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    resizer.setPointerCapture(event.pointerId);
+    resizer.classList.add('dragging');
+  });
+  resizer.addEventListener('pointermove', event => {
+    if (resizer.hasPointerCapture(event.pointerId)) setSidebarWidth(event.clientX - document.querySelector('.workspace').getBoundingClientRect().left);
+  });
+  const endDrag = event => {
+    if (resizer.hasPointerCapture(event.pointerId)) resizer.releasePointerCapture(event.pointerId);
+    resizer.classList.remove('dragging');
+  };
+  resizer.addEventListener('pointerup', endDrag);
+  resizer.addEventListener('pointercancel', endDrag);
+  resizer.addEventListener('dblclick', () => setSidebarWidth(SIDEBAR_DEFAULT));
+  resizer.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const current = Number(resizer.getAttribute('aria-valuenow')) || SIDEBAR_DEFAULT;
+    const next = event.key === 'Home' ? SIDEBAR_MIN : event.key === 'End' ? SIDEBAR_MAX :
+      current + (event.key === 'ArrowRight' ? 20 : -20);
+    setSidebarWidth(next);
+  });
   function notice(message, variant = '') {
     ui.notice.textContent = message;
     ui.notice.className = `notice ${variant}`.trim();
@@ -497,6 +548,7 @@
       rememberedHandle = await recent.restoreHandle();
       restoreButton.disabled = !rememberedHandle;
       forgetButton.disabled = !rememberedHandle;
+      if (bridge.getMode() === 'none') rememberCheckbox.checked = Boolean(rememberedHandle);
     } catch (err) {
       rememberedHandle = null;
       restoreButton.disabled = true; forgetButton.disabled = true;
@@ -504,6 +556,25 @@
     }
   }
   void checkRemembered();
+  rememberCheckbox.addEventListener('change', async () => {
+    const handle = bridge.getRootHandle();
+    if (!handle || bridge.getMode() !== 'readwrite') {
+      notice(rememberCheckbox.checked ? 'Výběr se zapamatuje při otevření příští složky.' : 'Pro odstranění již uloženého výběru použij Zapomenout.');
+      return;
+    }
+    try {
+      if (rememberCheckbox.checked) {
+        await recent.remember(handle); await checkRemembered();
+        notice('Aktuální wiki je zapamatovaná v tomto prohlížeči. Příště použij Poslední wiki.', 'success');
+      } else {
+        await recent.forget(); await checkRemembered();
+        notice('Zapamatování wiki vypnuto. Otevřená složka zůstává beze změny.', 'success');
+      }
+    } catch (err) {
+      rememberCheckbox.checked = !rememberCheckbox.checked;
+      notice('Zapamatování nelze změnit: ' + err.message, 'error');
+    }
+  });
   restoreButton.addEventListener('click', async () => {
     if (!rememberedHandle || !confirmDiscard() || !beginOperation('restore')) return;
     try {
@@ -533,7 +604,7 @@
         try {
           await recent.remember(bridge.getRootHandle());
           await checkRemembered();
-          if (bridge.getTree()) restoreButton.disabled = false;
+          notice('Wiki byla otevřena a zapamatována. Příště použij Poslední wiki.', 'success');
         } catch (err) {
           notice(`Wiki je otevřená, ale výběr se nepodařilo zapamatovat: ${err.message}`, 'error');
         }
