@@ -1,7 +1,7 @@
 /* Local Wiki file-system adapter. Browser classic script, compatible with file://. */
 (function (global) {
   'use strict';
-  const SKIP_DIRS = new Set(['.git', '.obsidian', 'node_modules', '_viewer', '.stackedit-data']);
+  const SKIP_DIRS = new Set(['.git', '.obsidian', '.github', '.vscode', '.venv', 'node_modules', '_viewer', '.stackedit-data']);
   const MD_EXTENSION = /\.(md|markdown)$/i;
   const IMAGE_EXTENSION = /\.(png|jpe?g|gif|webp|bmp|avif)$/i;
   const collator = new Intl.Collator('cs', { numeric: true, sensitivity: 'base' });
@@ -47,49 +47,92 @@
     let mode = 'none';
     const fileHandles = new Map();
     const assetHandles = new Map();
-    async function walkDirectory(handle, prefix, parent, nextFiles, nextAssets) {
-      const entries = [];
-      for await (const entry of handle.values()) entries.push(entry);
-      entries.sort(sortEntries);
-      for (const entry of entries) {
-        const path = prefix ? `${prefix}/${entry.name}` : entry.name;
-        if (entry.kind === 'directory') {
-          if (SKIP_DIRS.has(entry.name)) continue;
-          const folder = { kind: 'directory', name: entry.name, path, children: [] };
-          parent.children.push(folder);
-          await walkDirectory(entry, path, folder, nextFiles, nextAssets);
-        } else if (entry.kind === 'file' && MD_EXTENSION.test(entry.name)) {
-          nextFiles.set(path, entry);
-          parent.children.push({ kind: 'file', name: entry.name, path });
-        } else if (entry.kind === 'file' && IMAGE_EXTENSION.test(entry.name)) {
-          nextAssets.set(path, entry);
-        }
-      }
-    }
-    async function scan(handle) {
+
+    // Report progress during large recursive scans. An inaccessible child
+    // must not prevent its accessible sibling directories from opening.
+    async function scan(handle, onProgress) {
       const nextTree = createTree(handle.name);
       const nextFiles = new Map();
       const nextAssets = new Map();
-      await walkDirectory(handle, '', nextTree, nextFiles, nextAssets);
-      return { nextTree, nextFiles, nextAssets };
+      const stats = { directories: 0, entries: 0, files: 0, images: 0, skipped: 0 };
+      const skippedPaths = [];
+      let lastReport = 0;
+      function report(force = false) {
+        if (typeof onProgress !== 'function') return;
+        const now = Date.now();
+        if (force || now - lastReport >= 200) {
+          lastReport = now;
+          onProgress({ ...stats });
+        }
+      }
+      async function maybeYield() {
+        if (typeof global.setTimeout === 'function') {
+          await new Promise(resolve => global.setTimeout(resolve, 0));
+        }
+      }
+      async function walkDirectory(dirHandle, prefix, parent) {
+        const entries = [];
+        try {
+          for await (const entry of dirHandle.values()) {
+            entries.push(entry);
+            stats.entries++;
+            if (stats.entries % 128 === 0) {
+              report(true);
+              await maybeYield();
+            } else report();
+          }
+        } catch (error) {
+          if (!prefix) {
+            throw new Error('Kořenovou složku nelze přečíst: ' + (error.message || error));
+          }
+          stats.skipped++;
+          if (skippedPaths.length < 3) skippedPaths.push(prefix);
+          report(true);
+          return false;
+        }
+        stats.directories++;
+        entries.sort(sortEntries);
+        for (const entry of entries) {
+          const path = prefix ? prefix + '/' + entry.name : entry.name;
+          if (entry.kind === 'directory') {
+            if (SKIP_DIRS.has(entry.name.toLowerCase())) continue;
+            const folder = { kind: 'directory', name: entry.name, path, children: [] };
+            parent.children.push(folder);
+            if (!await walkDirectory(entry, path, folder)) parent.children.pop();
+          } else if (entry.kind === 'file' && MD_EXTENSION.test(entry.name)) {
+            nextFiles.set(path, entry);
+            parent.children.push({ kind: 'file', name: entry.name, path });
+            stats.files++;
+          } else if (entry.kind === 'file' && IMAGE_EXTENSION.test(entry.name)) {
+            nextAssets.set(path, entry);
+            stats.images++;
+          }
+          report();
+        }
+        return true;
+      }
+      report(true);
+      await walkDirectory(handle, '', nextTree);
+      report(true);
+      return { nextTree, nextFiles, nextAssets, scanInfo: { ...stats, skippedPaths } };
     }
     function applyScanned(result) {
       tree = result.nextTree;
       fileHandles.clear(); result.nextFiles.forEach((h, k) => fileHandles.set(k, h));
       assetHandles.clear(); result.nextAssets.forEach((h, k) => assetHandles.set(k, h));
-      return { tree, mode };
+      return { tree, mode, scanInfo: result.scanInfo || null };
     }
-    async function openWritable() {
+    async function openWritable(onProgress) {
       if (typeof global.showDirectoryPicker !== 'function') throw new Error('V tomto prostředí není dostupné showDirectoryPicker().');
       // Picker must remain directly inside user click's async chain.
       const handle = await global.showDirectoryPicker({ id: 'local-wiki-root', mode: 'readwrite' });
-      const found = await scan(handle);
+      const found = await scan(handle, onProgress);
       rootHandle = handle; mode = 'readwrite';
       return applyScanned(found);
     }
-    async function openExisting(handle) {
+    async function openExisting(handle, onProgress) {
       if (!handle || handle.kind !== 'directory') throw new Error('Uložená složka není platný adresář.');
-      const found = await scan(handle);
+      const found = await scan(handle, onProgress);
       rootHandle = handle; mode = 'readwrite';
       return applyScanned(found);
     }
@@ -285,9 +328,9 @@
       applyScanned(await scan(rootHandle));
       return newPath;
     }
-    async function refresh() {
+    async function refresh(onProgress) {
       if (!rootHandle || mode !== 'readwrite') throw new Error('Obnovení vyžaduje oprávnění ke složce.');
-      return applyScanned(await scan(rootHandle));
+      return applyScanned(await scan(rootHandle, onProgress));
     }
     return {
       openWritable, openExisting, openReadOnly, read, readRaw, write, readAsset, refresh, createFile, createDirectory, renameFile,
