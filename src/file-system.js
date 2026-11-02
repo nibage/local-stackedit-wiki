@@ -219,6 +219,8 @@
     function creationSegments(raw, kind) {
       if (typeof raw !== 'string') throw new Error('Cesta musí být text.');
       let value = raw.trim();
+      // A single leading slash denotes a path relative to the wiki root.
+      if (value.startsWith('/') && !value.startsWith('//')) value = value.slice(1);
       if (!value || /^[/\\]/.test(value) || /[\u0000-\u001f]/.test(value)) {
         throw new Error('Zadej platnou relativní cestu uvnitř wiki.');
       }
@@ -238,13 +240,49 @@
       }
       return parts;
     }
-    async function parentFor(parts) {
+    // All path segments are validated before any filesystem writes.
+    async function parentFor(parts, options = {}) {
       let dir = rootHandle;
-      for (const segment of parts.slice(0, -1)) {
-        try { dir = await dir.getDirectoryHandle(segment, { create: false }); }
-        catch (_) { throw new Error(`Nadřazená složka neexistuje: ${segment}`); }
+      const parents = parts.slice(0, -1);
+      for (let i = 0; i < parents.length; i++) {
+        const segment = parents[i];
+        let existing = null;
+        for await (const item of dir.values()) {
+          if (item.name.toLocaleLowerCase('cs') === segment.toLocaleLowerCase('cs')) {
+            existing = item; break;
+          }
+        }
+        if (existing) {
+          if (existing.kind !== 'directory' || existing.name !== segment) {
+            throw new Error(`Kolize názvu nadřazené složky: ${segment}`);
+          }
+          dir = await dir.getDirectoryHandle(segment, { create: false });
+        } else if (options.createParents) {
+          dir = await dir.getDirectoryHandle(segment, { create: true });
+        } else {
+          const error = new Error(`Nadřazená složka neexistuje: ${parents.slice(0, i + 1).join('/')}`);
+          error.code = 'MISSING_PARENT';
+          error.missingPath = parents.slice(0, i + 1).join('/');
+          throw error;
+        }
       }
       return dir;
+    }
+    async function missingParents(raw, kind = 'file') {
+      if (mode !== 'readwrite' || !rootHandle) throw new Error('Vytváření vyžaduje oprávnění k zápisu.');
+      const parts = creationSegments(raw, kind);
+      let dir = rootHandle;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const name = parts[i];
+        let found = null;
+        for await (const item of dir.values()) {
+          if (item.name.toLocaleLowerCase('cs') === name.toLocaleLowerCase('cs')) { found = item; break; }
+        }
+        if (!found) return parts.slice(0, i + 1).join('/');
+        if (found.kind !== 'directory' || found.name !== name) throw new Error(`Kolize názvu nadřazené složky: ${name}`);
+        dir = await dir.getDirectoryHandle(name, { create: false });
+      }
+      return null;
     }
     async function assertNotExists(parent, name) {
       for await (const item of parent.values()) {
@@ -253,10 +291,10 @@
         }
       }
     }
-    async function createFile(raw) {
+    async function createFile(raw, options = {}) {
       if (mode !== 'readwrite' || !rootHandle) throw new Error('Vytváření vyžaduje oprávnění k zápisu.');
       const parts = creationSegments(raw, 'file');
-      const parent = await parentFor(parts);
+      const parent = await parentFor(parts, options);
       const name = parts[parts.length - 1];
       await assertNotExists(parent, name);
       // FileSystemDirectoryHandle currently has no exclusive-create operation;
@@ -265,10 +303,10 @@
       applyScanned(await scan(rootHandle));
       return parts.join('/');
     }
-    async function createDirectory(raw) {
+    async function createDirectory(raw, options = {}) {
       if (mode !== 'readwrite' || !rootHandle) throw new Error('Vytváření vyžaduje oprávnění k zápisu.');
       const parts = creationSegments(raw, 'directory');
-      const parent = await parentFor(parts);
+      const parent = await parentFor(parts, options);
       const name = parts[parts.length - 1];
       await assertNotExists(parent, name);
       await parent.getDirectoryHandle(name, { create: true });
@@ -333,7 +371,7 @@
       return applyScanned(await scan(rootHandle, onProgress));
     }
     return {
-      openWritable, openExisting, openReadOnly, read, readRaw, write, readAsset, refresh, createFile, createDirectory, renameFile,
+      openWritable, openExisting, openReadOnly, read, readRaw, write, readAsset, refresh, createFile, createDirectory, missingParents, renameFile,
       normalizeDestination: raw => creationSegments(raw, 'file').join('/'),
       getTree: () => tree, getMode: () => mode, getRootHandle: () => rootHandle,
       hasFile: path => fileHandles.has(path), hasAsset: path => assetHandles.has(path),
