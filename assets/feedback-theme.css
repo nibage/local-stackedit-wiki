@@ -58,3 +58,5 @@
 [data-theme="dark"] .renderer-dialog::backdrop{background:#060b12c9}
 [data-theme="dark"] .renderer-detail{border-color:#43546a}
 [data-theme="dark"] .renderer-dialog .panel-note{color:#b9c9de}
+
+.editor-actions [hidden]{display:none!important}
