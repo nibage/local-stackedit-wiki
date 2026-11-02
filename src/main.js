@@ -279,18 +279,28 @@
     const parent = activePath && activePath.includes('/') ? activePath.slice(0, activePath.lastIndexOf('/') + 1) : '';
     const suggested = parent + (kind === 'file' ? 'Nová poznámka.md' : 'Nová složka');
     const path = window.prompt(kind === 'file'
-      ? 'Cesta nové poznámky vzhledem ke kořeni wiki (.md):'
-      : 'Cesta nové složky vzhledem ke kořeni wiki:', suggested);
-    if (path === null || !beginOperation('create')) return;
+      ? 'Cesta poznámky od kořene wiki, např. /knowledge/pivo.md. Nové složky lze potvrdit v dalším kroku:'
+      : 'Cesta nové složky od kořene wiki, např. /knowledge/novaslozka:', suggested);
+    if (path === null || !path.trim()) return;
+    let createParents = false;
+    try {
+      const missing = await bridge.missingParents(path, kind);
+      if (missing) {
+        createParents = window.confirm('Složka „' + missing + '“ neexistuje.\n\n' +
+          'Vytvořit chybějící podsložky uvnitř vybrané wiki a pokračovat?');
+        if (!createParents) { notice('Vytvoření bylo zrušeno; žádná složka nebyla založena.'); return; }
+      }
+    } catch (error) { notice('Neplatná cesta: ' + error.message, 'error'); return; }
+    if (!beginOperation('create')) return;
     let createdPath = null;
     try {
       if (kind === 'file') {
-        createdPath = await bridge.createFile(path);
+        createdPath = await bridge.createFile(path, { createParents });
         invalidateWikiIndex();
         const segments = createdPath.split('/');
         for (let i = 1; i < segments.length; i++) expanded.add(segments.slice(0, i).join('/'));
       } else {
-        const directory = await bridge.createDirectory(path);
+        const directory = await bridge.createDirectory(path, { createParents });
         invalidateWikiIndex();
         const segments = directory.split('/');
         for (let i = 1; i <= segments.length; i++) expanded.add(segments.slice(0, i).join('/'));
@@ -401,14 +411,48 @@
     }).finally(() => { indexPromise = null; });
     return indexPromise;
   }
-  async function openResult(path, line) {
-    if (selectedMode === 'preview') setView('split');
-    await selectFile(path);
-    if (activePath === path && Number.isInteger(line)) {
+  // Search results preserve the selected editor/preview layout.
+  function highlightPreviewQuery(query) {
+    ui.preview.querySelectorAll('mark.wiki-search-hit').forEach(mark => {
+      mark.replaceWith(document.createTextNode(mark.textContent));
+    });
+    ui.preview.normalize();
+    const term = String(query || '').trim().split(/\s+/)[0];
+    if (!term) return false;
+    const walker = document.createTreeWalker(ui.preview, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        if (!node.parentElement || node.parentElement.closest('svg,script,style,.preview-placeholder')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    let node;
+    while ((node = walker.nextNode())) {
+      const at = node.textContent.toLocaleLowerCase('cs').indexOf(term.toLocaleLowerCase('cs'));
+      if (at < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, at); range.setEnd(node, at + term.length);
+      const mark = document.createElement('mark'); mark.className = 'wiki-search-hit';
+      range.surroundContents(mark);
+      mark.scrollIntoView({ behavior: 'instant', block: 'center' });
+      return true;
+    }
+    return false;
+  }
+  async function openResult(path, line, query = '') {
+    const opened = await selectFile(path);
+    if (!opened || activePath !== path) return;
+    if (selectedMode === 'preview') {
+      if (!highlightPreviewQuery(query)) {
+        notice('Soubor je otevřen v náhledu, ale přesný hledaný text nebyl ve vykresleném Markdownu nalezen (může být ve zdrojové syntaxi).');
+      }
+      return;
+    }
+    if (Number.isInteger(line)) {
       editor.cm.setCursor(Math.max(0, line - 1), 0);
       editor.cm.scrollIntoView({ line: Math.max(0, line - 1), ch: 0 }, 70);
       editor.focus();
     }
+    if (selectedMode === 'split' && query) highlightPreviewQuery(query);
   }
   async function doFulltext() {
     const query = $('fulltext-query').value.trim();
@@ -419,7 +463,7 @@
       const results = wikiIndex.search(query, 100);
       const area = $('fulltext-results'); area.replaceChildren();
       for (const hit of results) addResult(area, `${hit.path}:${hit.line}`, hit.snippet,
-        () => void openResult(hit.path, hit.line));
+        () => void openResult(hit.path, hit.line, query));
       if (!results.length) area.textContent = 'Nic nenalezeno.';
       $('fulltext-status').textContent = `${results.length} shod${results.length === 1 ? 'a' : ''} (max. 3 na soubor, nejvýše 100 výsledků).`;
     } finally { $('fulltext-run').disabled = false; }
@@ -498,7 +542,12 @@
     catch (err) { if (err.name !== 'AbortError') notice(`Otevření selhalo: ${err.message}`, 'error'); }
     finally { endOperation('open'); }
   });
-  ui.readonly.addEventListener('click', () => { if (!operations.isBusy() && confirmDiscard()) ui.picker.click(); });
+  ui.readonly.addEventListener('click', () => {
+    if (!operations.isBusy() && confirmDiscard()) {
+      notice('Zvol složku pro nezapisovatelný režim. Náhled v něm funguje, ale změny nelze ukládat.');
+      ui.picker.click();
+    }
+  });
   ui.picker.addEventListener('change', () => {
     if (operations.isBusy()) { ui.picker.value = ''; return; }
     try { applyOpen(bridge.openReadOnly(ui.picker.files)); }
