@@ -1,0 +1,90 @@
+:root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;font-size:14px;color:#243140;background:#f2f5f8;--accent:#275b9d;--line:#dce3ea;--surface:#fff}
+*{box-sizing:border-box}body{margin:0}.app-shell{height:100dvh;display:flex;flex-direction:column;min-height:380px}button,input,textarea{font:inherit}button{cursor:pointer;border:1px solid #d0d8e0;color:#2a3744;background:#fff;padding:8px 11px;border-radius:7px}button:hover:not(:disabled){background:#f0f5fa}button:disabled{opacity:.43;cursor:default}.primary{background:#2862a8;border-color:#2862a8;color:#fff}.primary:hover:not(:disabled){background:#1d4c87}.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 16px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap}.brand{display:flex;gap:11px;align-items:center;white-space:nowrap}.brand strong{display:block;font-size:15px}.brand small{display:block;color:#748290;font-size:11px;margin-top:2px}.brand-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:#225793;color:#fff;font-weight:700}.actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.notice{background:#eaf3ff;border-bottom:1px solid #cfdfef;padding:8px 16px;color:#315271;min-height:35px;font-size:12px}.notice.success{background:#edf9ee;color:#325f3e}.notice.error{background:#fff0ed;color:#9c3529}.workspace{display:grid;grid-template-columns:minmax(210px,255px) minmax(0,1fr);flex:1;min-height:0}.sidebar{background:#fbfcfe;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}.sidebar-head{padding:15px 14px 10px;display:flex;gap:10px;justify-content:space-between;align-items:start;word-break:break-word;font-weight:700}.sidebar-head #count{font-weight:400;white-space:nowrap;color:#82909a;font-size:11px}.search-label{font-size:11px;color:#7c8995;margin:0 13px 5px}.sidebar input{margin:0 12px 10px;padding:8px 10px;min-width:0;border-radius:6px;border:1px solid #d9e0e7;background:white}.sidebar #tree{overflow:auto;flex:1;padding:1px 8px 14px}.tree-row{border:0;display:flex;align-items:center;width:100%;gap:7px;border-radius:5px;text-align:left;padding:6px 7px;background:none;color:#344257;font-size:12px;overflow-wrap:anywhere}.tree-row:hover{background:#edf3f9}.tree-row.selected{background:#dceafb;color:#215b99;font-weight:700}.glyph{color:#788aa3;flex:none;width:15px;text-align:center}.tree-children{margin-left:13px;padding-left:6px;border-left:1px solid #edf0f3}.sidebar-bottom{border-top:1px solid var(--line);padding:10px 12px;color:#788b9c;font-size:11px}.empty{color:#81909f;font-size:12px;margin:12px}.main-area{display:flex;flex-direction:column;min-height:0;min-width:0}.editor-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 13px;background:white;border-bottom:1px solid var(--line);flex-wrap:wrap}.file-title{display:flex;align-items:center;gap:10px;min-width:0;overflow-wrap:anywhere}.file-title strong{font-size:12px}.file-title #dirty{color:#ae580f;font-size:11px}.editor-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.mode{color:#728292;font-size:11px;margin-right:5px}.view-switch{display:flex;gap:0}.view-switch button{border-radius:0;padding:7px 9px;font-size:12px}.view-switch button:first-child{border-radius:6px 0 0 6px}.view-switch button:last-child{border-radius:0 6px 6px 0}.view-switch button+button{margin-left:-1px}.view-switch button.active{background:#e6f0fc;color:#205c9e;z-index:1;border-color:#a9c8e8}.editor-grid{display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0}.editor-grid[data-layout="edit"]{grid-template-columns:1fr}.editor-grid[data-layout="preview"]{grid-template-columns:1fr}.editor-grid[data-layout="edit"] .preview-pane,.editor-grid[data-layout="preview"] .edit-pane{display:none}.pane{display:flex;flex-direction:column;min-width:0;min-height:0;background:#fff}.edit-pane{border-right:1px solid var(--line)}.pane-title{display:flex;justify-content:space-between;gap:8px;background:#f9fafc;color:#708191;font-size:11px;padding:8px 14px;border-bottom:1px solid #edf0f2}.pane textarea{display:block;flex:1;width:100%;min-height:0;resize:none;border:0;outline:0;background:#fff;padding:17px 21px;font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospace;line-height:1.6;color:#253447;font-size:13px;tab-size:2}.pane textarea:disabled{background:#f8fafb;color:#738291}.markdown-preview{overflow:auto;flex:1;padding:21px 28px;background:#fff;color:#273747;line-height:1.7;overflow-wrap:anywhere}.markdown-preview>*:first-child{margin-top:0}.markdown-preview h1,.markdown-preview h2,.markdown-preview h3{line-height:1.25;color:#253950;margin:1.4em 0 .55em}.markdown-preview h1{font-size:1.75em;border-bottom:1px solid #e1e7ed;padding-bottom:.25em}.markdown-preview h2{font-size:1.36em}.markdown-preview h3{font-size:1.15em}.markdown-preview a{color:#1f69b0;text-decoration:underline;cursor:pointer}.markdown-preview pre{background:#f3f6f9;border:1px solid #edf0f5;border-radius:8px;padding:13px;overflow:auto;font-size:12px;line-height:1.55}.markdown-preview :not(pre)>code{background:#edf2f6;border-radius:4px;padding:2px 5px}.markdown-preview blockquote{margin:1em 0;padding:.2em 1.2em;border-left:3px solid #afc7df;color:#6b7f91;background:#fafcff}.markdown-preview table{border-collapse:collapse;display:block;max-width:100%;overflow:auto}.markdown-preview th,.markdown-preview td{padding:7px 12px;border:1px solid #dae1e8}.markdown-preview th{background:#f5f8fa}.markdown-preview img{max-width:100%;height:auto;border-radius:5px}.markdown-preview hr{border:0;border-top:1px solid #d7e0e9;margin:1.5em 0}.markdown-preview .unsupported{border-left:3px solid #d6a753;background:#fff9e9;padding:7px 10px;margin:10px 0;font-size:12px;color:#866a37}.markdown-preview .missing-image{font-size:11px;color:#9b5d2d}.preview-placeholder{color:#718294;max-width:600px}.statusbar{display:flex;justify-content:space-between;gap:8px;padding:6px 13px;border-top:1px solid var(--line);background:#fbfcfd;color:#6c7c89;font-size:11px}@media(max-width:850px){.workspace{grid-template-columns:190px minmax(0,1fr)}.editor-grid{grid-template-columns:1fr}.editor-grid[data-layout="split"]{grid-template-rows:1fr 1fr}.editor-grid[data-layout="split"] .edit-pane{border-right:0;border-bottom:1px solid var(--line)}.markdown-preview{padding:14px 18px}}@media(max-width:560px){.workspace{grid-template-columns:130px minmax(0,1fr)}.topbar{padding:8px}.brand small{display:none}.sidebar-head{flex-wrap:wrap}.view-switch button{font-size:11px;padding:6px}.editor-bar{padding:7px}.mode{display:none}.pane textarea{padding:10px}.sidebar input{margin:0 5px 8px;width:calc(100% - 10px)}}
+
+/* Dávka 3: offline Markdown editor CodeMirror */
+.format-toolbar{display:flex;flex-wrap:wrap;gap:3px;align-items:center;background:#fff;padding:5px 11px;border-bottom:1px solid #e7ecf1}
+.format-toolbar button{border:0;background:transparent;border-radius:4px;min-width:28px;height:26px;padding:3px 6px;color:#506378;font-size:12px}
+.format-toolbar button:hover{background:#e6f0fa;color:#184e85}
+.format-toolbar .toolbar-divider{width:1px;height:17px;background:#dce4eb;margin:0 3px}
+.pane .CodeMirror{flex:1;height:auto;min-height:0;width:100%;font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospace;font-size:13px;line-height:1.58;color:#253447}
+.pane .CodeMirror-lines{padding:13px 3px}
+.pane .CodeMirror-gutters{background:#fafbfd;border-right:1px solid #edf0f3}
+.pane .CodeMirror-linenumber{color:#a0adbb}
+.pane .CodeMirror-cursor{border-left:2px solid #276bb8}
+.pane .CodeMirror-focused .CodeMirror-selected{background:#c8e0f9}
+.pane .cm-header{color:#225c96;font-weight:650}
+.pane .cm-strong{font-weight:700}
+.pane .cm-em{font-style:italic}
+.pane .cm-link,.pane .cm-url{color:#1672a3}
+.pane .cm-quote{color:#658772}
+.pane .cm-comment,.pane .cm-code{color:#a43f63}
+.pane .CodeMirror-dialog{background:#f6f9fc;color:#253447}
+
+/* Dávka 4 – postranní panel: files / fulltext / links */
+.sidebar-tabs{display:flex;gap:3px;padding:0 9px 10px;border-bottom:1px solid var(--line)}
+.sidebar-tabs button{flex:1;min-width:0;border:1px solid transparent;padding:6px 4px;font-size:11px;background:transparent}
+.sidebar-tabs button.active{color:#1d5e9d;background:#e7f1fd;border-color:#bfd5ed}
+.sidebar-panel{display:flex;flex:1;flex-direction:column;min-height:0;overflow:auto;padding-top:11px}
+.sidebar-panel[hidden]{display:none!important}
+.sidebar-panel h3{font-size:12px;color:#415a74;margin:3px 13px 10px}
+.sidebar-panel .panel-note{font-size:11px;line-height:1.5;color:#708394;padding:4px 13px 10px}
+.sidebar-panel .panel-results{overflow:auto;padding:0 9px 12px}
+.sidebar-panel .fulltext-controls{display:flex;flex-direction:column;padding:0 10px 8px;gap:6px}
+.sidebar-panel .fulltext-controls input{margin:0;width:100%}
+.sidebar-panel .fulltext-controls button{font-size:12px;padding:7px}
+.sidebar-panel .panel-action{margin:0 12px 12px;min-height:34px;font-size:11px}
+.result-item{display:flex;flex-direction:column;gap:4px;text-align:left;width:100%;border:0;background:transparent;padding:9px 6px;border-bottom:1px solid #ebeff3;border-radius:0;overflow-wrap:anywhere}
+.result-item:hover{background:#ebf3fc}
+.result-item strong{font-size:11px;font-weight:650;color:#215c91}
+.result-item .snippet{font-size:11px;color:#66788a;line-height:1.4}
+.result-item .line-number{font-size:10px;color:#8c9aa7}
+.toc-item{width:100%;background:transparent;border:0;text-align:left;font-size:11px;color:#396c99;border-radius:4px;padding:6px 8px;overflow-wrap:anywhere}
+.toc-item:hover{background:#e8f2ff}
+.markdown-preview .visualization{overflow-x:auto;margin:12px 0;padding:7px 0;max-width:100%}
+.markdown-preview .visualization svg{max-width:100%;height:auto}
+
+/* Dávka 5: creating files and directories, without a backend. */
+.file-actions{display:flex;gap:6px;margin:0 10px 10px}
+.file-actions button{flex:1;min-width:0;padding:6px 7px;font-size:11px;border:1px solid #cddce9;background:#f6fafe;color:#245a88}
+.file-actions button:disabled{background:#f6f6f6;color:#8b98a5}
+
+/* Dávka 8: Obsidian callouts and YAML frontmatter. */
+.markdown-preview .obsidian-properties{margin:0 0 17px;border:1px solid #dbe4ed;border-radius:7px;background:#f8fafc;font-size:12px}
+.markdown-preview .obsidian-properties summary{cursor:pointer;padding:7px 12px;font-weight:600;color:#51657c}
+.markdown-preview .obsidian-properties pre{margin:0 10px 10px;background:#fff;white-space:pre-wrap;overflow-wrap:anywhere}
+.markdown-preview .obsidian-callout{margin:13px 0;padding:9px 14px 10px;border-left:4px solid #3e80bc;border-radius:5px;background:#eef6fd;color:#294866}
+.markdown-preview .obsidian-callout-title{font-weight:700;color:inherit;margin-bottom:5px}
+.markdown-preview details.obsidian-callout summary{cursor:pointer;margin-bottom:5px}
+.markdown-preview .obsidian-callout > :last-child{margin-bottom:0}
+.markdown-preview .obsidian-callout--tip,.markdown-preview .obsidian-callout--success{border-left-color:#27956a;background:#eaf7ef;color:#25654c}
+.markdown-preview .obsidian-callout--warning,.markdown-preview .obsidian-callout--question{border-left-color:#d2a23b;background:#fff8e5;color:#795d25}
+.markdown-preview .obsidian-callout--danger,.markdown-preview .obsidian-callout--failure,.markdown-preview .obsidian-callout--bug{border-left-color:#d05253;background:#fff0f0;color:#8b4141}
+.markdown-preview .obsidian-callout--quote,.markdown-preview .obsidian-callout--abstract{border-left-color:#8a78aa;background:#f5f1fb;color:#62537d}
+
+/* Dávka 9: diagnostic panel and offline SVG exports. */
+.renderer-dialog{max-width:min(540px,95vw);border:1px solid #c4d4e5;border-radius:12px;box-shadow:0 25px 80px #17283a55;padding:20px 23px;color:#263b50;background:#fff}
+.renderer-dialog::backdrop{background:#142a3e8a}
+.renderer-dialog h2{font-size:17px;margin:0 0 12px}
+.renderer-dialog p{font-size:12px;line-height:1.55}
+.renderer-detail{padding:5px 0;margin:0;border-bottom:1px solid #edf0f5}
+.renderer-dialog-actions{display:flex;justify-content:flex-end;margin-top:15px}
+.markdown-preview .visualization .diagram-export{display:block;width:max-content;margin:10px 0 0 auto;padding:5px 9px;background:#f5f9ff;color:#245886;border:1px solid #b9d2ec;border-radius:5px;font-size:11px}
+.markdown-preview .visualization svg{display:block;max-width:100%;height:auto}
+
+/* Dávka 13: uživatelem vyvolaná instalace rendererů. */
+.renderer-dialog-actions{flex-wrap:wrap;gap:7px;align-items:center}
+.renderer-dialog #renderer-install{margin-right:auto;background:#edf5ff;border-color:#a9c8e9;color:#164e7c}
+.renderer-dialog #renderer-install-status{min-height:16px;overflow-wrap:anywhere}
+
+/* Dávka 14: opt-in uložený handle poslední wiki. */
+.remember-root-label{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#40566d;white-space:nowrap;padding:0 2px}
+.remember-root-label input{width:16px;height:16px;accent-color:var(--accent)}
+
+/* Dávka 15: offline, non-destructive renderer smoke status */
+.renderer-smoke-result { margin: .5rem 0; font-size: .88rem; }
+.renderer-smoke-result p { margin: .25rem 0; line-height: 1.4; }
+
+/* Batch 21: manual renderer import */
+.renderer-file-label {display:inline-block; margin:0.4rem 0.3rem 0.4rem 0.7rem;}
+#renderer-local-files {max-width:100%; font-size:0.85rem;}
+#renderer-install-local:disabled {opacity:0.5;}
