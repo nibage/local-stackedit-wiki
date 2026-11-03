@@ -23,13 +23,15 @@ function setup(dir) {
   vm.runInNewContext(script,context,{filename:'file-system.js'});
   return context.LocalWikiFS.createBridge();
 }
-test('čte podsložky a vynechává .obsidian i obrázky',async()=>{
+test('čte podsložky a vynechává .obsidian, obrázky vidí ve stromu',async()=>{
   const md=new MockFile('A.md','# Hello');
   const root=new MockDir('Wiki',[new MockDir('Z',[md]),new MockDir('.obsidian',[new MockFile('config.md','hidden')]),new MockFile('image.jpg','image')]);
   const api=setup(root);
   const result=await api.openWritable();
   assert.equal(result.mode,'readwrite');
-  assert.equal(Array.from(result.tree.children, x => x.name).join(','),'Z');
+  assert.equal(Array.from(result.tree.children, x => x.name).join(','),'Z,image.jpg');
+  assert.equal(result.tree.children[1].kind, 'image');
+  assert.equal(Array.from(api.getAssetPaths()).join(','), 'image.jpg');
   assert.equal((await api.read('Z/A.md')).text,'# Hello');
 });
 test('ukládá původní soubor a blokuje přepis externí změny',async()=>{
@@ -48,5 +50,5 @@ test('read-only fallback nemůže zapisovat',async()=>{
   const result=api.openReadOnly([fakeFile]);
   assert.equal(result.tree.children[0].path,'One.md');
   assert.equal((await api.read('One.md')).text,'abc');
-  await assert.rejects(()=>api.write('One.md','new','3:1'),/pouze pro čtení/);
+  await assert.rejects(()=>api.write('One.md','new','3:1'),/read-only/);
 });

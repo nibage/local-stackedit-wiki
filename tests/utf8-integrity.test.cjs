@@ -58,8 +58,8 @@ test('External rewrite of same size and mtime is detected',async()=>{
 test('Invalid UTF-8 is rejected rather than decoded using replacements',async()=>{
   const f=new FileHandle('Bad.md',Buffer.from([0x23,0x20,0xc3,0x28]));
   const b=await setup(f);
-  await assert.rejects(()=>b.read('Bad.md'),/není platný UTF-8/);
-  await assert.rejects(()=>b.readRaw('Bad.md'),/není platný UTF-8/);
+  await assert.rejects(()=>b.read('Bad.md'),/not valid UTF-8/);
+  await assert.rejects(()=>b.readRaw('Bad.md'),/not valid UTF-8/);
   assert.deepEqual([...f.bytes],[0x23,0x20,0xc3,0x28]);
 });
 test('Non-BOM UTF-8 remains non-BOM after save',async()=>{

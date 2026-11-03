@@ -4,8 +4,8 @@
   const operations = window.LocalWikiOperationGuard.create();
   const $ = id => document.getElementById(id);
   const ui = {
-    notice: $('notice'), open: $('open-folder'), readonly: $('open-readonly'), picker: $('directory-input'),
-    refresh: $('refresh'), reload: $('reload'), save: $('save'), tree: $('tree'), editor: $('editor'),
+    notice: $('notice'), open: $('open-folder'), readonlyToggle: $('read-only-toggle'), picker: $('directory-input'),
+    refresh: $('refresh'), save: $('save'), tree: $('tree'), editor: $('editor'),
     preview: $('preview'), filename: $('filename'), dirty: $('dirty'), search: $('search'),
     mode: $('mode'), rootName: $('root-name'), count: $('count'), grid: $('editor-grid')
   };
@@ -14,14 +14,19 @@
   let indexPromise = null;
   let activePath = null, originalText = '', fingerprint = null, lineEnding = '\n', hasBOM = false;
   let expanded = new Set(['']), renderTimer = null, renderSequence = 0;
+  let inlineDraft = null, imageDialogURL = null, pendingMovePath = null;
+  let selectedFolder = '', treeClickTimer = null;
+  let moveEnabled = false, draggedPath = null;
   let blobURLs = [], selectedMode = 'split';
   const SIDEBAR_MIN = 190, SIDEBAR_MAX = 520, SIDEBAR_DEFAULT = 255;
   const SAFE_IMAGE = /\.(png|jpe?g|gif|webp|bmp|avif)$/i;
+  // Browser file:// origins may share storage across *different* index.html paths.
+  // Never read legacy unscoped keys from another copy of the app.
   function safeStored(key, fallback) {
-    try { return localStorage.getItem(key) || fallback; } catch (_) { return fallback; }
+    try { return localStorage.getItem(window.LocalWikiScope.storageKey(key)) || fallback; } catch (_) { return fallback; }
   }
   function safeStore(key, value) {
-    try { localStorage.setItem(key, value); } catch (_) { /* file:// storage may be unavailable */ }
+    try { localStorage.setItem(window.LocalWikiScope.storageKey(key), value); } catch (_) { /* file:// storage may be unavailable */ }
   }
   const themeSelect = $('theme-select');
   const mediaDark = window.matchMedia('(prefers-color-scheme: dark)');
@@ -67,45 +72,70 @@
       current + (event.key === 'ArrowRight' ? 20 : -20);
     setSidebarWidth(next);
   });
+  function updateMoveModeUI() {
+    const toggle = $('rename-file');
+    const allowed = bridge.getMode() === 'readwrite' && !operations.isBusy();
+    if (bridge.getMode() !== 'readwrite') moveEnabled = false;
+    toggle.disabled = !allowed;
+    toggle.classList.toggle('move-enabled', moveEnabled);
+    toggle.setAttribute('aria-pressed', String(moveEnabled));
+    toggle.setAttribute('aria-label', moveEnabled ? 'Disable drag and drop mode' : 'Enable drag and drop mode');
+    toggle.title = moveEnabled
+      ? 'Drag and drop a Markdown file onto a folder to move it. Press M on a focused note to enter a destination path. Every move requires dialog confirmation.'
+      : 'Enable drag and drop file moves';
+    ui.tree.classList.toggle('move-mode-enabled', moveEnabled);
+  }
+  function clearDragHighlights() {
+    ui.tree.querySelectorAll('.tree-drop-target,.tree-drag-source').forEach(
+      row => row.classList.remove('tree-drop-target', 'tree-drag-source'));
+  }
+  function showMoveDialog(path, destination = path) {
+    if (!path || !bridge.hasFile(path) || bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
+    pendingMovePath = path;
+    $('move-description').textContent = 'Source note: ' + path;
+    $('move-destination').value = destination;
+    $('move-dialog').showModal();
+    requestAnimationFrame(() => $('move-destination').focus());
+  }
   function notice(message, variant = '') {
     ui.notice.textContent = message;
     ui.notice.className = `notice ${variant}`.trim();
   }
   function beginOperation(name) {
     if (!operations.acquire(name)) {
-      notice(`Probíhá operace „${operations.currentOperation()}“. Nejprve ji dokonči.`, 'error');
+      notice(`An operation is in progress: ${operations.currentOperation()}. Please complete it first.`, 'error');
       return false;
     }
     // Prevent editing a document that may be replaced by a move, open or refresh.
     // Saving is the exception: edits made while a write is in progress remain dirty.
     if (name !== 'save') editor.setReadOnly(true);
-    redrawDirty();
+    redrawDirty(); updateMoveModeUI();
     return true;
   }
   function endOperation(name) {
     operations.release(name);
     editor.setReadOnly(bridge.getMode() !== 'readwrite' || !activePath);
-    redrawDirty();
+    redrawDirty(); updateMoveModeUI();
   }
   function isDirty() { return activePath !== null && editor.getValue() !== originalText; }
   function confirmDiscard() {
-    return !isDirty() || window.confirm('Aktuální soubor obsahuje neuložené změny. Zahodit je?');
+    return !isDirty() || window.confirm('The current note has unsaved changes. Discard them?');
   }
   function redrawDirty() {
     const dirty = isDirty();
-    ui.dirty.textContent = dirty ? '● Neuloženo' : '';
+    ui.dirty.textContent = dirty ? '● Unsaved' : '';
     ui.save.disabled = operations.isBusy() || bridge.getMode() !== 'readwrite' || !dirty;
-    $('save-status').textContent = dirty ? 'Změny nejsou uloženy na disk' : activePath ? 'Soubor beze změn' : 'Žádný soubor';
-    $('stats').textContent = `${editor.getValue().length} znaků · ${editor.getValue() ? editor.getValue().split('\n').length : 0} řádků`;
+    $('save-status').textContent = dirty ? 'Unsaved changes' : activePath ? 'No unsaved changes' : 'No file';
+    $('stats').textContent = `${editor.getValue().length} characters · ${editor.getValue() ? editor.getValue().split('\n').length : 0} lines`;
   }
   function releaseImages() { blobURLs.forEach(url => URL.revokeObjectURL(url)); blobURLs = []; }
   function clearEditor() {
     renderSequence++; clearTimeout(renderTimer); // Cancel delayed render/image updates.
     activePath = null; originalText = ''; fingerprint = null; hasBOM = false;
     editor.setValue(''); editor.setReadOnly(true);
-    ui.filename.textContent = 'Žádný otevřený soubor';
-    $('rename-file').disabled = true;
-    ui.reload.disabled = true; ui.preview.replaceChildren();
+    ui.filename.textContent = 'No note open';
+    updateMoveModeUI();
+    ui.preview.replaceChildren();
     releaseImages(); redrawDirty();
     $('toc').replaceChildren(); $('backlinks-results').replaceChildren();
   }
@@ -144,7 +174,7 @@
     if (anchor === null || anchor === '') return true;
     const h = window.LocalWikiNavigation.findHeading(ui.preview, anchor);
     if (!h) {
-      notice(`Nadpis v poznámce nebyl nalezen: ${anchor}`, 'error');
+      notice(`Heading not found in note: ${anchor}`, 'error');
       return false;
     }
     if (selectedMode === 'edit') setView('split');
@@ -180,7 +210,7 @@
         path = resolvePathFrom(sourcePath, raw.split('#')[0].split('?')[0]);
       }
       if (!path || !SAFE_IMAGE.test(path) || !bridge.hasAsset(path)) {
-        img.replaceWith(document.createTextNode(`[obrázek nenalezen nebo nejednoznačný: ${img.alt || raw || '?'}]`));
+        img.replaceWith(document.createTextNode(`[image missing or ambiguous: ${img.alt || raw || '?'}]`));
         continue;
       }
       try {
@@ -191,7 +221,7 @@
         img.src = url;
         img.title = path;
       } catch (_) {
-        if (sequence === renderSequence) img.replaceWith(document.createTextNode(`[obrázek nelze načíst: ${raw}]`));
+        if (sequence === renderSequence) img.replaceWith(document.createTextNode(`[unable to load image: ${raw}]`));
       }
     }
   }
@@ -205,28 +235,28 @@
       let baseStatus = 'Offline Markdown';
       const report = stats => {
         if (sequence !== renderSequence) return;
-        const parts = [stats.rendered ? `Diagramy/noty: ${stats.rendered}` : '',
-          stats.pending ? `Vykreslování: ${stats.pending}` : '',
-          stats.missing ? `Chybí knihovny: ${stats.missing}` : '',
-          stats.failed ? `Chyby renderu: ${stats.failed}` : ''];
+        const parts = [stats.rendered ? `Diagrams/notation: ${stats.rendered}` : '',
+          stats.pending ? `Rendering: ${stats.pending}` : '',
+          stats.missing ? `Missing libraries: ${stats.missing}` : '',
+          stats.failed ? `Render failures: ${stats.failed}` : ''];
         $('render-status').textContent = [baseStatus, ...parts].filter(Boolean).join(' · ');
       };
       const result = window.LocalWikiRender.render(editor.getValue(), ui.preview, { onDiagramUpdate: report });
       baseStatus = [result.expressions ? `Math: ${result.expressions}` : '',
-        result.callouts ? `Callouty: ${result.callouts}` : ''].filter(Boolean).join(' · ') || 'Offline Markdown';
+        result.callouts ? `Callouts: ${result.callouts}` : ''].filter(Boolean).join(' · ') || 'Offline Markdown';
       report(result.diagrams);
       buildToc();
       void loadImages(result.imageNodes, activePath, sequence);
     } catch (err) {
-      const p = document.createElement('p'); p.textContent = `Náhled selhal: ${err.message}`;
+      const p = document.createElement('p'); p.textContent = `Preview failed: ${err.message}`;
       ui.preview.replaceChildren(p);
-      $('render-status').textContent = 'Chyba náhledu';
+      $('render-status').textContent = 'Preview error';
     }
   }
   function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(renderPreview, 170); }
   async function selectFile(path, options = {}) {
     if (path === activePath && !options.force) return true;
-    if (operations.isBusy()) { notice('Probíhá zápis nebo jiná disková operace; přepnutí dokumentu je dočasně zakázané.', 'error'); return false; }
+    if (operations.isBusy()) { notice('A file operation is in progress; switching notes is temporarily disabled.', 'error'); return false; }
     if (!options.skipConfirm && !confirmDiscard()) return false;
     const ticket = operations.beginRead();
     const formerPath = activePath, formerText = editor.getValue();
@@ -234,34 +264,141 @@
       const result = await bridge.read(path);
       if (!operations.isCurrentRead(ticket)) return false;
       if (activePath !== formerPath || editor.getValue() !== formerText) {
-        notice('Během načítání se změnil editor. Přepnutí bylo zrušeno kvůli neuloženým úpravám.', 'error');
+        notice('The editor changed during loading. Switching was cancelled to protect unsaved changes.', 'error');
         return false;
       }
-      activePath = path; fingerprint = result.fingerprint; hasBOM = Boolean(result.hasBOM);
+      activePath = path; selectedFolder = parentPath(path); fingerprint = result.fingerprint; hasBOM = Boolean(result.hasBOM);
       lineEnding = result.text.includes('\r\n') ? '\r\n' : '\n';
       const normalizedText = result.text.replace(/\r\n?/g, '\n');
       originalText = normalizedText; editor.setValue(normalizedText);
       editor.setReadOnly(bridge.getMode() !== 'readwrite');
-      ui.filename.textContent = path; ui.reload.disabled = false;
-      $('rename-file').disabled = bridge.getMode() !== 'readwrite';
-      $('backlinks-results').textContent = 'Klikni na „Zjistit odkazy na tuto stránku“. '; 
+      ui.filename.textContent = path;
+      updateMoveModeUI();
+      $('backlinks-results').textContent = 'Click Find incoming links.'; 
       redrawDirty(); renderTree(); renderPreview();
       ui.preview.scrollTop = 0;
-      notice(`Otevřen soubor: ${path}`, 'success');
+      notice(`Opened note: ${path}`, 'success');
       return true;
     } catch (err) {
-      if (operations.isCurrentRead(ticket)) notice(`Soubor nelze otevřít: ${err.message}`, 'error');
+      if (operations.isCurrentRead(ticket)) notice(`Cannot open note: ${err.message}`, 'error');
       return false;
     }
   }
-  async function reloadActive() {
-    if (!activePath || !confirmDiscard()) return;
-    await selectFile(activePath, { force: true, skipConfirm: true });
-  }
   function filteredNode(node, needle) {
     if (!needle) return true;
-    if (node.kind === 'file') return node.path.toLocaleLowerCase('cs').includes(needle);
+    if (node.kind !== 'directory') return node.path.toLocaleLowerCase('cs').includes(needle);
     return node.children.some(child => filteredNode(child, needle));
+  }
+  function parentPath(path) { return path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : ''; }
+  function basename(path) { return path.split('/').pop(); }
+  function combinePath(parent, name) { return parent ? parent + '/' + name : name; }
+  function showImage(path) {
+    const dialog = $('image-dialog');
+    const img = $('image-dialog-preview');
+    if (imageDialogURL) { URL.revokeObjectURL(imageDialogURL); imageDialogURL = null; }
+    $('image-dialog-path').textContent = path;
+    $('image-dialog-title').textContent = basename(path);
+    $('image-insert').disabled = bridge.getMode() !== 'readwrite' || !activePath || operations.isBusy();
+    $('image-insert').onclick = () => {
+      if (imageDialogURL === null || !activePath || bridge.getMode() !== 'readwrite') return;
+      const base = parentPath(activePath).split('/').filter(Boolean);
+      const target = path.split('/');
+      while (base.length && target.length && base[0] === target[0]) { base.shift(); target.shift(); }
+      const relative = [...base.map(() => '..'), ...target].join('/');
+      const encoded = relative.split('/').map(segment => encodeURIComponent(segment)).join('/');
+      editor.cm.replaceSelection('![' + basename(path).replace(/\.(?:png|jpe?g|gif|webp|bmp|avif)$/i, '') + '](' + encoded + ')');
+      editor.focus(); dialog.close();
+    };
+    bridge.readAsset(path).then(file => {
+      if (!dialog.open || $('image-dialog-path').textContent !== path) return;
+      imageDialogURL = URL.createObjectURL(file);
+      img.src = imageDialogURL;
+    }).catch(err => notice('Cannot display image: ' + err.message, 'error'));
+    dialog.showModal();
+  }
+  $('image-dialog').addEventListener('close', () => {
+    $('image-dialog-preview').removeAttribute('src');
+    if (imageDialogURL) { URL.revokeObjectURL(imageDialogURL); imageDialogURL = null; }
+  });
+  $('image-close').addEventListener('click', () => $('image-dialog').close());
+  async function completeDraft(draft, value) {
+    if (!inlineDraft || inlineDraft !== draft || draft.finished) return;
+    draft.finished = true;
+    inlineDraft = null;
+    const trimmed = value.trim();
+    if (!trimmed) { renderTree(); return; }
+    if (draft.kind === 'file' && !confirmDiscard()) { renderTree(); return; }
+    // Inline editor accepts a single filename. Paths are composed only from
+    // the folder where the draft is visually placed, never from unchecked input.
+    if (trimmed.includes('/') || trimmed.includes('\\')) {
+      notice('Enter a name only. Create the parent folder first.', 'error');
+      renderTree(); return;
+    }
+    const path = combinePath(draft.parent, trimmed);
+    if (!beginOperation('create')) { renderTree(); return; }
+    let created = null;
+    try {
+      if (draft.kind === 'file') created = await bridge.createFile(path);
+      else created = await bridge.createDirectory(path);
+      invalidateWikiIndex();
+      expanded.add(draft.parent);
+      if (draft.kind === 'directory') { expanded.add(created); selectedFolder = created; }
+      renderTree();
+    } catch (err) { notice('Cannot create item: ' + err.message, 'error'); renderTree(); }
+    finally { endOperation('create'); }
+    if (created) {
+      if (draft.kind === 'file') {
+        clearEditor(); // Discard was explicitly confirmed before file creation.
+        if (await selectFile(created)) notice('Note created: ' + created, 'success');
+      } else notice('Folder created: ' + created, 'success');
+    }
+  }
+  function startDraft(kind) {
+    if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
+    const folder = selectedFolder;
+    inlineDraft = { parent: folder, kind, finished: false };
+    ui.search.value = '';
+    setSideTab('files');
+    const parts = folder.split('/').filter(Boolean);
+    for (let i = 0; i <= parts.length; i++) expanded.add(parts.slice(0, i).join('/'));
+    renderTree();
+  }
+  function startInlineRename(node) {
+    if (bridge.getMode() !== 'readwrite' || operations.isBusy() || node.kind !== 'file') return;
+    inlineDraft = { kind: 'rename', path: node.path, parent: parentPath(node.path), finished: false };
+    ui.search.value = ''; setSideTab('files'); renderTree();
+  }
+  function makeNameInput(draft, parent) {
+    const input = document.createElement('input');
+    input.className = 'tree-name-input'; input.type = 'text'; input.spellcheck = false;
+    input.setAttribute('aria-label', draft.kind === 'rename' ? 'Rename file' : 'New item name');
+    input.value = draft.kind === 'rename' ? basename(draft.path) : (draft.kind === 'file' ? 'New note.md' : 'New folder');
+    let cancelled = false;
+    input.addEventListener('click', event => event.stopPropagation());
+    input.addEventListener('keydown', event => {
+      event.stopPropagation();
+      if (event.key === 'Escape') { event.preventDefault(); cancelled = true; draft.finished = true; inlineDraft = null; renderTree(); }
+      if (event.key === 'Enter') { event.preventDefault(); input.blur(); }
+    });
+    input.addEventListener('blur', () => {
+      if (cancelled || draft.finished) return;
+      if (draft.kind === 'rename') {
+        draft.finished = true; inlineDraft = null;
+        const next = input.value.trim();
+        renderTree();
+        if (next && next !== basename(draft.path)) {
+          if (next.includes('/') || next.includes('\\')) notice('Inline renaming accepts only the filename.', 'error');
+          else void renamePath(draft.path, combinePath(draft.parent, next));
+        }
+      } else void completeDraft(draft, input.value);
+    });
+    parent.append(input);
+    requestAnimationFrame(() => {
+      if (!input.isConnected) return;
+      input.focus();
+      const dot = input.value.lastIndexOf('.');
+      input.setSelectionRange(0, draft.kind !== 'directory' && dot > 0 ? dot : input.value.length);
+    });
   }
   function renderTree() {
     const root = bridge.getTree();
@@ -272,55 +409,123 @@
       const row = document.createElement('button');
       row.type = 'button'; row.className = 'tree-row';
       if (node.kind === 'file' && node.path === activePath) row.classList.add('selected');
+      if (node.kind === 'directory' && node.path && node.path === selectedFolder) row.classList.add('selected-folder');
       row.setAttribute('aria-label', node.path || node.name);
       const open = expanded.has(node.path) || Boolean(needle);
       const glyph = document.createElement('span'); glyph.className = 'glyph';
-      glyph.textContent = node.kind === 'directory' ? (open ? '▾' : '▸') : '◦';
+      glyph.textContent = node.kind === 'directory' ? (open ? '▾' : '▸') : node.kind === 'image' ? '▧' : '◦';
       const label = document.createElement('span'); label.textContent = node.name;
-      row.append(glyph, label); parent.append(row);
-      if (node.kind === 'file') row.addEventListener('click', () => void selectFile(node.path));
-      else {
-        row.addEventListener('click', () => { if (open) expanded.delete(node.path); else expanded.add(node.path); renderTree(); });
+      row.append(glyph, label);
+      const entry = document.createElement('div'); entry.className = 'tree-entry';
+      entry.append(row);
+      if (node.kind === 'image') row.classList.add('tree-image');
+      // Native HTML5 DnD is enabled only in explicit move mode. The source
+      // comes from this tree, never from untrusted external drops.
+      if (node.kind === 'file' && moveEnabled && bridge.getMode() === 'readwrite') {
+        row.draggable = true;
+        row.classList.add('tree-draggable');
+        row.title = 'Drag and drop this file into another folder, or press M to open the move dialog';
+        row.addEventListener('dragstart', event => {
+          if (!moveEnabled || operations.isBusy()) { event.preventDefault(); return; }
+          draggedPath = node.path;
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', node.path);
+          row.classList.add('tree-drag-source');
+        });
+        row.addEventListener('dragend', () => { draggedPath = null; clearDragHighlights(); });
+        row.addEventListener('keydown', event => {
+          if (event.key.toLowerCase() === 'm' && !event.altKey && !event.ctrlKey && !event.metaKey) {
+            event.preventDefault(); showMoveDialog(node.path);
+          }
+        });
+      }
+      if (node.kind === 'directory') {
+        row.addEventListener('dragover', event => {
+          if (!moveEnabled || !draggedPath || !bridge.hasFile(draggedPath) || operations.isBusy()) return;
+          event.preventDefault(); event.stopPropagation();
+          event.dataTransfer.dropEffect = 'move';
+          clearDragHighlights(); row.classList.add('tree-drop-target');
+        });
+        row.addEventListener('dragleave', () => row.classList.remove('tree-drop-target'));
+        row.addEventListener('drop', event => {
+          if (!moveEnabled || !draggedPath || !bridge.hasFile(draggedPath) || operations.isBusy()) return;
+          event.preventDefault(); event.stopPropagation();
+          const source = draggedPath;
+          draggedPath = null;
+          clearDragHighlights();
+          showMoveDialog(source, combinePath(node.path, basename(source)));
+        });
+      }
+      if (node.path && bridge.getMode() === 'readwrite') {
+        const remove = document.createElement('button');
+        remove.type = 'button'; remove.className = 'tree-delete'; remove.textContent = '×';
+        remove.setAttribute('aria-label', `Delete ${node.kind === 'directory' ? 'folder' : 'file'} ${node.path}`);
+        remove.title = 'Permanently delete (confirmation required)';
+        remove.addEventListener('click', () => void deleteItem(node.path, node.kind));
+        entry.append(remove);
+      }
+      parent.append(entry);
+      if (node.kind === 'file') {
+        row.addEventListener('click', event => {
+          if (event.detail > 1) return;
+          clearTimeout(treeClickTimer);
+          treeClickTimer = setTimeout(() => void selectFile(node.path), 265);
+        });
+        row.addEventListener('dblclick', event => {
+          event.preventDefault(); clearTimeout(treeClickTimer); startInlineRename(node);
+        });
+      } else if (node.kind === 'image') {
+        row.addEventListener('click', () => showImage(node.path));
+      } else {
+        row.addEventListener('click', () => { selectedFolder = node.path; if (open) expanded.delete(node.path); else expanded.add(node.path); renderTree(); });
         if (open) {
           const nested = document.createElement('div'); nested.className = 'tree-children';
           parent.append(nested); node.children.forEach(child => make(child, nested));
+          if (inlineDraft && inlineDraft.parent === node.path && inlineDraft.kind !== 'rename') makeNameInput(inlineDraft, nested);
         }
+      }
+      if (inlineDraft && inlineDraft.kind === 'rename' && inlineDraft.path === node.path) {
+        row.hidden = true;
+        makeNameInput(inlineDraft, entry);
       }
     };
     make(root, ui.tree);
-    const count = node => node.kind === 'file' ? 1 : node.children.reduce((n, child) => n + count(child), 0);
-    ui.count.textContent = `${count(root)} .md`;
+    const count = node => node.kind === 'file' ? 1 : node.kind === 'directory' ? node.children.reduce((n, child) => n + count(child), 0) : 0;
+    ui.count.textContent = `${count(root)} .md · ${bridge.getAssetPaths().length} images`;
     ui.rootName.textContent = root.name;
   }
   function showScanProgress(progress) {
-    notice('Načítám adresáře… ' + progress.directories + ' složek, ' + progress.files + ' poznámek' +
-      (progress.skipped ? ' · nepřístupné složky: ' + progress.skipped : '') + ' (prosím vyčkej)');
+    notice(`Scanning folders… ${progress.directories} folders, ${progress.files} notes` +
+      (progress.skipped ? ` · inaccessible folders: ${progress.skipped}` : '') + ' (please wait)');
   }
   function applyOpen(result) {
     operations.invalidateReads();
-    clearEditor(); expanded = new Set(['']); ui.search.value = '';
-    ui.mode.textContent = result.mode === 'readwrite' ? 'Čtení + zápis' : 'Jen pro čtení';
-    ui.refresh.disabled = result.mode !== 'readwrite';
+    if ($('image-dialog').open) $('image-dialog').close();
+    clearEditor(); inlineDraft = null; selectedFolder = ''; expanded = new Set(['']); ui.search.value = '';
+    ui.mode.textContent = result.mode === 'readwrite' ? 'Read/write' : 'Read-only';
+    ui.refresh.disabled = !bridge.getRootHandle();
+    ui.readonlyToggle.checked = result.mode === 'readonly';
     $('new-file').disabled = result.mode !== 'readwrite';
     $('new-folder').disabled = result.mode !== 'readwrite';
+    draggedPath = null; moveEnabled = false; updateMoveModeUI();
     wikiIndex.invalidate(); indexPromise = null;
     $('fulltext-results').replaceChildren(); $('backlinks-results').replaceChildren();
-    $('fulltext-status').textContent = 'Index bude vytvořen při prvním hledání. Žádná data neopustí počítač.';
+    $('fulltext-status').textContent = 'The search index will be built on first use. No content leaves your computer.';
     renderTree();
     const skipped = result.scanInfo?.skipped || 0;
     if (skipped) {
       const sample = (result.scanInfo.skippedPaths || []).join(', ');
-      notice('Wiki otevřena, ale ' + skipped + ' podsložek se nepodařilo přečíst' +
-        (sample ? ' (např. ' + sample + ')' : '') + '. Jejich obsah se nezobrazuje; ostatní složky fungují.', 'error');
+      notice(`Wiki opened, but ${skipped} subfolders could not be read` +
+        (sample ? ` (e.g. ${sample})` : '') + '. These contents are not shown; other folders are available.', 'error');
     } else {
       notice(result.mode === 'readwrite'
-        ? 'Wiki otevřena pro čtení i zápis (' + (result.scanInfo?.files ?? '?') + ' poznámek). Soubor se přepisuje až po kliknutí na Uložit.'
-        : 'Wiki otevřena jen pro čtení. Náhled a odkazy fungují i bez práva zápisu.', 'success');
+        ? `Wiki opened with read/write access (${result.scanInfo?.files ?? '?'} notes). Notes are written to disk only when you click Save.`
+        : 'Wiki opened read-only. Preview and links remain available.', 'success');
     }
   }
   function invalidateWikiIndex() {
     wikiIndex.invalidate(); indexPromise = null;
-    $('fulltext-status').textContent = 'Po změně stromu bude fulltext vytvořen při dalším hledání.';
+    $('fulltext-status').textContent = 'The full-text index will be rebuilt on the next search.';
     $('fulltext-results').replaceChildren();
     $('backlinks-results').replaceChildren();
   }
@@ -328,20 +533,20 @@
     if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
     if (kind === 'file' && !confirmDiscard()) return;
     const parent = activePath && activePath.includes('/') ? activePath.slice(0, activePath.lastIndexOf('/') + 1) : '';
-    const suggested = parent + (kind === 'file' ? 'Nová poznámka.md' : 'Nová složka');
+    const suggested = parent + (kind === 'file' ? 'New note.md' : 'New folder');
     const path = window.prompt(kind === 'file'
-      ? 'Cesta poznámky od kořene wiki, např. /knowledge/pivo.md. Nové složky lze potvrdit v dalším kroku:'
-      : 'Cesta nové složky od kořene wiki, např. /knowledge/novaslozka:', suggested);
+      ? 'Note path from wiki root, e.g. /knowledge/beer.md. You can confirm creation of missing folders next:'
+      : 'New folder path from wiki root, e.g. /knowledge/new-folder:', suggested);
     if (path === null || !path.trim()) return;
     let createParents = false;
     try {
       const missing = await bridge.missingParents(path, kind);
       if (missing) {
-        createParents = window.confirm('Složka „' + missing + '“ neexistuje.\n\n' +
-          'Vytvořit chybějící podsložky uvnitř vybrané wiki a pokračovat?');
-        if (!createParents) { notice('Vytvoření bylo zrušeno; žádná složka nebyla založena.'); return; }
+        createParents = window.confirm('Folder "' + missing + '" does not exist.\n\n' +
+          'Create missing folders inside this wiki and continue?');
+        if (!createParents) { notice('Creation cancelled; no folders were created.'); return; }
       }
-    } catch (error) { notice('Neplatná cesta: ' + error.message, 'error'); return; }
+    } catch (error) { notice('Invalid path: ' + error.message, 'error'); return; }
     if (!beginOperation('create')) return;
     let createdPath = null;
     try {
@@ -356,49 +561,70 @@
         const segments = directory.split('/');
         for (let i = 1; i <= segments.length; i++) expanded.add(segments.slice(0, i).join('/'));
         renderTree();
-        notice(`Vytvořena složka: ${directory}`, 'success');
+        notice(`Folder created: ${directory}`, 'success');
       }
-    } catch (err) { notice(`Nelze vytvořit položku: ${err.message}`, 'error'); }
+    } catch (err) { notice(`Cannot create item: ${err.message}`, 'error'); }
     finally { endOperation('create'); }
     if (createdPath) {
       clearEditor(); // User explicitly approved discarding old edits before creation.
-      if (await selectFile(createdPath)) notice(`Vytvořena poznámka: ${createdPath}. Nyní ji můžeš upravovat.`, 'success');
+      if (await selectFile(createdPath)) notice(`Note created: ${createdPath}. You can edit it now.`, 'success');
     }
   }
-  async function renameActive() {
-    if (!activePath || bridge.getMode() !== 'readwrite') return;
+  async function deleteItem(path, kind) {
+    if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
+    if (!confirmDiscard()) return;
+    if (!beginOperation('delete')) return;
+    try {
+      const snapshot = await bridge.deletionSnapshot(path, kind);
+      let message = kind === 'file' ? `Permanently delete note "${path}"?` :
+        `Permanently delete folder "${path}" and all of its contents?\n\n` +
+        `Contains ${snapshot.files} files and ${Math.max(0, snapshot.directories - 1)} subfolders. ` +
+        `This includes non-Markdown files. This action cannot be undone.`;
+      if (!window.confirm(message)) { notice('Deletion cancelled.'); return; }
+      if (kind === 'directory' && snapshot.files > 0 &&
+          !window.confirm('Final confirmation: permanently delete the entire folder "' + path + '" and all ' + snapshot.files + ' files?')) {
+        notice('Folder deletion cancelled.'); return;
+      }
+      await bridge.deleteEntry(path, kind, snapshot);
+      invalidateWikiIndex();
+      if (activePath === path || (kind === 'directory' && activePath?.startsWith(path + '/'))) clearEditor();
+      renderTree();
+      notice(`Deleted: ${path}`, 'success');
+    } catch (err) { notice('Deletion failed: ' + err.message, 'error'); }
+    finally { endOperation('delete'); }
+  }
+  async function renamePath(oldPath, requested) {
+    if (!oldPath || bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
     if (isDirty()) {
-      notice('Před přesunem nejprve ulož nebo vrať neuložené změny.', 'error'); return;
+      notice('Save or discard unsaved changes before moving a note.', 'error'); return;
     }
-    const oldPath = activePath;
-    const requested = window.prompt('Nová relativní cesta souboru v rámci wiki (.md):', oldPath);
-    if (requested === null || !requested.trim() || !beginOperation('rename')) return;
-    $('rename-file').disabled = true;
+    if (!requested || !requested.trim() || !beginOperation('rename')) return;
+    updateMoveModeUI();
     let moved = null, summaryNotice = '';
     try {
       const newPath = bridge.normalizeDestination(requested);
       if (newPath === oldPath) return;
-      notice('Kontroluji odkazy napříč wiki…');
+      notice('Checking links across the wiki…');
       const snapshots = await window.LocalWikiMigration.snapshotAll(bridge);
       const plan = window.LocalWikiMigration.plan(snapshots, oldPath, newPath);
       // A transaction spanning multiple disk files is not available in the
       // browser; request explicit user confirmation with the computed scope.
       const examples = plan.changes.slice(0, 6).map(x => `• ${x.path} (${x.links})`).join('\n');
-      const more = plan.affectedFiles > 6 ? `\n…a ${plan.affectedFiles - 6} dalších` : '';
-      const summary = `Přesunout ${oldPath} → ${newPath}?\n\n` +
-        `Předběžně nalezeno ${plan.totalLinks} odkazů k opravě v ${plan.affectedFiles} souborech.` +
+      const more = plan.affectedFiles > 6 ? `\n…and ${plan.affectedFiles - 6} more` : '';
+      const summary = `Move ${oldPath} → ${newPath}?\n\n` +
+        `Found ${plan.totalLinks} links to update across ${plan.affectedFiles} files.` +
         (examples ? `\n${examples}${more}` : '') +
-        '\n\nOpravují se jen jednoznačně rozpoznané Markdown a [[wiki]] odkazy. ' +
-        'Nepodporované zápisy zůstanou beze změny. Operace více souborů není atomická. ' +
-        'Než začneš, měj zálohu wiki. Pokračovat?';
-      if (!window.confirm(summary)) { notice('Přesun byl zrušen.'); return; }
+        '\n\nOnly unambiguous Markdown and [[wiki]] links will be updated. ' +
+        'Unsupported syntax is left unchanged. Multi-file operations are not atomic. ' +
+        'Keep a backup of your wiki. Continue?';
+      if (plan.totalLinks > 0 && !window.confirm(summary)) { notice('Move cancelled.'); return; }
       const result = await window.LocalWikiMigration.execute(bridge, plan, snapshots);
       invalidateWikiIndex();
       for (const prefix of newPath.split('/').slice(0, -1).map((_, i, all) => all.slice(0, i + 1).join('/'))) expanded.add(prefix);
       moved = result.moved;
-      summaryNotice = `Přesun dokončen: ${oldPath} → ${newPath}. Upraveno ${result.links} odkazů v ${result.updated} dokumentech.`;
+      summaryNotice = `Moved: ${oldPath} → ${newPath}. Updated ${result.links} links in ${result.updated} documents.`;
     } catch (err) {
-      notice(`Přesun se nepodařil: ${err.message}`, 'error');
+      notice(`Move failed: ${err.message}`, 'error');
       // Partial write errors may create a target copy. Re-scan in all cases.
       try {
         await bridge.refresh();
@@ -407,13 +633,27 @@
       } catch (_) { /* Error message above is the authoritative status. */ }
     } finally {
       endOperation('rename');
-      $('rename-file').disabled = !activePath || bridge.getMode() !== 'readwrite';
+      updateMoveModeUI();
     }
     if (moved) {
+      // Re-read the active document even if another note was renamed: the link
+      // migration may have changed its bytes, invalidating the fingerprint.
+      const next = activePath === oldPath ? moved : activePath;
       clearEditor();
-      if (await selectFile(moved)) notice(summaryNotice, 'success');
+      if (next && bridge.hasFile(next)) await selectFile(next);
+      notice(summaryNotice, 'success');
     }
   }
+  function renameActive() { showMoveDialog(activePath); }
+  $('move-cancel').addEventListener('click', () => $('move-dialog').close());
+  $('move-form').addEventListener('submit', evt => {
+    evt.preventDefault();
+    const target = $('move-destination').value.trim();
+    const source = pendingMovePath;
+    $('move-dialog').close();
+    if (source && target) void renamePath(source, target);
+  });
+  $('move-dialog').addEventListener('close', () => { pendingMovePath = null; });
   function setView(mode) {
     selectedMode = mode; ui.grid.dataset.layout = mode;
     for (const button of document.querySelectorAll('.view-switch button')) button.classList.toggle('active', button.dataset.view === mode);
@@ -432,9 +672,9 @@
   }
   function buildToc() {
     const target = $('toc'); target.replaceChildren();
-    if (!activePath) { target.textContent = 'Otevři poznámku.'; return; }
+    if (!activePath) { target.textContent = 'Open a note.'; return; }
     const heads = ui.preview.querySelectorAll('h1,h2,h3,h4,h5,h6');
-    if (!heads.length) { target.textContent = 'Dokument neobsahuje nadpisy.'; return; }
+    if (!heads.length) { target.textContent = 'No headings in this note.'; return; }
     heads.forEach(h => {
       const b = document.createElement('button'); b.className = 'toc-item'; b.type = 'button';
       const depth = Number(h.tagName.slice(1)); b.style.paddingLeft = `${8 + (depth - 1) * 10}px`;
@@ -448,21 +688,22 @@
   async function ensureIndex() {
     if (wikiIndex.isReady()) return true;
     if (indexPromise) return indexPromise;
-    if (bridge.getMode() === 'none') { notice('Nejprve otevři složku wiki.', 'error'); return false; }
+    if (bridge.getMode() === 'none') { notice('Open a wiki folder first.', 'error'); return false; }
     const status = $('fulltext-status');
     indexPromise = wikiIndex.rebuild((done, total) => {
-      status.textContent = `Indexuji lokální wiki: ${done} / ${total} souborů…`;
+      status.textContent = `Indexing local wiki: ${done} / ${total} files…`;
     }).then(result => {
       if (result.stale) return false;
-      status.textContent = `Připraveno: ${result.indexed} z ${result.total} souborů. Index je pouze v paměti prohlížeče.`;
+      status.textContent = `Ready: ${result.indexed} of ${result.total} files. The index is kept in browser memory only.`;
       return true;
     }).catch(err => {
-      status.textContent = `Indexování selhalo: ${err.message}`;
+      status.textContent = `Indexing failed: ${err.message}`;
       return false;
     }).finally(() => { indexPromise = null; });
     return indexPromise;
   }
-  // Search results preserve the selected editor/preview layout.
+  // Search results respect the user's view. In preview, locate a visible
+  // occurrence without opening the editor; in edit/split navigate the source.
   function highlightPreviewQuery(query) {
     ui.preview.querySelectorAll('mark.wiki-search-hit').forEach(mark => {
       mark.replaceWith(document.createTextNode(mark.textContent));
@@ -494,7 +735,7 @@
     if (!opened || activePath !== path) return;
     if (selectedMode === 'preview') {
       if (!highlightPreviewQuery(query)) {
-        notice('Soubor je otevřen v náhledu, ale přesný hledaný text nebyl ve vykresleném Markdownu nalezen (může být ve zdrojové syntaxi).');
+        notice('The note is open in preview, but the exact term was not found in rendered Markdown (it may occur only in source syntax).');
       }
       return;
     }
@@ -507,7 +748,7 @@
   }
   async function doFulltext() {
     const query = $('fulltext-query').value.trim();
-    if (!query) { $('fulltext-status').textContent = 'Zadej hledaný text.'; return; }
+    if (!query) { $('fulltext-status').textContent = 'Enter a search term.'; return; }
     $('fulltext-run').disabled = true;
     try {
       if (!await ensureIndex()) return;
@@ -516,109 +757,64 @@
       for (const hit of results) addResult(area, `${hit.path}:${hit.line}`, hit.snippet,
         () => void openResult(hit.path, hit.line, query));
       if (!results.length) area.textContent = 'Nic nenalezeno.';
-      $('fulltext-status').textContent = `${results.length} shod${results.length === 1 ? 'a' : ''} (max. 3 na soubor, nejvýše 100 výsledků).`;
+      $('fulltext-status').textContent = `${results.length} matches (up to 3 per file, maximum 100 results).`;
     } finally { $('fulltext-run').disabled = false; }
   }
   async function doBacklinks() {
-    if (!activePath) { $('backlinks-results').textContent = 'Nejdřív otevři poznámku.'; return; }
+    if (!activePath) { $('backlinks-results').textContent = 'Open a note first.'; return; }
     const path = activePath;
     $('backlinks-run').disabled = true;
-    $('backlinks-results').textContent = 'Načítám odkazy…';
+    $('backlinks-results').textContent = 'Loading links…';
     try {
       if (!await ensureIndex()) return;
       if (path !== activePath) return;
       const refs = wikiIndex.backlinks(path);
       const area = $('backlinks-results'); area.replaceChildren();
-      if (!refs.length) area.textContent = 'Na tento dokument zatím neodkazuje žádná další poznámka.';
-      else refs.forEach(from => addResult(area, from, 'Odkazuje na tento soubor', () => void openResult(from)));
+      if (!refs.length) area.textContent = 'No other notes link to this document.';
+      else refs.forEach(from => addResult(area, from, 'Odkazuje na tento file', () => void openResult(from)));
     } finally { $('backlinks-run').disabled = false; }
   }
   document.querySelectorAll('[data-side]').forEach(b => b.addEventListener('click', () => setSideTab(b.dataset.side)));
   $('fulltext-run').addEventListener('click', () => void doFulltext());
   $('fulltext-query').addEventListener('keydown', e => { if (e.key === 'Enter') void doFulltext(); });
   $('backlinks-run').addEventListener('click', () => void doBacklinks());
-  // Directory bookmarks are strictly opt-in. Only the handle is stored in IndexedDB.
-  // The browser retains control of read/write permission. No automatic requestPermission on load.
+  // Remember the last folder automatically, but never prompt for permission
+  // during page load. Chrome remains in full control of the permission grant.
   const recent = window.LocalWikiRecent;
-  const restoreButton = $('restore-last'), forgetButton = $('forget-last');
-  const rememberCheckbox = $('remember-root');
-  let rememberedHandle = null;
-  async function checkRemembered() {
+  async function rememberCurrent() {
+    const handle = bridge.getRootHandle();
+    if (!handle) return;
+    try { await recent.remember(handle); }
+    catch (err) { notice('Wiki opened, but remembering it failed: ' + err.message, 'error'); }
+  }
+  async function restoreQuietly() {
     try {
-      rememberedHandle = await recent.restoreHandle();
-      restoreButton.disabled = !rememberedHandle;
-      forgetButton.disabled = !rememberedHandle;
-      if (bridge.getMode() === 'none') rememberCheckbox.checked = Boolean(rememberedHandle);
+      const handle = await recent.restoreHandle();
+      if (!handle || bridge.getMode() !== 'none' || operations.isBusy()) return;
+      const writable = await recent.ensurePermission(handle, false);
+      const readable = writable || await recent.ensurePermission(handle, false, true);
+      if (!readable) {
+        notice('The previous wiki is remembered. Chrome needs renewed permission; use Open folder.');
+        return;
+      }
+      if (!beginOperation('restore')) return;
+      try { applyOpen(await bridge.openExisting(handle, showScanProgress, !writable)); }
+      finally { endOperation('restore'); }
     } catch (err) {
-      rememberedHandle = null;
-      restoreButton.disabled = true; forgetButton.disabled = true;
-      notice(`Nelze přečíst poslední složku: ${err.message}`, 'error');
+      notice('Automatic reopening of your wiki failed: ' + err.message, 'error');
     }
   }
-  void checkRemembered();
-  rememberCheckbox.addEventListener('change', async () => {
-    const handle = bridge.getRootHandle();
-    if (!handle || bridge.getMode() !== 'readwrite') {
-      notice(rememberCheckbox.checked ? 'Výběr se zapamatuje při otevření příští složky.' : 'Pro odstranění již uloženého výběru použij Zapomenout.');
-      return;
-    }
-    try {
-      if (rememberCheckbox.checked) {
-        await recent.remember(handle); await checkRemembered();
-        notice('Aktuální wiki je zapamatovaná v tomto prohlížeči. Příště použij Poslední wiki.', 'success');
-      } else {
-        await recent.forget(); await checkRemembered();
-        notice('Zapamatování wiki vypnuto. Otevřená složka zůstává beze změny.', 'success');
-      }
-    } catch (err) {
-      rememberCheckbox.checked = !rememberCheckbox.checked;
-      notice('Zapamatování nelze změnit: ' + err.message, 'error');
-    }
-  });
-  restoreButton.addEventListener('click', async () => {
-    if (!rememberedHandle || !confirmDiscard() || !beginOperation('restore')) return;
-    try {
-      // Requesting permission is deliberately user-initiated. Browser may decline
-      // the request; in that case the old bookmark is not used and nothing is written.
-      if (!await recent.ensurePermission(rememberedHandle, true)) {
-        throw new Error('Prohlížeč neudělil přístup. Otevři složku znovu tlačítkem Otevřít složku.');
-      }
-      applyOpen(await bridge.openExisting(rememberedHandle, showScanProgress));
-    } catch (err) { notice(`Poslední wiki nelze otevřít: ${err.message}`, 'error'); }
-    finally { endOperation('restore'); }
-  });
-  forgetButton.addEventListener('click', async () => {
-    try {
-      await recent.forget();
-      rememberedHandle = null;
-      restoreButton.disabled = true; forgetButton.disabled = true;
-      rememberCheckbox.checked = false;
-      notice('Zapamatovaný výběr byl smazán z prohlížeče. Otevřená wiki zůstává beze změny.', 'success');
-    } catch (err) { notice(`Výběr nelze smazat: ${err.message}`, 'error'); }
-  });
+  void restoreQuietly();
   ui.open.addEventListener('click', async () => {
     if (!confirmDiscard() || !beginOperation('open')) return;
     try {
-      applyOpen(await bridge.openWritable(showScanProgress));
-      if (rememberCheckbox.checked) {
-        try {
-          await recent.remember(bridge.getRootHandle());
-          await checkRemembered();
-          notice('Wiki byla otevřena a zapamatována. Příště použij Poslední wiki.', 'success');
-        } catch (err) {
-          notice(`Wiki je otevřená, ale výběr se nepodařilo zapamatovat: ${err.message}`, 'error');
-        }
-      }
-    }
-    catch (err) { if (err.name !== 'AbortError') notice(`Otevření selhalo: ${err.message}`, 'error'); }
-    finally { endOperation('open'); }
+      applyOpen(await bridge.openWritable(showScanProgress, ui.readonlyToggle.checked));
+      await rememberCurrent();
+    } catch (err) {
+      if (err.name !== 'AbortError') notice(`Could not open folder: ${err.message}`, 'error');
+    } finally { endOperation('open'); }
   });
-  ui.readonly.addEventListener('click', () => {
-    if (!operations.isBusy() && confirmDiscard()) {
-      notice('Zvol složku pro nezapisovatelný režim. Náhled v něm funguje, ale změny nelze ukládat.');
-      ui.picker.click();
-    }
-  });
+  // Input fallback is retained only for browsers without File System Access API.
   ui.picker.addEventListener('change', () => {
     if (operations.isBusy()) { ui.picker.value = ''; return; }
     try { applyOpen(bridge.openReadOnly(ui.picker.files)); }
@@ -628,15 +824,23 @@
   ui.refresh.addEventListener('click', async () => {
     if (!confirmDiscard() || !beginOperation('refresh')) return;
     const old = activePath;
-    try { applyOpen(await bridge.refresh(showScanProgress)); }
-    catch (err) { notice(`Obnovení selhalo: ${err.message}`, 'error'); }
+    let refreshed = false;
+    try { applyOpen(await bridge.refresh(showScanProgress)); refreshed = true; }
+    catch (err) { notice(`Refresh failed: ${err.message}`, 'error'); }
     finally { endOperation('refresh'); }
-    if (old && bridge.hasFile(old)) await selectFile(old);
+    if (refreshed && old && bridge.hasFile(old)) await selectFile(old);
   });
-  ui.reload.addEventListener('click', () => void reloadActive());
-  $('rename-file').addEventListener('click', () => void renameActive());
-  $('new-file').addEventListener('click', () => void createNew('file'));
-  $('new-folder').addEventListener('click', () => void createNew('directory'));
+  $('rename-file').addEventListener('click', () => {
+    if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
+    moveEnabled = !moveEnabled;
+    draggedPath = null; clearDragHighlights();
+    updateMoveModeUI(); renderTree();
+    notice(moveEnabled
+      ? 'Move mode enabled. Drag and drop a Markdown file onto a folder; review its destination in the dialog. Press M on a focused note for manual entry.'
+      : 'Move mode disabled. File dragging is off.');
+  });
+  $('new-file').addEventListener('click', () => startDraft('file'));
+  $('new-folder').addEventListener('click', () => startDraft('directory'));
   editor.onChange(() => { redrawDirty(); scheduleRender(); });
   document.querySelectorAll('[data-format]').forEach(button => button.addEventListener('click', () => editor.format(button.dataset.format)));
   ui.search.addEventListener('input', renderTree);
@@ -653,11 +857,11 @@
         originalText = savedText;
         fingerprint = result.fingerprint;
         wikiIndex.update(path, savedText);
-        if (editor.getValue() === savedText) notice(`Uloženo do původního souboru: ${path}`, 'success');
-        else notice(`Uložena předchozí verze ${path}. Novější úpravy v editoru stále čekají na další uložení.`, 'success');
+        if (editor.getValue() === savedText) notice(`Saved to original file: ${path}`, 'success');
+        else notice(`Saved an earlier version of ${path}. Newer edits in the editor still need saving.`, 'success');
       }
     } catch (err) {
-      notice(`Uložení zastaveno: ${err.message} Text zůstal v editoru.`, 'error');
+      notice(`Save blocked: ${err.message} The text remains in the editor.`, 'error');
     } finally { endOperation('save'); }
   });
   ui.preview.addEventListener('click', evt => {
@@ -675,7 +879,7 @@
     if (/^https?:\/\//i.test(href) || /^mailto:/i.test(href)) {
       evt.preventDefault(); window.open(href, '_blank', 'noopener,noreferrer'); return;
     }
-    evt.preventDefault(); notice(`Odkaz nelze otevřít: ${href} (soubor ve wiki nebyl nalezen).`, 'error');
+    evt.preventDefault(); notice(`Cannot open link: ${href} (file not found in the wiki).`, 'error');
   });
   document.addEventListener('keydown', evt => {
     if ((evt.ctrlKey || evt.metaKey) && evt.key.toLowerCase() === 'n') {
@@ -686,10 +890,10 @@
     }
   });
   window.addEventListener('beforeunload', evt => { if (isDirty()) { evt.preventDefault(); evt.returnValue = ''; } });
-  $('diag-api').textContent = `${location.protocol} · ${typeof window.showDirectoryPicker === 'function' ? 'File System API ✓' : 'File System API nedostupné'}`;
+  $('diag-api').textContent = `${location.protocol} · ${typeof window.showDirectoryPicker === 'function' ? 'File System API ✓' : 'File System API unavailable'}`;
   setView(selectedMode);
 
-  // Hide installer in fully bundled offline releases; retain for incomplete builds.
+  // A complete offline release already has both libraries; no installer button is needed.
   const bundledRenderers = window.LocalWikiDiagrams.capabilities();
   if (bundledRenderers.mermaid && bundledRenderers.abc) $('renderer-check').hidden = true;
 
@@ -699,13 +903,13 @@
     const details = $('renderer-details'); details.replaceChildren();
     const items = [
       ['Markdown (marked)', !!window.marked],
-      ['Matematika (MathJax)', !!(window.MathJax && window.MathJax.Hub)],
-      ['Mermaid diagramy', status.mermaid],
-      ['ABC notový zápis', status.abc]
+      ['Math (MathJax)', !!(window.MathJax && window.MathJax.Hub)],
+      ['Mermaid diagrams', status.mermaid],
+      ['ABC music notation', status.abc]
     ];
     for (const [name, available] of items) {
       const row = document.createElement('p'); row.className = 'renderer-detail';
-      row.textContent = `${available ? '✓' : '✕'} ${name}: ${available ? 'připraven' : 'chybí knihovna'}`;
+      row.textContent = `${available ? '✓' : '✕'} ${name}: ${available ? 'ready' : 'library missing'}`;
       details.appendChild(row);
     }
     const dialog = $('renderer-dialog');
@@ -718,7 +922,7 @@
     const output = $('renderer-smoke-result');
     if (button.disabled) return;
     button.disabled = true;
-    output.textContent = 'Provádím lokální test vykreslení diagramu a not…';
+    output.textContent = 'Running local diagram and notation rendering test…';
     try {
       const result = await window.LocalWikiRendererSmoke.run();
       const symbols = { ok: '✓', missing: '–', failed: '✕' };
@@ -728,7 +932,7 @@
         row.textContent = `${symbols[status.status]} ${label}: ${status.message}`;
         output.appendChild(row);
       }
-    } catch (error) { output.textContent = `Test nelze dokončit: ${error.message}`; }
+    } catch (error) { output.textContent = `Test failed: ${error.message}`; }
     finally { button.disabled = false; }
   });
   $('renderer-close').addEventListener('click', () => {
@@ -743,18 +947,18 @@
     const status = $('renderer-install-status');
     if (btn.disabled) return;
     btn.disabled = true;
-    status.textContent = 'Vyber složku aplikace obsahující index.html (ne wiki).';
+    status.textContent = 'Select the application folder containing index.html, not your wiki.';
     try {
       const result = await window.LocalWikiRendererInstaller.install({
         onProgress: message => { status.textContent = message; }
       });
       if (result.installed.length) {
-        status.textContent = `Nainstalováno: ${result.installed.join(', ')}. Obnov stránku (Ctrl+R), aby se knihovny načetly. K prohlížení wiki už nebude potřeba internet.`;
-        notice('Knihovny jsou uložené vedle aplikace. Po obnovení stránky budou fungovat offline.', 'success');
-      } else status.textContent = 'Obě knihovny už jsou přibalené. Pokud se nezobrazují, obnov stránku.';
+        status.textContent = `Installed: ${result.installed.join(', ')}. Reload the page (Ctrl+R) to load the libraries. Internet access is no longer required.`;
+        notice('Libraries were installed next to the application. Reload to use them offline.', 'success');
+      } else status.textContent = 'Both libraries are bundled. If rendering is missing, reload the page.';
     } catch (err) {
-      status.textContent = `Doplnění rendererů se nezdařilo: ${err.message || err}. Zápis se týká jen zvoleného adresáře aplikace.`;
-      notice('Doplnění rendererů nebylo dokončeno. Otevři Renderery pro podrobnosti.', 'error');
+      status.textContent = `Renderer installation failed: ${err.message || err}. Writes were limited to the selected application folder.`;
+      notice('Renderer installation did not complete. Open Renderers for details.', 'error');
     } finally { btn.disabled = false; }
   });
 
@@ -766,8 +970,8 @@
     const count = vendorFilesInput.files?.length || 0;
     vendorFilesButton.disabled = count === 0;
     $('renderer-install-status').textContent = count
-      ? `Vybráno ${count} souborů. Klikni na „Uložit vybrané JS offline“ a potvrď složku aplikace, nikoli wiki.`
-      : 'Soubory nejsou vybrány.';
+      ? `Selected ${count} files. Click Install selected JS offline and choose the application folder, not your wiki.`
+      : 'No files selected.';
   });
   vendorFilesButton.addEventListener('click', async () => {
     if (vendorFilesButton.disabled) return;
@@ -779,12 +983,12 @@
         onProgress: message => { status.textContent = message; }
       });
       status.textContent = result.installed.length
-        ? `Knihovny ${result.installed.join(', ')} uloženy. Obnov stránku (Ctrl+R). Internet nyní není potřeba.`
-        : 'Knihovny už byly přítomny a ověřeny. Nic jsem nepřepsal.';
-      notice('Dokončen lokální import rendererů.', 'success');
+        ? `Libraries ${result.installed.join(', ')} saved. Reload the page (Ctrl+R). Internet is no longer needed.`
+        : 'Libraries were already installed and verified; nothing was overwritten.';
+      notice('Local renderer import completed.', 'success');
     } catch (error) {
-      status.textContent = `Import nebyl dokončen: ${error?.message || error}`;
-      notice('Import rendererů selhal. Zdrojové soubory wiki zůstaly beze změny.', 'error');
+      status.textContent = `Import did not complete: ${error?.message || error}`;
+      notice('Renderer import failed. Wiki source files remain unchanged.', 'error');
     } finally { vendorFilesButton.disabled = !(vendorFilesInput.files?.length); }
   });
 
@@ -797,8 +1001,8 @@
       indexed: wikiIndex.indexedCount()
     });
     window.LocalWikiDiagnostics.download(report);
-    notice('Diagnostický soubor byl připraven ke stažení. Neobsahuje obsah ani názvy souborů.', 'success');
+    notice('Diagnostic JSON is ready to download. No wiki content or filenames are included.', 'success');
   });
 
-  window.LocalWikiDebug = { bridge, editor, operations, wikiIndex, selectFile, renderPreview, findDoc, setSideTab, createNew, renameActive }; // For reproducible offline smoke tests.
+  window.LocalWikiDebug = { bridge, editor, operations, wikiIndex, selectFile, renderPreview, findDoc, setSideTab, createNew, renameActive, showMoveDialog, updateMoveModeUI }; // For reproducible offline smoke tests.
 })();

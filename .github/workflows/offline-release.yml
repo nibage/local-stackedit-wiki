@@ -1,21 +1,11 @@
 name: Build complete offline wiki ZIP
 on:
-  # Build an offline ZIP automatically when sources change on main, as well as
-  # on demand. A failed genuine renderer test never uploads an artifact.
-  push:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'assets/**'
-      - 'index.html'
-      - 'tests/**'
-      - '.github/workflows/offline-release.yml'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -36,6 +26,10 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Verify bundled Mermaid and ABCjs render into SVG without network
         run: python tests/real-renderers-release-smoke.py --zip local-stackedit-wiki-offline.zip
+      - name: Verify workspace layout, sidebar resizing and theme colors
+        run: python tests/rc3-layout-storage-smoke.py
+      - name: Verify RC5 English UI, drag-and-drop safety, inline creation, images and palettes
+        run: python tests/rc5-ui-smoke.py
       - name: Upload verified ZIP
         uses: actions/upload-artifact@v4
         with:

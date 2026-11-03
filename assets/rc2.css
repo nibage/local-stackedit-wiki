@@ -1,0 +1,25 @@
+/* Preview syntax highlighting (offline Prism). The source content is never executed. */
+.markdown-preview pre code[class*="language-"] { background:transparent; padding:0; text-shadow:none; }
+.markdown-preview .token.comment, .markdown-preview .token.prolog { color:#667b8c; }
+.markdown-preview .token.string, .markdown-preview .token.char { color:#26805d; }
+.markdown-preview .token.keyword, .markdown-preview .token.boolean { color:#864fbc; font-weight:600; }
+.markdown-preview .token.function, .markdown-preview .token.class-name { color:#1e76af; }
+.markdown-preview .token.number, .markdown-preview .token.operator { color:#ae6d2c; }
+.markdown-preview .token.punctuation { color:#6c7b89; }
+[data-theme="dark"] .markdown-preview .token.comment { color:#8c9eae; }
+[data-theme="dark"] .markdown-preview .token.string, [data-theme="dark"] .markdown-preview .token.char { color:#86d8a6; }
+[data-theme="dark"] .markdown-preview .token.keyword, [data-theme="dark"] .markdown-preview .token.boolean { color:#d1a7ff; }
+[data-theme="dark"] .markdown-preview .token.function, [data-theme="dark"] .markdown-preview .token.class-name { color:#90c8ff; }
+[data-theme="dark"] .markdown-preview .token.number, [data-theme="dark"] .markdown-preview .token.operator { color:#ffbe87; }
+[data-theme="dark"] .markdown-preview .token.punctuation { color:#bbc5d2; }
+/* Safe delete controls for each visible file/folder; never nested buttons. */
+.tree-entry { display:flex; align-items:center; min-width:0; }
+.tree-entry > .tree-row { flex:1; min-width:0; width:auto; }
+.tree-delete { flex:0 0 21px; border:0; background:transparent; color:#aa4b56; padding:3px; margin-right:3px; opacity:0; border-radius:4px; font-size:16px; line-height:1.1; }
+.tree-entry:hover .tree-delete,.tree-delete:focus-visible { opacity:1; }
+.tree-delete:hover { background:#ffe5e5; color:#8e2020; }
+[data-theme="dark"] .tree-delete { color:#e99d9d; }
+[data-theme="dark"] .tree-delete:hover { background:#623238; color:#ffe6e6; }
+.readonly-option { display:inline-flex; align-items:center; gap:5px; padding:0 6px; white-space:nowrap; font-size:12px; }
+.readonly-option input { accent-color:var(--accent); }
+@media (hover:none) { .tree-delete { opacity:1; } }

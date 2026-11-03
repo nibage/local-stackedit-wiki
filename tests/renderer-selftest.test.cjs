@@ -67,6 +67,6 @@ test('Second concurrent run is rejected without interfering with the first', asy
   const x=fixture();
   const mermaid={initialize(){},mermaidAPI:{render(){}}};
   const first=x.run({document:x.document,adapter:x.adapter,mermaid,abc:null,timeoutMs:25});
-  await assert.rejects(x.run({document:x.document,adapter:x.adapter,mermaid,abc:null}),/už probíhá/);
+  await assert.rejects(x.run({document:x.document,adapter:x.adapter,mermaid,abc:null}),/already running/);
   await first;
 });

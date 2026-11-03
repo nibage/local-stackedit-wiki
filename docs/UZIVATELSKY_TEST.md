@@ -1,27 +1,40 @@
-# Testování po první zpětné vazbě
+# Uživatelské testování – opravy podle zpětné vazby
 
-## Nové chování
-- **Fulltext**: při otevření výsledku zůstává zvolený režim Náhled, Editor nebo Vedle sebe. V Náhledu se zvýrazní první viditelný výskyt prvního hledaného slova. Výskyt skrytý ve zdrojové Markdown syntaxi nemusí být v Náhledu viditelný.
-- **Nová poznámka**: `/knowledge/pivo.md` je cesta od kořene právě otevřené wiki, nikoli od kořene disku. Při `/nova/podslozka/pivo.md` se nabídne vytvořit chybějící adresáře; bez potvrzení se nic nevytvoří. Zakázané jsou `..`, síťové cesty, rezervované adresáře a překrývání názvů. Pokud až později selže vytvoření souboru, může na disku zůstat nová prázdná složka.
-- **Lišta**: tažením svislé hrany nastavíš šířku 190–520 px; dvojklik vrací 255 px. Klávesnice: šipky vlevo/vpravo, Home a End.
-- **Vzhled**: Světlý / Tmavý / Podle systému; preference se ukládá do localStorage, pokud jej prohlížeč povoluje.
+Otevírej `index.html` dvojklikem v Chrome nebo Edge. Pro první zápis používej kopii wiki, nikoliv jedinou kopii důležitých poznámek.
 
-## Rozdíly mezi tlačítky
-- **Otevřít složku**: přímý přístup k lokální wiki se čtením a zápisem, po potvrzení v Chromu.
-- **Otevřít bez zápisu** (dříve Jen pro čtení): záložní výběr souborů prostřednictvím `webkitdirectory`; neumožňuje ukládání ani správu souborů. Nesouvisí s přepínačem Náhled.
-- **Zapamatovat tuto wiki**: lze zaškrtnout před výběrem složky nebo přímo po něm; ukládá vybraný adresář do IndexedDB v tomto prohlížeči, nikoliv soubory.
-- **Poslední wiki**: znovu otevře uložený adresář; Chrome může znovu žádat oprávnění. Záleží na podpoře úložiště pro konkrétní `file://` původ.
-- **Zapomenout**: smaže uložený výběr, nikoliv soubory na disku.
-- **Načíst znovu**: právě otevřenou poznámku přečte z disku znovu; vhodné po úpravě ve VS Code / Obsidianu. Může zahodit neuložené úpravy po potvrzení.
-- **Obnovit strom**: znovu projde adresáře; vhodné po vytvoření, smazání nebo přejmenování souborů mimo aplikaci. Může zahodit neuložené úpravy po potvrzení.
-- **Renderery**: diagnostika a pomocník pro Mermaid/ABCjs. Ještě nejsou v repozitáři jako plné offline distribuce. GitHub Actions vytváří ověřovaný kompletní ZIP.
+## Vzhled a navigace
 
-## Doporučený test v Chrome
-1. Otevři kořen **kopie** testovací wiki.
-2. V režimu Náhled vyhledej známé slovo přes Fulltext a klikni na výsledek; zkontroluj, že zůstal náhled a je vidět zvýraznění.
-3. Vytvoř `/nova/podslozka/test.md` a potvrď založení podsložek.
-4. Změň motiv a šířku panelu, obnov stránku; volby by měly zůstat zachovány.
-5. Zaškrtni Zapamatovat tuto wiki; obnov stránku a klikni na Poslední wiki. Znovu případně povol přístup.
-6. Externě přidej `.md` a klikni Obnovit strom. Externě změň aktivní poznámku a klikni Načíst znovu.
+- **Vzhled**: Světlý / Tmavý / Podle systému. Volba se ukládá lokálně v prohlížeči (pokud prohlížeč úložiště dovolí).
+- **Šířka panelu**: tažením úzkého pruhu vedle levé lišty; minimum 190 px, maximum 520 px. Dvojklik na pruh obnoví 255 px. Pomocí kláves `←` a `→` lze měnit šířku také z klávesnice.
+- **Fulltext**: kliknutí na nalezený výsledek zachová aktuální režim Náhled / Editor / Vedle sebe. V Náhledu se vyhledá a zvýrazní první viditelný výskyt prvního hledaného slova. Výskyt ve zdrojové Markdown syntaxi (např. neviditelné URL) se v náhledu nemusí zobrazit.
 
-**Poznámka:** Automatické testy prohlížeče používají simulované soubory. Reálná perzistence File System Access handle v lokálním Chrome vyžaduje uživatelský test.
+## Vytváření poznámek
+
+- `pivo.md` – nová poznámka v kořeni wiki.
+- `/knowledge/pivo.md` – nová poznámka v existující podsložce `knowledge`.
+- `/novaslozka/pivo.md` – pokud složka neexistuje, aplikace požádá o její založení. **Bez souhlasu se nevytvoří žádný nový adresář.**
+- `/a/b/pivo.md` – po souhlasu vytvoří i několik chybějících podsložek.
+
+Počáteční `/` znamená kořen **vybrané wiki**, nikoli kořen disku. `..`, UNC cesty a rezervované názvy zůstávají zakázané. Stávající soubory se nepřepisují. Pokud vytvoření souboru selže až po založení podsložek (například kvůli oprávněním), prázdné složky mohou zůstat a lze je případně odstranit ručně.
+
+## Význam tlačítek
+
+- **Otevřít složku**: vybere skutečný adresář a požádá Chrome/Edge o právo číst i zapisovat soubory.
+- **Otevřít bez zápisu** (dříve Jen pro čtení): importuje seznam místních souborů pomocí fallback filepickeru; lze prohlížet Markdown, ale **nelze ukládat**. Není to režim Náhled; ten se zapíná tlačítkem vpravo nad dokumentem.
+- **Zapamatovat tuto wiki**: pokud už je otevřena pro zápis, zaškrtnutí rovnou uloží výběr do IndexedDB; můžeš ji zaškrtnout i před prvním otevřením složky.
+- **Poslední wiki**: znovu otevře uložený adresář po kliknutí; prohlížeč může požadovat nové schválení přístupu. Funguje pouze, pokud IndexedDB a handle persistence nejsou v Chrome blokovány (může záležet i na přesné cestě `file://`).
+- **Zapomenout**: odstraní uložený výběr z prohlížeče, nezmění wiki na disku.
+- **Načíst znovu**: znovu načte právě otevřenou poznámku z disku; typický případ: upravíš tutéž `.md` v Obsidianu/VS Code a chceš vidět nový obsah. Při neuložených změnách vyžaduje potvrzení jejich zahození.
+- **Obnovit strom**: znovu projde všechny adresáře a objeví nově přidané, odstraněné nebo přesunuté soubory; typický případ: mimo aplikaci vytvoříš celou složku či nové poznámky. Taky vyžaduje potvrzení zahození neuložených změn.
+- **Renderery**: diagnostika a jednorázové doplnění Mermaid / ABCjs. V plně offline distribuci z GitHub Actions mají být přibalené. Po úspěšném skutečném testu lze toto tlačítko odstranit nebo přesunout do nastavení.
+
+## Ruční regresní test
+
+1. Otevři kořen testovací wiki a otevři poznámku.
+2. Zvol **Náhled**, přepni na **Fulltext**, vyhledej známé slovo a otevři výsledek. Náhled musí zůstat aktivní a slovo má být zvýrazněné, pokud je skutečně viditelné ve vykresleném Markdownu.
+3. Vytvoř `/nova/podslozka/test.md`, potvrď založení chybějících podsložek. Ve stromu najdi novou poznámku.
+4. Změň šířku panelu, přepni tmavý/světlý motiv, obnov stránku; volby by měly zůstat zachovány, pokud je povoleno localStorage.
+5. Zaškrtni **Zapamatovat tuto wiki**, obnov stránku, klikni na **Poslední wiki**. Při žádosti Chrome znovu povol přístup.
+6. Mimo aplikaci vytvoř nový `.md`; po **Obnovit strom** se má objevit. Mimo aplikaci změň obsah otevřené poznámky; po **Načíst znovu** se mají zobrazit nové změny.
+
+**Neotestované v reálném Chrome:** uložení root handle po restartu prohlížeče v konkrétním `file://` původu; nutné ověřit uživatelem. Testy v Chromiu používají simulované handles.

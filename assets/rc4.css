@@ -1,0 +1,103 @@
+/* RC4: palette inspired by the user's Aivuru screenshots, without external assets. */
+:root[data-theme="light"] {
+  color-scheme:light;
+  --accent:#a81d32;
+  --accent-strong:#8c1428;
+  --line:#d9dde2;
+  --surface:#fff;
+  --canvas:#edf0f3;
+  --panel:#fff;
+  --panel-alt:#f7f8fa;
+  --text:#252c34;
+  --muted:#677182;
+  color:var(--text);background:var(--canvas);
+}
+:root[data-theme="dark"] {
+  color-scheme:dark;
+  --accent:#f6a622;
+  --accent-strong:#de8d07;
+  --line:#30353d;
+  --surface:#1b1e23;
+  --canvas:#111317;
+  --panel:#1b1e24;
+  --panel-alt:#171a20;
+  --text:#edf0f4;
+  --muted:#a4adbc;
+  color:var(--text);background:var(--canvas);
+}
+[data-theme] .topbar {background:var(--panel);color:var(--text);border-bottom:2px solid var(--accent);}
+[data-theme="light"] .topbar {background:#891928;color:white;}
+[data-theme="light"] .topbar .brand small,[data-theme="light"] .topbar .theme-label {color:#f1c9d0;}
+[data-theme="light"] .topbar .brand-icon {background:#fff;color:#891928;}
+[data-theme="dark"] .topbar .brand-icon {background:var(--accent);color:#17130b;}
+[data-theme] .workspace,[data-theme] .main-area {background:var(--canvas);}
+[data-theme] .sidebar,[data-theme] .editor-bar,[data-theme] .pane,[data-theme] .markdown-preview,[data-theme] .format-toolbar,
+[data-theme] .renderer-dialog,[data-theme] .wiki-dialog {background:var(--panel);color:var(--text);border-color:var(--line);}
+[data-theme] .sidebar {background:var(--panel-alt);}
+[data-theme] .pane-title,[data-theme] .statusbar {background:var(--panel-alt);color:var(--muted);border-color:var(--line);}
+[data-theme] .markdown-preview h1,[data-theme] .markdown-preview h2,[data-theme] .markdown-preview h3 {color:var(--text);}
+[data-theme] .markdown-preview h1 {border-color:var(--line);}
+[data-theme] .brand small,[data-theme] .search-label,[data-theme] .sidebar-head #count,[data-theme] .mode,
+[data-theme] .sidebar-bottom,[data-theme] .theme-label,[data-theme] .empty,[data-theme] .glyph,
+[data-theme] .result-item .snippet,[data-theme] .dialog-hint {color:var(--muted);}
+[data-theme] .sidebar input,[data-theme] .theme-label select,[data-theme] .wiki-dialog input {background:var(--panel-alt);color:var(--text);border:1px solid var(--line);}
+[data-theme] button:not(.primary):not(.tree-row):not(.result-item):not(.toc-item):not([data-format]):not(.tree-delete) {
+  background:var(--panel-alt); color:var(--text);border-color:var(--line);
+}
+[data-theme] .primary {background:var(--accent);border-color:var(--accent);color:#fff;}
+[data-theme="dark"] .primary {color:#1c1407;}
+[data-theme] .primary:hover:not(:disabled) {filter:brightness(.92);}
+[data-theme] .tree-row,[data-theme] .result-item,[data-theme] .toc-item,[data-theme] .format-toolbar button {color:var(--text);}
+[data-theme] .tree-row:hover,[data-theme] .result-item:hover,[data-theme] .toc-item:hover {background:color-mix(in srgb,var(--accent) 8%,var(--panel));}
+[data-theme] .sidebar-tabs button.active {
+  color:var(--text);background:color-mix(in srgb,var(--accent) 9%,var(--panel));border:1px solid #58a36a;
+  box-shadow:inset 0 0 0 1px #58a36a;
+}
+[data-theme] .view-switch button.active {background:color-mix(in srgb,var(--accent) 11%,var(--panel));color:var(--text);border-color:var(--accent);}
+[data-theme] .tree-row.selected {color:var(--text);background:color-mix(in srgb,var(--accent) 17%,var(--panel));border-left:2px solid var(--accent);}
+[data-theme] .tree-children {border-color:var(--line);}
+[data-theme] .markdown-preview a,[data-theme] .result-item strong,[data-theme] .toc-item {color:var(--accent);}
+[data-theme] .markdown-preview pre,[data-theme] .markdown-preview :not(pre)>code,[data-theme] .markdown-preview th {background:var(--panel-alt);color:var(--text);border-color:var(--line);}
+[data-theme] .markdown-preview td,[data-theme] .markdown-preview blockquote,[data-theme] .markdown-preview hr {border-color:var(--line);}
+[data-theme] .markdown-preview blockquote {background:var(--panel-alt);color:var(--muted);}
+[data-theme] .markdown-preview .obsidian-properties {background:var(--panel-alt);color:var(--text);border-color:var(--line);}
+[data-theme] .markdown-preview .obsidian-properties summary {color:var(--muted);}
+[data-theme] .markdown-preview .obsidian-properties pre {background:var(--panel);}
+[data-theme] .pane .CodeMirror {background:var(--panel);color:var(--text);}
+[data-theme] .pane .CodeMirror-gutters {background:var(--panel-alt);border-color:var(--line);}
+[data-theme] .pane .CodeMirror-linenumber {color:var(--muted);}
+[data-theme] .pane .CodeMirror-cursor {border-left-color:var(--accent);}
+[data-theme] .pane .cm-header,[data-theme] .pane .cm-link,[data-theme] .pane .cm-url {color:var(--accent);}
+[data-theme] .format-toolbar {border-color:var(--line);}
+[data-theme] .notice {background:var(--panel-alt);border-color:var(--line);color:var(--text);}
+[data-theme] .notice.success {background:color-mix(in srgb,#2d8f58 13%,var(--panel));color:var(--text);}
+[data-theme] .notice.error {background:color-mix(in srgb,#c04430 19%,var(--panel));color:var(--text);}
+[data-theme="dark"] .markdown-preview .token.keyword,[data-theme="dark"] .markdown-preview .token.boolean {color:#ffc46b;}
+[data-theme="dark"] .markdown-preview .token.function,[data-theme="dark"] .markdown-preview .token.class-name {color:#eebf85;}
+[data-theme="light"] .markdown-preview .token.keyword,[data-theme="light"] .markdown-preview .token.boolean {color:#a31d47;}
+[data-theme="dark"] .renderer-dialog::backdrop,[data-theme="dark"] .wiki-dialog::backdrop {background:#050607cf;}
+/* Compact CodeMirror lines, preserving soft wrapping and readable preview. */
+.pane .CodeMirror {line-height:1.36;}
+.pane .CodeMirror-lines {padding:9px 3px;}
+/* Inline file and folder names. Keep inputs outside button elements. */
+.tree-name-input {flex:1;min-width:0;width:100%;height:29px;margin:2px 3px!important;padding:3px 6px!important;font-size:12px!important;border-radius:4px;outline:2px solid var(--accent);outline-offset:0;}
+.tree-entry > .tree-row[hidden] {display:none;}
+.tree-image .glyph {color:var(--accent);}
+/* Custom move and image preview dialogs. */
+.wiki-dialog {width:min(560px,calc(100vw - 32px));border:1px solid var(--line);border-radius:12px;padding:22px;box-shadow:0 24px 70px #0005;}
+.wiki-dialog::backdrop {background:#0a0d128c;}
+.wiki-dialog h2 {font-size:18px;margin:0 0 16px;}
+.wiki-dialog label {display:block;margin-bottom:6px;font-weight:650;font-size:13px;}
+.wiki-dialog input {width:100%;padding:10px 12px;border-radius:7px;}
+.wiki-dialog .dialog-hint {font-size:12px;line-height:1.55;overflow-wrap:anywhere;}
+.wiki-dialog .dialog-actions {display:flex;justify-content:flex-end;gap:9px;margin-top:18px;}
+.wiki-dialog .image-dialog {max-width:80vw;}
+.image-dialog img {display:block;width:auto;max-width:100%;max-height:65vh;margin:0 auto;border-radius:7px;object-fit:contain;}
+/* Older theme button rules use many :not() selectors; explicitly win the tab state. */
+[data-theme] .sidebar-tabs button.active {border:1px solid #58a36a!important;color:var(--text)!important;background:color-mix(in srgb,var(--accent) 9%,var(--panel))!important;}
+[data-theme] .tree-row.selected-folder {background:color-mix(in srgb,var(--accent) 8%,var(--panel));outline:1px dashed var(--accent);}
+
+/* Compact sidebar action row: three buttons remain legible at its minimum width. */
+.file-actions { gap:2px; margin-inline:8px; }
+.file-actions button { padding:6px 2px; font-size:10px; white-space:nowrap; }
+.file-actions #new-file { flex-grow:1.15; }
