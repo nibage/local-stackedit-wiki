@@ -78,7 +78,7 @@
         const lines = text.replace(/\r\n?/g, '\n').split('\n');
         for (let i = 0, matches = 0; i < lines.length; i++) {
           if (words.every(word => norm(lines[i]).includes(word))) {
-            found.push({ path, line: i + 1, snippet: lines[i].trim().slice(0, 180) || '(prázdný řádek)' });
+            found.push({ path, line: i + 1, snippet: lines[i].trim().slice(0, 180) || '(empty line)' });
             matches++;
             if (matches >= 3 || found.length >= maxResults) break;
           }

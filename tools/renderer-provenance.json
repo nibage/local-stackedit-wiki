@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "type": "verified-upstream-npm",
+  "renderers": {
+    "mermaid": {
+      "version": "8.9.2",
+      "path": "vendor/mermaid/mermaid.min.js",
+      "sha512": "6Wa+B9B3RYe0RtUPHHpg6RTnDBMLUq1hdoJtNJfkfNOaipetnb30xQPd1nTQDBMF0dt7lOb3XmAq62Dqqr57Zw==",
+      "npm_tarball_integrity": "sha512-XWEaraDRDlHZexdeHSSr/MH4VJAOksRSPudchi69ecZJ7IUjjlzHsg32n4ZwJUh6lFO+NMYLHwHNNYUyxIjGPg=="
+    },
+    "abcjs": {
+      "version": "6.4.4",
+      "path": "vendor/abcjs/abcjs-basic-min.js",
+      "sha512": "hx3dWycidsM9DGlvzbYPs1FzMBkYp6OFyfSvQNdMNNKeXstRI1/geDx+jbzIU58qf7nmHyqByMSlcND92gQwBg==",
+      "npm_tarball_integrity": "sha512-dT3Z2vb8yihbiPMzSoup0JOcvO2je4qpFNlTD+kS5VBelE3AASAs18dS5qeMWkZeqCz7kI/hz62B2lpMDugWLA=="
+    }
+  }
+}

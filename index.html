@@ -1,11 +1,14 @@
 <!doctype html>
-<html lang="cs">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Local StackEdit Wiki</title>
   <link rel="stylesheet" href="assets/app.css">
   <link rel="stylesheet" href="assets/feedback-theme.css">
+  <link rel="stylesheet" href="assets/rc2.css">
+  <link rel="stylesheet" href="assets/rc4.css">
+  <link rel="stylesheet" href="assets/rc5.css">
   <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css">
   <link rel="stylesheet" href="vendor/codemirror/addon/dialog/dialog.css">
   <script>
@@ -27,87 +30,99 @@
   <header class="topbar">
     <div class="brand"><span class="brand-icon">W</span><div><strong>Local StackEdit Wiki</strong><small>Offline Markdown wiki</small></div></div>
     <div class="actions">
-      <button id="open-folder" class="primary" type="button">Otevřít složku</button>
-      <button id="open-readonly" type="button" title="Otevřít kopii složky pouze pro čtení (bez možnosti uložit změny); není to přepínač Náhled">Otevřít bez zápisu</button>
-      <button id="restore-last" type="button" disabled title="Otevřít složku uloženou v tomto prohlížeči; Chrome může znovu žádat oprávnění">Poslední wiki</button>
-      <label class="remember-root-label" title="Zaškrtnutí po otevření wiki uloží její výběr do tohoto prohlížeče"><input type="checkbox" id="remember-root"> Zapamatovat tuto wiki</label>
-      <button id="forget-last" type="button" disabled title="Smazat zapamatovaný výběr z tohoto prohlížeče">Zapomenout</button>
+      <label class="readonly-option" title="Open the selected folder without write permission"><input id="read-only-toggle" type="checkbox"> Open read-only</label>
+      <button id="open-folder" class="primary" type="button">Open folder</button>
       <input id="directory-input" type="file" webkitdirectory directory multiple hidden>
-      <button id="refresh" type="button" disabled title="Znovu projít všechny složky a objevit soubory vytvořené, odstraněné nebo přesunuté mimo aplikaci">Obnovit strom</button><label class="theme-label" for="theme-select">Vzhled <select id="theme-select" aria-label="Barevný motiv"><option value="system">Podle systému</option><option value="light">Světlý</option><option value="dark">Tmavý</option></select></label>
+      <label class="theme-label" for="theme-select">Theme <select id="theme-select" aria-label="Color theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
     </div>
   </header>
-  <div id="notice" class="notice" role="status">Otevři kořenovou složku wiki. V Chrome / Edge můžeš povolit přímý zápis.</div>
+  <div id="notice" class="notice" role="status">Open a wiki folder. Chrome and Edge can grant direct file access.</div>
   <div class="workspace">
     <aside class="sidebar">
-      <div class="sidebar-head"><span id="root-name">Žádná složka</span><span id="count">0 souborů</span></div>
-      <div class="sidebar-tabs" role="group" aria-label="Režim postranního panelu">
-        <button type="button" data-side="files" class="active">Soubory</button>
+      <div class="sidebar-head"><span id="root-name">No folder</span><span id="count">0 files</span></div>
+      <div class="sidebar-tabs" role="group" aria-label="Sidebar tabs">
+        <button type="button" data-side="files" class="active">Files</button>
         <button type="button" data-side="search">Fulltext</button>
-        <button type="button" data-side="links">Odkazy</button>
+        <button type="button" data-side="links">Links</button>
       </div>
       <section id="side-files" class="sidebar-panel">
-        <div class="file-actions" role="group" aria-label="Vytvoření položky"><button id="new-file" type="button" disabled title="Vytvořit Markdown poznámku (Ctrl+N)">+ Poznámka</button><button id="new-folder" type="button" disabled title="Vytvořit složku">+ Složka</button></div>
-        <label class="search-label" for="search">Filtrovat soubory podle názvu</label>
-        <input id="search" type="search" placeholder="Název nebo cesta…" autocomplete="off">
-        <div id="tree" role="tree" aria-label="Adresářový strom"><p class="empty">Nejdřív otevři wiki.</p></div>
+        <div class="file-actions" role="group" aria-label="File actions"><button id="new-file" type="button" disabled title="Create Markdown note (Ctrl+N)">+ Note</button><button id="new-folder" type="button" disabled title="Create a folder">+ Folder</button><button id="rename-file" type="button" disabled aria-pressed="false" title="Enable drag and drop to move Markdown files">Move</button></div>
+        <label class="search-label" for="search">Filter files by name</label>
+        <input id="search" type="search" placeholder="Name or path…" autocomplete="off">
+        <div id="tree" role="tree" aria-label="Folder tree"><p class="empty">Open a wiki first.</p></div>
       </section>
       <section id="side-search" class="sidebar-panel" hidden>
-        <label class="search-label" for="fulltext-query">Hledat v obsahu celé wiki</label>
-        <div class="fulltext-controls"><input id="fulltext-query" type="search" placeholder="Výraz či několik slov…"><button id="fulltext-run" type="button">Hledat</button></div>
-        <div class="panel-note" id="fulltext-status">Po kliknutí se dočasně prohledají lokální .md soubory. Nic se neodesílá ani neukládá mimo wiki.</div>
-        <div id="fulltext-results" class="panel-results" role="region" aria-label="Výsledky hledání"></div>
+        <label class="search-label" for="fulltext-query">Search all wiki contents</label>
+        <div class="fulltext-controls"><input id="fulltext-query" type="search" placeholder="Words or phrase…"><button id="fulltext-run" type="button">Search</button></div>
+        <div class="panel-note" id="fulltext-status">Searches local Markdown files; no content is sent anywhere.</div>
+        <div id="fulltext-results" class="panel-results" role="region" aria-label="Search results"></div>
       </section>
       <section id="side-links" class="sidebar-panel" hidden>
-        <h3>Obsah dokumentu</h3>
-        <div id="toc" class="panel-results"><p class="empty">Otevři poznámku.</p></div>
-        <h3>Zpětné odkazy</h3>
-        <button id="backlinks-run" type="button" class="panel-action">Zjistit odkazy na tuto stránku</button>
-        <div id="backlinks-results" class="panel-results"><p class="empty">Zatím nenačteno.</p></div>
+        <h3>Table of contents</h3>
+        <div id="toc" class="panel-results"><p class="empty">Open a note.</p></div>
+        <h3>Backlinks</h3>
+        <button id="backlinks-run" type="button" class="panel-action">Find incoming links</button>
+        <div id="backlinks-results" class="panel-results"><p class="empty">Not loaded yet.</p></div>
       </section>
-      <div class="sidebar-bottom" id="diagnostics">file:// · <span id="diag-api">kontrola API…</span></div>
+      <div class="sidebar-bottom" id="diagnostics">file:// · <span id="diag-api">Checking API…</span></div>
     </aside>
-    <div class="sidebar-resizer" id="sidebar-resizer" role="separator" aria-label="Změnit šířku postranního panelu" aria-orientation="vertical" tabindex="0" aria-valuemin="190" aria-valuemax="520" aria-valuenow="255" title="Tažením změň šířku lišty; dvojklik obnoví výchozí šířku"></div>
+    <div class="sidebar-resizer" id="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" tabindex="0" aria-valuemin="190" aria-valuemax="520" aria-valuenow="255" title="Drag to resize; double-click to reset"></div>
     <main class="main-area">
       <div class="editor-bar">
-        <div class="file-title"><strong id="filename">Žádný otevřený soubor</strong><span id="dirty" aria-live="polite"></span></div>
+        <div class="file-title"><strong id="filename">No note open</strong><span id="dirty" aria-live="polite"></span></div>
         <div class="editor-actions">
-          <span id="mode" class="mode">Čeká na složku</span>
-          <div class="view-switch" role="group" aria-label="Zobrazení">
+          <span id="mode" class="mode">Waiting for folder</span>
+          <div class="view-switch" role="group" aria-label="Editor layout">
             <button id="view-edit" type="button" data-view="edit">Editor</button>
-            <button id="view-split" type="button" data-view="split" class="active">Vedle sebe</button>
-            <button id="view-preview" type="button" data-view="preview">Náhled</button>
+            <button id="view-split" type="button" data-view="split" class="active">Side by side</button>
+            <button id="view-preview" type="button" data-view="preview">Preview</button>
           </div>
-          <button id="renderer-check" type="button" title="Informace o offline knihovnách">Renderery</button>
-          <button id="rename-file" type="button" disabled title="Přejmenovat nebo přesunout aktivní .md soubor">Přejmenovat / přesunout</button>
-          <button id="reload" type="button" disabled title="Zahodit aktuální text v editoru a znovu načíst otevřený soubor z disku (vyžádá potvrzení při neuložených změnách)">Načíst znovu</button>
-          <button id="save" class="primary" type="button" disabled>Uložit</button>
+          <button id="renderer-check" type="button" title="Offline renderer information">Renderers</button>
+          <button id="refresh" type="button" disabled title="Refresh folder tree and current note from disk; unsaved changes require confirmation">Refresh</button>
+          <button id="save" class="primary" type="button" disabled>Save</button>
         </div>
       </div>
       <div class="editor-grid" id="editor-grid" data-layout="split">
-        <section class="pane edit-pane" aria-label="Zdroj Markdown"><div class="pane-title"><span>Markdown · Ctrl+F hledání</span><span>Ctrl+S pro uložení</span></div><div class="format-toolbar" role="toolbar" aria-label="Formátování Markdown">
-          <button type="button" data-format="bold" title="Tučné (Ctrl+B)"><strong>B</strong></button>
-          <button type="button" data-format="italic" title="Kurzíva (Ctrl+I)"><em>I</em></button>
-          <button type="button" data-format="heading" title="Nadpis">H2</button>
-          <button type="button" data-format="list" title="Seznam">☷</button>
-          <button type="button" data-format="link" title="Odkaz">🔗</button>
-          <button type="button" data-format="code" title="Kód">&lt;/&gt;</button>
+        <section class="pane edit-pane" aria-label="Markdown source"><div class="pane-title"><span>Markdown · Ctrl+F search</span><span>Ctrl+S to save</span></div><div class="format-toolbar" role="toolbar" aria-label="Markdown formatting">
+          <button type="button" data-format="bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
+          <button type="button" data-format="italic" title="Italic (Ctrl+I)"><em>I</em></button>
+          <button type="button" data-format="heading" title="Heading">H2</button>
+          <button type="button" data-format="list" title="List">☷</button>
+          <button type="button" data-format="link" title="Link">🔗</button>
+          <button type="button" data-format="code" title="Code">&lt;/&gt;</button>
           <span class="toolbar-divider"></span>
-          <button type="button" data-format="undo" title="Zpět (Ctrl+Z)">↶</button>
-          <button type="button" data-format="redo" title="Znovu (Ctrl+Y)">↷</button>
-        </div><textarea id="editor" spellcheck="false" disabled placeholder="Vyber soubor vlevo.&#10;&#10;Změny se provádějí přímo v původním .md souboru."></textarea></section>
-        <section class="pane preview-pane" aria-label="Živý náhled Markdown"><div class="pane-title"><span>Živý náhled</span><span id="render-status">Offline</span></div><div id="preview" class="markdown-preview"><div class="preview-placeholder"><h2>Vítej v lokální wiki</h2><p>Po otevření souboru se zde vykreslí Markdown a matematické vzorce.</p><p>Mermaid a ABC notaci lze aktivovat doplněním knihoven do vendor/.</p></div></div></section>
+          <button type="button" data-format="undo" title="Undo (Ctrl+Z)">↶</button>
+          <button type="button" data-format="redo" title="Redo (Ctrl+Y)">↷</button>
+        </div><textarea id="editor" spellcheck="false" disabled placeholder="Choose a note on the left.&#10;&#10;Saved changes are written to its original .md file."></textarea></section>
+        <section class="pane preview-pane" aria-label="Live Markdown preview"><div class="pane-title"><span>Live preview</span><span id="render-status">Offline</span></div><div id="preview" class="markdown-preview"><div class="preview-placeholder"><h2>Welcome to your local wiki</h2><p>Markdown and math will appear here when you open a note.</p><p>Mermaid and ABC notation work offline when the libraries are bundled.</p></div></div></section>
       </div>
-      <footer class="statusbar"><span id="save-status">Žádný soubor</span><span id="stats">0 znaků</span></footer>
+      <footer class="statusbar"><span id="save-status">No file</span><span id="stats">0 characters</span></footer>
     </main>
   </div>
 </div>
+<dialog id="move-dialog" class="wiki-dialog" aria-labelledby="move-dialog-title">
+  <form id="move-form">
+    <h2 id="move-dialog-title">Move note</h2>
+    <p id="move-description" class="dialog-hint"></p>
+    <label for="move-destination">Destination path inside wiki</label>
+    <input id="move-destination" type="text" required autocomplete="off" spellcheck="false">
+    <p class="dialog-hint">You may also edit the filename. The destination folder must already exist. Links will be checked before writing. Nothing is moved until you confirm.</p>
+    <div class="dialog-actions"><button id="move-cancel" type="button">Cancel</button><button class="primary" type="submit">Continue</button></div>
+  </form>
+</dialog>
+<dialog id="image-dialog" class="wiki-dialog image-dialog" aria-labelledby="image-dialog-title">
+  <h2 id="image-dialog-title">Image</h2>
+  <img id="image-dialog-preview" alt="Image preview">
+  <p id="image-dialog-path" class="dialog-hint"></p>
+  <div class="dialog-actions"><button id="image-insert" type="button">Insert into note</button><button id="image-close" type="button">Close</button></div>
+</dialog>
 <dialog id="renderer-dialog" aria-labelledby="renderer-dialog-title" class="renderer-dialog">
-  <h2 id="renderer-dialog-title">Offline renderery</h2>
-  <div id="renderer-details" aria-live="polite"></div><p class="panel-note">Test používá jen interní ukázkový flowchart a notovou osnovu, nikoli soubory tvé wiki.</p><div id="renderer-smoke-result" class="renderer-smoke-result" role="status" aria-live="polite"></div>
-  <p>MathJax je přibalen. Mermaid a ABCjs je možné jednorázově stáhnout přes HTTPS a uložit do složky aplikace. Po obnovení stránky se budou načítat výhradně z lokálních souborů. Pokud přímé stahování nefunguje, můžeš stáhnout oba oficiální .js soubory ve svém prohlížeči a vybrat je níže. Knihovny lze také doplnit skriptem <code>tools/download-renderers.ps1</code>.</p><p><strong>Instalace:</strong> připoj se jednorázově k internetu, klikni na tlačítko níže a v dialogu vyber <strong>složku aplikace, která obsahuje index.html</strong> — nikoli složku tvé wiki. Aplikace zapíše pouze <code>vendor/mermaid/mermaid.min.js</code> a <code>vendor/abcjs/abcjs-basic-min.js</code>.</p><p id="renderer-install-status" class="panel-note" role="status" aria-live="polite"></p>
-  <p class="panel-note"><a href="tools/test-file-access.html" target="_blank" rel="noopener noreferrer">Otestovat přístup k místní složce při spuštění dvojklikem</a> — samostatný test určený pro testovací složku, nikoli ostrou wiki.</p>
-  <p class="panel-note">Diagnostický výpis neobsahuje obsah wiki ani názvy či cesty souborů. Uloží se pouze na tvém počítači.</p>
-  <div class="renderer-dialog-actions"><button id="renderer-smoke" type="button">Otestovat skutečné vykreslení</button><button id="renderer-install" type="button">Doplnit offline renderery…</button><label for="renderer-local-files" class="renderer-file-label">Nebo vybrat stažené soubory (.js):</label><input id="renderer-local-files" type="file" accept=".js,application/javascript,text/javascript" multiple><button id="renderer-install-local" type="button" disabled>Uložit vybrané JS offline…</button><button id="diagnostics-export" type="button">Uložit diagnostiku JSON</button><button id="renderer-close" type="button">Zavřít</button></div>
+  <h2 id="renderer-dialog-title">Offline renderers</h2>
+  <div id="renderer-details" aria-live="polite"></div><p class="panel-note">The test renders built-in sample diagrams and notation, not your wiki files.</p><div id="renderer-smoke-result" class="renderer-smoke-result" role="status" aria-live="polite"></div>
+  <p>MathJax is bundled. Mermaid and ABCjs can be installed once via HTTPS into the application folder. After reloading, all libraries are loaded locally. If automatic downloads fail, choose official downloaded .js files below, or use the installer script <code>tools/download-renderers.ps1</code>.</p><p><strong>Installation:</strong> connect to the internet once, click below and choose <strong>the application folder containing index.html</strong>, not your wiki. Only the following files will be written: <code>vendor/mermaid/mermaid.min.js</code> and <code>vendor/abcjs/abcjs-basic-min.js</code>.</p><p id="renderer-install-status" class="panel-note" role="status" aria-live="polite"></p>
+  <p class="panel-note"><a href="tools/test-file-access.html" target="_blank" rel="noopener noreferrer">Test local folder access with file://</a> — use only a test folder, never your original wiki.</p>
+  <p class="panel-note">Diagnostics do not contain wiki content, file names, or paths. They are saved only to your computer.</p>
+  <div class="renderer-dialog-actions"><button id="renderer-smoke" type="button">Test real rendering</button><button id="renderer-install" type="button">Install offline renderers…</button><label for="renderer-local-files" class="renderer-file-label">Or choose downloaded .js files:</label><input id="renderer-local-files" type="file" accept=".js,application/javascript,text/javascript" multiple><button id="renderer-install-local" type="button" disabled>Install selected JS offline…</button><button id="diagnostics-export" type="button">Save diagnostic JSON</button><button id="renderer-close" type="button">Close</button></div>
 </dialog>
 <script src="vendor/marked/marked.js"></script>
 <script src="vendor/codemirror/lib/codemirror.js"></script>
@@ -120,6 +135,12 @@
 <script src="vendor/codemirror/addon/dialog/dialog.js"></script>
 <script src="vendor/codemirror/addon/search/searchcursor.js"></script>
 <script src="vendor/codemirror/addon/search/search.js"></script>
+<script src="vendor/prism/prism.js"></script>
+<script src="vendor/prism/prism-python.min.js"></script>
+<script src="vendor/prism/prism-javascript.min.js"></script>
+<script src="vendor/prism/prism-css.min.js"></script>
+<script src="vendor/prism/prism-json.min.js"></script>
+<script src="vendor/prism/prism-bash.min.js"></script>
 <script src="vendor/mermaid/mermaid.min.js"></script>
 <script src="vendor/abcjs/abcjs-basic-min.js"></script>
 <script src="src/diagram-adapter.js"></script>
@@ -131,6 +152,7 @@
 <script src="src/file-system.js"></script>
 <script src="src/renderer.js"></script>
 <script src="src/link-migration.js"></script>
+<script src="src/instance-scope.js"></script>
 <script src="src/recent-wiki.js"></script>
 <script src="src/diagnostics.js"></script>
 <script src="src/renderer-installer.js"></script>

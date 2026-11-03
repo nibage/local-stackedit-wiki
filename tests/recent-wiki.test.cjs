@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../src/recent-wiki.js'), 'utf8');
+const scopeSource = fs.readFileSync(path.join(__dirname, '../src/instance-scope.js'), 'utf8');
 
 function makeFakeIndexedDB() {
   const saved = new Map();
@@ -40,7 +41,8 @@ function makeFakeIndexedDB() {
   };
 }
 function load(storage = makeFakeIndexedDB()) {
-  const context = { indexedDB: storage };
+  const context = { indexedDB: storage, location: {href:'file:///install-A/index.html'} };
+  vm.runInNewContext(scopeSource, context);
   vm.runInNewContext(source, context);
   return context.LocalWikiRecent;
 }
@@ -74,7 +76,7 @@ test('no implicit permission prompt while checking saved directory', async () =>
 });
 test('rejects invalid handle and gracefully reports blocked storage', async () => {
   const recent = load();
-  await assert.rejects(recent.remember({kind:'file'}), /složku/);
+  await assert.rejects(recent.remember({kind:'file'}), /directory/);
   const blocked = load(undefined); // default fake DB is available
   assert.ok(blocked);
   const noStorage = load(null);

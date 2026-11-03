@@ -6,7 +6,7 @@
   const ALLOWED_CODE_CLASSES = /^language-[a-z\d_+.-]+$/i;
   const MATH_MARKER = 'LOCALWIKIMATHBLOCK';
   const OBSIDIAN_IMAGE = /\.(?:png|jpe?g|gif|webp|bmp|avif)$/i;
-  const CALLOUT_LABELS = { note: 'Poznámka', abstract: 'Shrnutí', info: 'Informace', todo: 'Úkol', tip: 'Tip', success: 'Hotovo', question: 'Otázka', warning: 'Upozornění', failure: 'Neúspěch', danger: 'Nebezpečí', bug: 'Chyba', example: 'Příklad', quote: 'Citace' }; 
+  const CALLOUT_LABELS = { note: 'Note', abstract: 'Summary', info: 'Info', todo: 'Todo', tip: 'Tip', success: 'Success', question: 'Question', warning: 'Warning', failure: 'Failure', danger: 'Danger', bug: 'Bug', example: 'Example', quote: 'Quote' }; 
   const tokenCounter = () => Math.floor(Math.random() * 1000000000).toString(36);
   function convertWikiLinks(line) {
     return line.replace(/(?<!!)\[\[([^\]\n]+)\]\]/g, (all, inner) => {
@@ -172,7 +172,7 @@
     const details = document.createElement('details');
     details.className = 'obsidian-properties';
     const summary = document.createElement('summary');
-    summary.textContent = 'Vlastnosti poznámky (YAML)';
+    summary.textContent = 'Note properties (YAML)';
     const pre = document.createElement('pre');
     pre.textContent = frontmatter;
     details.append(summary, pre);
@@ -180,7 +180,7 @@
     return true;
   }
   function render(text, container, options = {}) {
-    if (!global.marked || typeof global.marked.parse !== 'function') throw new Error('Chybí offline knihovna marked.js.');
+    if (!global.marked || typeof global.marked.parse !== 'function') throw new Error('Offline marked.js library is missing.');
     const { prepared, expressions, frontmatter } = prepareSource(text);
     const html = global.marked.parse(prepared, { gfm: true, breaks: false, headerIds: false, mangle: false });
     const fragment = sanitize(html);
@@ -193,14 +193,23 @@
         const warn = document.createElement('div');
         warn.className = 'unsupported';
         warn.textContent = code.className.includes('mermaid')
-          ? 'Mermaid: knihovna není nainstalována. Viz docs/RENDERERY.md. Zdroj zůstává zachovaný.'
-          : 'ABCjs: knihovna není nainstalována. Viz docs/RENDERERY.md. Zdroj zůstává zachovaný.';
+          ? 'Mermaid is missing. See docs/RENDERERS.md. Source content is preserved.'
+          : 'ABCjs is missing. See docs/RENDERERS.md. Source content is preserved.';
         code.parentNode.before(warn);
       }
     });
     let idx = 0;
     fragment.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(h => { h.id = `wiki-heading-${idx++}`; });
     container.replaceChildren(fragment);
+    // Syntax highlighting runs on already sanitized DOM. Prism only processes
+    // explicitly labeled code blocks; unknown languages stay plain text.
+    if (global.Prism) {
+      for (const code of container.querySelectorAll('pre > code[class*="language-"]')) {
+        if (/\blanguage-(?:mermaid|abc)\b/i.test(code.className)) continue;
+        const language = /\blanguage-([a-z\d_+.-]+)/i.exec(code.className)?.[1];
+        if (language && global.Prism.languages[language]) global.Prism.highlightElement(code);
+      }
+    }
     const diagrams = global.LocalWikiDiagrams ? global.LocalWikiDiagrams.enhance(container, options.onDiagramUpdate) : { ready: 0, missing: 0 };
     if (expressions.length && global.MathJax && global.MathJax.Hub) {
       try { global.MathJax.Hub.Queue(['Typeset', global.MathJax.Hub, container]); }

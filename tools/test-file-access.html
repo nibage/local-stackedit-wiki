@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="cs">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Local StackEdit Wiki – test dvojkliku a zápisu</title>
+<title>Local StackEdit Wiki – file access test</title>
 <style>
 :root { font: 16px/1.55 system-ui, -apple-system, Segoe UI, sans-serif; color-scheme: light dark; }
 body { max-width: 720px; margin: 2.5rem auto; padding: 0 1.4rem; }
@@ -18,20 +18,20 @@ footer { opacity: .75; font-size: .9rem; margin-top: 2rem; }
 </style>
 </head>
 <body>
-<h1>Test lokálního přístupu – dávka 18</h1>
-<p>Tato samostatná stránka slouží k ověření, zda Chrome nebo Edge umožní aplikaci pracovat se složkami při otevření <code>index.html</code> dvojklikem. Nepotřebuje internet ani žádné další knihovny.</p>
+<h1>Test local file access</h1>
+<p>This standalone page checks whether Chrome or Edge permits local folder access when you open index.html by double-clicking it. No internet or external libraries are required.</p>
 <div class="panel">
-  <strong>Použij pouze testovací složku, například přiloženou <code>demo-wiki</code>.</strong>
-  <p>Po kliknutí na tlačítko prohlížeč požádá o přístup ke složce, vytvoří v ní náhodně pojmenovaný dočasný soubor, ověří zápis a čtení a soubor odstraní. Stávající soubory nepřepisuje. Pokud odstranění selže, zobrazí upozornění.</p>
+  <strong>Use only a disposable test folder, such as the included <code>demo-wiki</code>.</strong>
+  <p>The browser asks for permission, creates a uniquely named temporary file, verifies writing and reading, then deletes the temporary file. It never overwrites existing files. Any cleanup failure is reported.</p>
 </div>
 <dl class="status">
- <dt>Spuštění</dt><dd id="protocol">—</dd>
- <dt>Zabezpečený kontext</dt><dd id="secure">—</dd>
+ <dt>Protocol</dt><dd id="protocol">—</dd>
+ <dt>Secure context</dt><dd id="secure">—</dd>
  <dt>File System Access API</dt><dd id="api">—</dd>
- <dt>Výsledek testu</dt><dd id="result" role="status" aria-live="polite">Ještě nespouštěno</dd>
+ <dt>Test result</dt><dd id="result" role="status" aria-live="polite">Not run yet</dd>
 </dl>
-<p><button id="start" type="button">Vybrat testovací složku a otestovat</button> <button id="export" type="button">Uložit diagnostiku JSON</button></p>
-<footer>Výstupní JSON neobsahuje jméno ani cestu testovací složky, žádný seznam souborů ani obsah poznámek. Je použitelný pro nahlášení chyby. Tato stránka je nezávislá na hlavní aplikaci.</footer>
+<p><button id="start" type="button">Select test folder and test</button> <button id="export" type="button">Save diagnostic JSON</button></p>
+<footer>The JSON report does not contain folder names, paths, file lists or note contents. You can use it to report a problem. This page runs independently from the main application.</footer>
 <script>
 (function () {
   'use strict';
@@ -44,11 +44,11 @@ footer { opacity: .75; font-size: .9rem; margin-top: 2rem; }
   };
   function display(id, text, cls) { $(id).textContent = text; $(id).className = cls || ''; }
   display('protocol', report.protocol);
-  display('secure', report.secureContext ? 'Ano' : 'Ne', report.secureContext ? 'ok' : 'warn');
-  display('api', report.directoryPickerAvailable ? 'Dostupné' : 'Nedostupné', report.directoryPickerAvailable ? 'ok' : 'bad');
+  display('secure', report.secureContext ? 'Yes' : 'No', report.secureContext ? 'ok' : 'warn');
+  display('api', report.directoryPickerAvailable ? 'Available' : 'Unavailable', report.directoryPickerAvailable ? 'ok' : 'bad');
   if (!report.directoryPickerAvailable) {
     $('start').disabled = true;
-    display('result', 'Tento prohlížeč nebo způsob spuštění nepodporuje zápis do složky.', 'bad');
+    display('result', 'This browser or launch method does not support writing to folders.', 'bad');
     report.outcome = 'api-unavailable';
   }
   function newName() {
@@ -62,12 +62,12 @@ footer { opacity: .75; font-size: .9rem; margin-top: 2rem; }
       try { await root.getFileHandle(name, { create: false }); }
       catch (error) { if (error && error.name === 'NotFoundError') return name; throw error; }
     }
-    throw new Error('Nepodařilo se vytvořit jedinečný název testovacího souboru.');
+    throw new Error('Could not create a unique temporary filename.');
   }
   $('start').addEventListener('click', async () => {
     $('start').disabled = true;
     report.outcome = 'running'; report.temporaryFileRemoved = null;
-    display('result', 'Čekám na výběr složky…');
+    display('result', 'Waiting for folder selection…');
     let root = null, name = null, created = false, successful = false;
     try {
       // Keep the picker call as the first awaited operation in the user click.
@@ -75,18 +75,18 @@ footer { opacity: .75; font-size: .9rem; margin-top: 2rem; }
       name = await unusedFileName(root);
       const handle = await root.getFileHandle(name, { create: true });
       created = true;
-      const original = 'Local StackEdit Wiki – test zápisu UTF-8\r\nČeské znaky: příliš žluťoučký kůň.\r\n';
+      const original = 'Local StackEdit Wiki – UTF-8 write test\r\nCzech UTF-8 characters: příliš žluťoučký kůň.\r\n';
       const stream = await handle.createWritable();
       try { await stream.write(original); await stream.close(); }
       catch (error) { try { await stream.abort(); } catch (_) {} throw error; }
       const actual = await (await handle.getFile()).text();
-      if (actual !== original) throw new Error('Přečtené bajty neodpovídají zapsanému textu.');
+      if (actual !== original) throw new Error('Read-back bytes did not match the written text.');
       successful = true;
     } catch (error) {
       report.outcome = error && error.name === 'AbortError' ? 'cancelled' :
         !root ? 'folder-selection-failed' : !created ? 'file-creation-failed' : 'read-or-write-failed';
-      display('result', error && error.name === 'AbortError' ? 'Výběr složky byl zrušen.' :
-        'Test selhal: ' + (error && error.message || String(error)), 'bad');
+      display('result', error && error.name === 'AbortError' ? 'Folder selection was cancelled.' :
+        'Test failed: ' + (error && error.message || String(error)), 'bad');
     } finally {
       if (created && root && name) {
         try { await root.removeEntry(name); report.temporaryFileRemoved = true; }
@@ -94,10 +94,10 @@ footer { opacity: .75; font-size: .9rem; margin-top: 2rem; }
       }
       if (report.temporaryFileRemoved === false) {
         report.outcome = 'cleanup-failed';
-        display('result', 'VAROVÁNÍ: dočasný testovací soubor se nepodařilo odstranit. Zkontroluj testovací složku.', 'bad');
+        display('result', 'WARNING: could not delete the temporary test file. Inspect your test folder.', 'bad');
       } else if (successful) {
         report.outcome = 'pass';
-        display('result', 'Úspěch: oprávnění, vytvoření, zápis, čtení i odstranění fungují.', 'ok');
+        display('result', 'Success: permission, creation, writing, reading and deletion all work.', 'ok');
       }
       $('start').disabled = !report.directoryPickerAvailable;
     }

@@ -16,7 +16,7 @@
 
   function scrubSvg(root) {
     if (!root || root.localName !== 'svg' || root.namespaceURI !== 'http://www.w3.org/2000/svg') {
-      throw new Error('Renderer nevrátil platné SVG.');
+      throw new Error('The renderer did not return valid SVG.');
     }
     const forbidden = new Set([
       'script','foreignobject','iframe','object','embed','image','feimage','audio','video',
@@ -48,10 +48,10 @@
 
   function safeSvgFromString(xml) {
     if (typeof xml !== 'string' || !/<svg(?:\s|>)/i.test(xml)) {
-      throw new Error('Renderer nevrátil SVG.');
+      throw new Error('The renderer did not return SVG.');
     }
     const doc = new DOMParser().parseFromString(xml, 'image/svg+xml');
-    if (doc.querySelector('parsererror')) throw new Error('SVG obsahuje chybný XML zápis.');
+    if (doc.querySelector('parsererror')) throw new Error('SVG contains invalid XML.');
     scrubSvg(doc.documentElement);
     return document.importNode(doc.documentElement, true);
   }
@@ -59,8 +59,8 @@
   function addExportButton(target, type, svg) {
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'diagram-export';
-    button.textContent = 'Uložit SVG';
-    button.title = 'Uloží pouze vykreslený diagram, původní poznámka se nemění.';
+    button.textContent = 'Save SVG';
+    button.title = 'Saves the rendered diagram without modifying the note.';
     button.addEventListener('click', () => {
       const output = new XMLSerializer().serializeToString(svg);
       const blob = new Blob([output], { type: 'image/svg+xml;charset=utf-8' });
@@ -87,13 +87,13 @@
       const setWarning = message => { if (warning?.isConnected) warning.textContent = message; };
       if (!runtime[kind]) {
         counters.missing++;
-        setWarning(`${label}: knihovna není nainstalována. Zdrojový kód zůstává viditelný. Viz docs/RENDERERY.md.`);
+        setWarning(`${label}: library is not installed. The source remains visible. See docs/RENDERERS.md.`);
         continue;
       }
       const target = document.createElement('div');
       target.className = `visualization visualization-${kind}`;
       target.setAttribute('role', 'group');
-      target.setAttribute('aria-label', `Vykreslení ${label}`);
+      target.setAttribute('aria-label', `Rendering ${label}`);
       pre.before(target);
       const original = code.textContent;
       let settled = false;
@@ -102,12 +102,12 @@
         if (settled) return;
         settled = true; counters.pending--; counters.failed++;
         target.remove();
-        setWarning(`${label}: vykreslení selhalo (${err?.message || String(err)}). Zdroj je zachován.`);
+        setWarning(`${label}: rendering failed (${err?.message || String(err)}). Source content was preserved.`);
         notify();
       };
       const success = nodes => {
         if (settled || !target.isConnected) return;
-        if (!nodes.length) { fail(new Error('Žádný SVG výstup')); return; }
+        if (!nodes.length) { fail(new Error('No SVG output')); return; }
         try {
           for (const node of nodes) { scrubSvg(node); target.appendChild(node); }
           addExportButton(target, kind, nodes[0]);
@@ -121,7 +121,7 @@
         if (kind === 'abc') {
           global.ABCJS.renderAbc(target, original, { responsive: 'resize', paddingtop: 12, paddingbottom: 12 });
           const svgNodes = Array.from(target.querySelectorAll('svg'));
-          if (!svgNodes.length) throw new Error('ABCjs nevrátil notový zápis.');
+          if (!svgNodes.length) throw new Error('ABCjs did not render music notation.');
           // ABCjs generates DOM nodes directly. Scrub before displaying/exporting.
           success(svgNodes);
         } else {

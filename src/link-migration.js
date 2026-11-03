@@ -107,8 +107,8 @@
     return { text: output, count };
   }
   function plan(snapshots, oldPath, newPath) {
-    if (!snapshots.has(oldPath)) throw new Error('Původní dokument chybí v načtené wiki.');
-    if (newPath !== oldPath && snapshots.has(newPath)) throw new Error('Cílový dokument již existuje.');
+    if (!snapshots.has(oldPath)) throw new Error('Original document is missing from the loaded wiki.');
+    if (newPath !== oldPath && snapshots.has(newPath)) throw new Error('Destination document already exists.');
     const beforePaths = new Set(snapshots.keys());
     const afterPaths = new Set(beforePaths); afterPaths.delete(oldPath); afterPaths.add(newPath);
     const changes = [];
@@ -135,7 +135,7 @@
     for (const [path, old] of snapshots) {
       const fresh = await bridge.readRaw(path);
       if (fresh.fingerprint !== old.fingerprint || fresh.text !== old.text) {
-        throw new Error(`Soubor ${path} se během přípravy změnil; nic nebylo přesunuto.`);
+        throw new Error(`Soubor ${path} changed during preparation; nothing was moved.`);
       }
     }
     const original = snapshots.get(migration.oldPath);
@@ -145,7 +145,7 @@
       for (const change of migration.changes) {
         const fresh = await bridge.readRaw(change.path);
         const expected = change.oldPath === migration.oldPath ? original.text : change.before;
-        if (fresh.text !== expected) throw new Error(`Soubor ${change.path} se mezitím změnil.`);
+        if (fresh.text !== expected) throw new Error(`Soubor ${change.path} changed in the meantime.`);
         const saved = await bridge.write(change.path, change.after, fresh.fingerprint);
         committed.push({ path: change.path, before: change.before, after: change.after, fingerprint: saved.fingerprint });
       }
@@ -156,18 +156,18 @@
       for (const change of committed.reverse()) {
         try {
           const fresh = await bridge.readRaw(change.path);
-          if (fresh.text !== change.after) throw new Error('obsah se mezitím změnil');
+          if (fresh.text !== change.after) throw new Error('content changed in the meantime');
           await bridge.write(change.path, change.before, fresh.fingerprint);
         } catch (err) { problems.push(`${change.path}: ${err.message}`); }
       }
       try {
         const moved = await bridge.readRaw(migration.newPath);
-        if (moved.text !== original.text) throw new Error('obsah nelze bezpečně vrátit');
+        if (moved.text !== original.text) throw new Error('content cannot be safely restored');
         await bridge.renameFile(migration.newPath, migration.oldPath, moved.fingerprint);
-      } catch (err) { problems.push(`přesun: ${err.message}`); }
+      } catch (err) { problems.push(`move: ${err.message}`); }
       const message = problems.length
-        ? `Aktualizace selhala: ${error.message}. Automatické vrácení není úplné (${problems.join('; ')}). Zkontroluj soubory a zálohu.`
-        : `Aktualizace selhala: ${error.message}. Změny byly vráceny; stav wiki pro jistotu zkontroluj.`;
+        ? `Update failed: ${error.message}. Automatic rollback was incomplete (${problems.join('; ')}). Check files and your backup.`
+        : `Update failed: ${error.message}. Changes were rolled back; verify your wiki to be safe.`;
       const failure = new Error(message); failure.code = 'MIGRATION_FAILED'; throw failure;
     }
   }

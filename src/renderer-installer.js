@@ -1,6 +1,6 @@
 /*
  * Optional one-time browser installer for genuine offline Mermaid / ABCjs UMD builds.
- * Uses a user-picked APPLICATION directory (never the wiki directory), a pinned HTTPS
+ * Uses and user-picked APPLICATION directory (never the wiki directory), and pinned HTTPS
  * CDN URL, and stores the downloaded bytes directly next to this index.html.
  * At normal wiki viewing time no network requests are made.
  * MIT libraries remain third-party software. No installation happens silently.
@@ -24,7 +24,7 @@
   ]);
   let running = false;
 
-  // Content tests are only a sanity check, NOT proof of origin. Mermaid has
+  // Content tests are only and sanity check, NOT proof of origin. Mermaid has
   // an independently published SHA-512 integrity digest from cdnjs/SRIs.
   function checkSignature(text, spec) {
     if (spec.id === 'mermaid') return /mermaidAPI/.test(text) && /initialize/.test(text);
@@ -35,40 +35,40 @@
   async function checkIntegrity(bytes, spec, subtle) {
     if (!spec.integrity) return;
     if (!subtle || typeof subtle.digest !== 'function') {
-      throw new Error(`${spec.name}: chybí Web Crypto API pro ověření SHA-512.`);
+      throw new Error(`${spec.name}: Web Crypto API is unavailable for SHA-512 verification.`);
     }
     const expected = spec.integrity.slice('sha512-'.length);
     const digest = new Uint8Array(await subtle.digest('SHA-512', bytes));
     const actual = Array.from(digest, byte => String.fromCharCode(byte)).join('');
     if (btoa(actual) !== expected) {
-      throw new Error(`${spec.name}: neodpovídá ověřený SHA-512 kontrolní součet.`);
+      throw new Error(`${spec.name}: SHA-512 checksum did not match the verified value.`);
     }
   }
 
   function validatePayload(buffer, spec) {
     if (!(buffer instanceof ArrayBuffer) || buffer.byteLength < spec.minBytes || buffer.byteLength > spec.maxBytes) {
-      throw new Error(`${spec.name}: soubor má neočekávanou velikost.`);
+      throw new Error(`${spec.name}: Unexpected file size.`);
     }
     const prefix = new TextDecoder('utf-8').decode(buffer.slice(0, 512)).trimStart();
     if (/^(?:<!doctype|<html|<\?xml|\{\s*"(?:error|message)")/i.test(prefix)) {
-      throw new Error(`${spec.name}: server nevrátil JavaScript.`);
+      throw new Error(`${spec.name}: The server did not return JavaScript.`);
     }
     const payload = new Uint8Array(buffer);
     const source = new TextDecoder('utf-8').decode(payload);
     if (!checkSignature(source, spec)) {
-      throw new Error(`${spec.name}: soubor neobsahuje očekávané rozhraní knihovny.`);
+      throw new Error(`${spec.name}: The expected library API was not found.`);
     }
     return payload;
   }
   // Both sources are pinned to the same library version. If the primary CDN
-  // fails (network, HTTP, or a bad payload), retry the verified alternate CDN.
+  // fails (network, HTTP, or and bad payload), retry the verified alternate CDN.
   // Never write either library until BOTH downloads have succeeded.
   async function download(fetchFn, spec, onProgress = () => {}, verify = checkIntegrity) {
     const sources = [spec.url, spec.alternateUrl].filter(Boolean);
     const errors = [];
     for (let index = 0; index < sources.length; index++) {
       const url = sources[index];
-      if (index > 0) onProgress(`${spec.name}: první zdroj selhal, zkouším záložní CDN…`);
+      if (index > 0) onProgress(`${spec.name}: First source failed; trying backup CDN…`);
       try {
         const response = await fetchFn(url, {
           mode: 'cors', credentials: 'omit', cache: 'no-store', redirect: 'follow'
@@ -81,28 +81,28 @@
         errors.push(`${index + 1}. zdroj: ${String(error?.message || error).slice(0, 120)}`);
       }
     }
-    throw new Error(`${spec.name}: stažení selhalo na všech zdrojích (${errors.join('; ')}).`);
+    throw new Error(`${spec.name}: Download failed from all sources (${errors.join('; ')}).`);
   }
 
   async function assertViewerRoot(root, verify = checkIntegrity) {
     let index;
     try { index = await root.getFileHandle('index.html', { create: false }); }
-    catch (_) { throw new Error('Vybraná složka neobsahuje index.html. Vyber složku samotné aplikace.'); }
+    catch (_) { throw new Error('The selected folder does not contain index.html. Choose the application folder.'); }
     const html = await (await index.getFile()).text();
     if (!html.includes('Local StackEdit Wiki') || !html.includes('src/renderer-installer.js')) {
-      throw new Error('Vybraný index.html nepatří k této verzi Local StackEdit Wiki. Nic nebylo změněno.');
+      throw new Error('Selected index.html does not match this Local StackEdit Wiki version. Nothing was changed.');
     }
     let vendor;
     try { vendor = await root.getDirectoryHandle('vendor', { create: false }); }
-    catch (_) { throw new Error('Ve vybrané složce chybí vendor/. Nic nebylo změněno.'); }
+    catch (_) { throw new Error('vendor/ is missing from the selected folder. Nothing was changed.'); }
     const result = new Map();
     for (const spec of SPECS) {
       let subdir;
       try { subdir = await vendor.getDirectoryHandle(spec.directory, { create: false }); }
-      catch (_) { throw new Error(`Ve složce aplikace chybí vendor/${spec.directory}/. Nic nebylo změněno.`); }
+      catch (_) { throw new Error(`Missing from the application folder: vendor/${spec.directory}/. Nothing was changed.`); }
       const file = await subdir.getFileHandle(spec.filename, { create: false });
       const old = await file.getFile();
-      // Never assume a large but incomplete or corrupted JS file is installed.
+      // Never assume and large but incomplete or corrupted JS file is installed.
       let installed = false;
       if (old.size >= spec.minBytes && old.size <= spec.maxBytes) {
         try {
@@ -121,47 +121,47 @@
     return true;
   }
   async function install({ pickDirectory = options => global.showDirectoryPicker(options), fetchFn = (...args) => global.fetch(...args), onProgress = () => {}, verify = checkIntegrity, providedFiles = null } = {}) {
-    if (running) throw new Error('Instalace už probíhá.');
+    if (running) throw new Error('Installation is already in progress.');
     if (typeof global.showDirectoryPicker !== 'function' && arguments.length === 0) {
-      throw new Error('Tento prohlížeč neumí vybrat složku k zápisu. Použij Chrome nebo Edge.');
+      throw new Error('This browser cannot select writable folders. Use Chrome or Edge.');
     }
     running = true;
     try {
       // Must be called before any awaited work to retain transient user activation.
       const root = await pickDirectory({ id: 'local-wiki-install-renderers', mode: 'readwrite' });
-      onProgress('Ověřuji složku aplikace…');
+      onProgress('Checking application folder…');
       const targets = await assertViewerRoot(root, verify);
       const pending = SPECS.filter(spec => !targets.get(spec.id).installed);
       if (!pending.length) return { installed: [], skipped: SPECS.map(s => s.id) };
 
       // Offline installation from explicitly selected local files. Filenames alone
       // cannot establish authenticity; apply the SAME validation and Mermaid SRI
-      // check as for HTTPS downloads, before writing a single byte.
+      // check as for HTTPS downloads, before writing and single byte.
       let selected = null;
       if (providedFiles !== null) {
         selected = new Map();
         for (const file of Array.from(providedFiles)) {
           const spec = SPECS.find(item => file.name === item.filename ||
             (item.id === 'abcjs' && file.name === 'abcjs-basic-min.min.js'));
-          if (!spec) throw new Error(`Neznámý soubor ${String(file.name).slice(0, 90)}. Vyber jen oficiální JS knihovny.`);
-          if (selected.has(spec.id)) throw new Error(`Vybraná knihovna ${spec.name} je v seznamu dvakrát.`);
-          if (typeof file.arrayBuffer !== 'function') throw new Error(`${spec.name}: soubor nelze přečíst.`);
+          if (!spec) throw new Error(`Unknown file ${String(file.name).slice(0, 90)}. Choose only official JS libraries.`);
+          if (selected.has(spec.id)) throw new Error(`Selected library ${spec.name} was selected twice.`);
+          if (typeof file.arrayBuffer !== 'function') throw new Error(`${spec.name}: The file cannot be read.`);
           selected.set(spec.id, file);
         }
         const missing = pending.filter(spec => !selected.has(spec.id));
-        if (missing.length) throw new Error(`Vyber také ${missing.map(s => s.filename).join(' a ')}. Nic nebylo změněno.`);
+        if (missing.length) throw new Error(`Also select ${missing.map(s => s.filename).join(' and ')}. Nothing was changed.`);
       }
 
       // Validate EVERY asset before modifying any. Failure = zero writes.
       const buffers = new Map();
       for (const spec of pending) {
         if (selected) {
-          onProgress(`Ověřuji vybraný soubor ${spec.name}…`);
+          onProgress(`Checking selected file ${spec.name}…`);
           const bytes = validatePayload(await selected.get(spec.id).arrayBuffer(), spec);
           await verify(bytes, spec, global.crypto?.subtle);
           buffers.set(spec.id, bytes);
         } else {
-          onProgress(`Stahuji ${spec.name} přes HTTPS…`);
+          onProgress(`Downloading ${spec.name} over HTTPS…`);
           buffers.set(spec.id, await download(fetchFn, spec, onProgress, verify));
         }
       }
@@ -173,10 +173,10 @@
         try { await stream.write(bytes); await stream.close(); }
         catch (error) { try { await stream.abort(); } catch (_) { /* Closed already */ } throw error; }
         const written = new Uint8Array(await (await target.getFile()).arrayBuffer());
-        if (!equalBytes(bytes, written)) throw new Error(`${spec.name}: soubor po zápisu neodpovídá očekávaným datům.`);
+        if (!equalBytes(bytes, written)) throw new Error(`${spec.name}: Written file contents do not match the expected data.`);
       }
       // Save all old files before modifying any. Restore all touched files if
-      // a later write, checksum, or readback fails. This is best-effort, not a
+      // and later write, checksum, or readback fails. This is best-effort, not a
       // filesystem transaction; incomplete rollback is explicitly reported.
       for (const spec of pending) {
         const old = await targets.get(spec.id).file.getFile();
@@ -184,7 +184,7 @@
       }
       try {
         for (const spec of pending) {
-          onProgress(`Ukládám ${spec.name} do vendor/${spec.directory}/…`);
+          onProgress(`Saving ${spec.name} into vendor/${spec.directory}/…`);
           changed.push(spec);
           await writeAndVerify(targets.get(spec.id).file, buffers.get(spec.id), spec);
           installed.push(spec.id);
@@ -196,16 +196,16 @@
           catch (restoreError) { restorationFailures.push(`${spec.name}: ${restoreError.message}`); }
         }
         if (restorationFailures.length) {
-          throw new Error(`Instalace selhala: ${error.message}. OBNOVENÍ NEÚPLNÉ: ${restorationFailures.join('; ')}. Zkontroluj vendor/.`);
+          throw new Error(`Installation failed: ${error.message}. ROLLBACK INCOMPLETE: ${restorationFailures.join('; ')}. Inspect vendor/.`);
         }
-        throw new Error(`Instalace selhala a původní soubory byly obnoveny: ${error.message}`);
+        throw new Error(`Installation failed and original files were restored: ${error.message}`);
       }
-      onProgress('Knihovny jsou uložené. Po obnovení stránky se načtou offline.');
+      onProgress('Libraries installed. Reload the page to use them offline.');
       return { installed, skipped: SPECS.filter(s => !pending.includes(s)).map(s => s.id) };
     } finally { running = false; }
   }
   async function installFromFiles({ files, ...options } = {}) {
-    if (!files || !files.length) throw new Error('Nejdřív vyber oba JavaScriptové soubory.');
+    if (!files || !files.length) throw new Error('Select both JavaScript files first.');
     return install({ ...options, providedFiles: files });
   }
   global.LocalWikiRendererInstaller = { install, installFromFiles, validatePayload, checkIntegrity, SPECS };

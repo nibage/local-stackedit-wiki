@@ -1,0 +1,19 @@
+/* RC5 - explicit, keyboard-accessible drag-and-drop mode for Markdown notes. */
+[data-theme] .file-actions #rename-file.move-enabled,
+[data-theme] .file-actions #rename-file.move-enabled:hover {
+  border: 2px solid #54b273 !important;
+  box-shadow: inset 0 0 0 1px #54b273, 0 0 0 1px #54b273 !important;
+  color: var(--text) !important;
+  background: color-mix(in srgb, #54b273 16%, var(--panel)) !important;
+}
+[data-theme] .tree-row.tree-draggable { cursor: grab; }
+[data-theme] .tree-row.tree-draggable:active { cursor: grabbing; }
+[data-theme] .tree-row.tree-drag-source { opacity: .52; }
+[data-theme] .tree-row.tree-drop-target {
+  outline: 2px dashed #54b273 !important;
+  outline-offset: -2px;
+  background: color-mix(in srgb,#54b273 21%,var(--panel)) !important;
+  border-radius: 4px;
+}
+[data-theme] .file-actions #rename-file:focus-visible,
+[data-theme] .tree-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

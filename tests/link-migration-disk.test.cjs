@@ -47,7 +47,7 @@ test('preflight detects external mutation, does not move source',async()=>{
   const b=await bridgeFor(root);const ss=await ctx.LocalWikiMigration.snapshotAll(b);
   const p=ctx.LocalWikiMigration.plan(ss,'A.md','C.md');
   root.children.get('B.md').body=Buffer.from('External');root.children.get('B.md').lastModified++;
-  await assert.rejects(()=>ctx.LocalWikiMigration.execute(b,p,ss),/změnil/);
+  await assert.rejects(()=>ctx.LocalWikiMigration.execute(b,p,ss),/changed/);
   assert.equal(root.children.has('A.md'),true);assert.equal(root.children.has('C.md'),false);
 });
 test('write failure after partial update rolls back changed documents and rename',async()=>{
@@ -55,7 +55,7 @@ test('write failure after partial update rolls back changed documents and rename
   c.failWrite=true;const root=new MockDir('Wiki',[a,b,c]);
   const bridge=await bridgeFor(root);const ss=await ctx.LocalWikiMigration.snapshotAll(bridge);
   const p=ctx.LocalWikiMigration.plan(ss,'A.md','Moved.md');
-  await assert.rejects(()=>ctx.LocalWikiMigration.execute(bridge,p,ss),/Změny byly vráceny/);
+  await assert.rejects(()=>ctx.LocalWikiMigration.execute(bridge,p,ss),/Changes were rolled back/);
   assert.equal(root.children.has('Moved.md'),false);
   assert.equal((await bridge.readRaw('A.md')).text,'# A');
   assert.equal((await bridge.readRaw('B.md')).text,'[A](A.md)');

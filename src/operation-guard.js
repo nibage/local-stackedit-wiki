@@ -16,7 +16,7 @@
         return true;
       },
       release(name) {
-        if (mutation !== name) throw new Error('Nesouhlasící ukončení diskové operace.');
+        if (mutation !== name) throw new Error('The completed file operation does not match the active operation.');
         mutation = null;
       },
       isBusy() { return mutation !== null; },

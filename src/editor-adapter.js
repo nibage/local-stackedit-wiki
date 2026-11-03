@@ -3,7 +3,7 @@
 (function (global) {
   'use strict';
   function make(textarea) {
-    if (!global.CodeMirror) throw new Error('Chybí offline editor CodeMirror.');
+    if (!global.CodeMirror) throw new Error('Offline CodeMirror editor is missing.');
     const cm = global.CodeMirror.fromTextArea(textarea, {
       mode: 'gfm', lineNumbers: true, lineWrapping: true, indentUnit: 2,
       tabSize: 2, indentWithTabs: false, readOnly: true,
@@ -40,9 +40,9 @@
     }
     function format(type) {
       if (cm.getOption('readOnly')) return;
-      if (type === 'bold') wrap('**', '**', 'tučný text');
-      else if (type === 'italic') wrap('*', '*', 'kurzíva');
-      else if (type === 'code') wrap('`', '`', 'kód');
+      if (type === 'bold') wrap('**', '**', 'bold text');
+      else if (type === 'italic') wrap('*', '*', 'italic text');
+      else if (type === 'code') wrap('`', '`', 'code');
       else if (type === 'link') wrap('[', '](cesta.md)', 'odkaz');
       else if (type === 'heading') prefixLine('## ');
       else if (type === 'list') prefixLine('- ');

@@ -86,7 +86,7 @@ test('blocks move if source was externally edited', async () => {
   const fp = (await bridge.read('A.md')).fingerprint;
   root.entries.get('A.md').bytes = Buffer.from('NEW');
   root.entries.get('A.md').lastModified++;
-  await assert.rejects(() => bridge.renameFile('A.md', 'B.md', fp), /změnila/);
+  await assert.rejects(() => bridge.renameFile('A.md', 'B.md', fp), /changed/);
   assert.equal(root.entries.has('B.md'), false);
 });
 test('write failure rolls back target and preserves original', async () => {
@@ -105,7 +105,7 @@ test('failed source deletion preserves both copies and reports recovery', async 
   root.failDelete = true;
   const bridge = await setup(root);
   const fp = (await bridge.read('A.md')).fingerprint;
-  await assert.rejects(() => bridge.renameFile('A.md', 'B.md', fp), /Obě kopie/);
+  await assert.rejects(() => bridge.renameFile('A.md', 'B.md', fp), /Both copies/);
   assert.equal(root.entries.get('A.md').bytes.toString(), 'IMPORTANT');
   assert.equal(root.entries.get('B.md').bytes.toString(), 'IMPORTANT');
   assert.equal(bridge.hasFile('B.md'), true);
@@ -116,7 +116,7 @@ test('source changed mid-copy: preserve both copies for manual recovery', async 
   root.newFileHook = target => { target.onClose = () => { srcFile.bytes = Buffer.from('SECOND'); srcFile.lastModified++; }; };
   const bridge = await setup(root);
   const fp = (await bridge.read('A.md')).fingerprint;
-  await assert.rejects(() => bridge.renameFile('A.md', 'B.md', fp), /Obě kopie/);
+  await assert.rejects(() => bridge.renameFile('A.md', 'B.md', fp), /Both copies/);
   assert.equal(root.entries.get('A.md').bytes.toString(), 'SECOND');
   assert.equal(root.entries.get('B.md').bytes.toString(), 'FIRST');
 });

@@ -52,28 +52,28 @@ test('Lokální import bez fetch skutečně zapíše dva vybrané soubory',async
 
 test('Odmítne neúplný výběr dřív než cokoliv zapíše',async()=>{
   const mock=mockRoot();
-  await assert.rejects(installFromFiles({ files:picked().slice(0,1), pickDirectory:async()=>mock.root }),/Vyber také/);
+  await assert.rejects(installFromFiles({ files:picked().slice(0,1), pickDirectory:async()=>mock.root }),/Also select/);
   assert.equal(mock.writes,0);
 });
 
 test('Odmítne HTML odpověď přejmenovanou na JS soubor',async()=>{
   const mock=mockRoot();
   const files=picked(); files[1]=selected('abcjs-basic-min.js',bytes('<html>Blocked</html>',70000));
-  await assert.rejects(installFromFiles({ files, pickDirectory:async()=>mock.root }),/nevrátil JavaScript/);
+  await assert.rejects(installFromFiles({ files, pickDirectory:async()=>mock.root }),/did not return JavaScript/);
   assert.equal(mock.writes,0);
 });
 
 test('Odmítne náhodný JS soubor správné velikosti',async()=>{
   const mock=mockRoot();
   const files=picked(); files[1]=selected('abcjs-basic-min.js',bytes('/* unrelated fake */',70000));
-  await assert.rejects(installFromFiles({ files, pickDirectory:async()=>mock.root }),/očekávané rozhraní/);
+  await assert.rejects(installFromFiles({ files, pickDirectory:async()=>mock.root }),/expected library API/);
   assert.equal(mock.writes,0);
 });
 
 test('Odmítne soubory s duplicitním názvem nebo neznámý soubor',async()=>{
   const mock=mockRoot();
-  await assert.rejects(installFromFiles({ files:[...picked(),picked()[0]],pickDirectory:async()=>mock.root }),/dvakrát/);
-  await assert.rejects(installFromFiles({ files:[...picked(),selected('third-party.js',bytes('whatever',70000))],pickDirectory:async()=>mock.root }),/Neznámý soubor/);
+  await assert.rejects(installFromFiles({ files:[...picked(),picked()[0]],pickDirectory:async()=>mock.root }),/twice/);
+  await assert.rejects(installFromFiles({ files:[...picked(),selected('third-party.js',bytes('whatever',70000))],pickDirectory:async()=>mock.root }),/Unknown file/);
   assert.equal(mock.writes,0);
 });
 
@@ -87,7 +87,7 @@ test('Opraví pouze chybějící knihovnu, přítomnou nepřepisuje',async()=>{
 
 test('Při chybě druhého zápisu obnoví původní data',async()=>{
   const mock=mockRoot({failSecond:true});
-  await assert.rejects(installFromFiles({ files:picked(),pickDirectory:async()=>mock.root }),/obnoveny/);
+  await assert.rejects(installFromFiles({ files:picked(),pickDirectory:async()=>mock.root }),/restored/);
   assert.equal(new TextDecoder().decode(mock.store.get('mermaid/mermaid.min.js')), 'placeholder');
   assert.equal(new TextDecoder().decode(mock.store.get('abcjs/abcjs-basic-min.js')), 'placeholder');
 });
