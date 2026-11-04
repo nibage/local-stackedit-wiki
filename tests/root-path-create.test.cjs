@@ -28,7 +28,7 @@ function bridge(root) {
 test('root-relative nested .md creation requires explicit opt-in',async()=>{
   const root=new Dir('Wiki'),api=bridge(root);await api.openWritable();
   assert.equal(await api.missingParents('/knowledge/novaslozka/pivo.md'),'knowledge');
-  await assert.rejects(api.createFile('/knowledge/novaslozka/pivo.md'),/neexistuje/);
+  await assert.rejects(api.createFile('/knowledge/novaslozka/pivo.md'),/Parent folder does not exist/);
   assert.equal(root.map.size,0);
   assert.equal(await api.createFile('/knowledge/novaslozka/pivo.md',{createParents:true}),'knowledge/novaslozka/pivo.md');
   assert.equal(await api.missingParents('/knowledge/novaslozka/next.md'),null);
@@ -39,6 +39,6 @@ test('unsafe and case-colliding folders are never created',async()=>{
   for(const input of ['../x.md','//server/x.md','/.git/x.md','C:/x.md']){
     await assert.rejects(api.createFile(input,{createParents:true}),undefined,input);
   }
-  await assert.rejects(api.createFile('knowledge/x.md',{createParents:true}),/Kolize/);
+  await assert.rejects(api.createFile('knowledge/x.md',{createParents:true}),/Parent folder name collision/);
   assert.equal(root.map.size,1);
 });
