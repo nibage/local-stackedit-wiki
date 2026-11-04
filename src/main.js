@@ -81,7 +81,7 @@
     toggle.setAttribute('aria-pressed', String(moveEnabled));
     toggle.setAttribute('aria-label', moveEnabled ? 'Disable drag and drop mode' : 'Enable drag and drop mode');
     toggle.title = moveEnabled
-      ? 'Drag and drop a Markdown file onto a folder to move it. Press M on a focused note to enter a destination path. Every move requires dialog confirmation.'
+      ? 'Drag and drop a Markdown file onto a folder to move it. Press M on a focused note to enter a destination path. Automatic drop moves immediately without confirmation; manual M opens a dialog.'
       : 'Enable drag and drop file moves';
     ui.tree.classList.toggle('move-mode-enabled', moveEnabled);
   }
@@ -424,7 +424,7 @@
       if (node.kind === 'file' && moveEnabled && bridge.getMode() === 'readwrite') {
         row.draggable = true;
         row.classList.add('tree-draggable');
-        row.title = 'Drag and drop this file into another folder, or press M to open the move dialog';
+        row.title = 'Drag and drop to move immediately, or press M for the manual move dialog';
         row.addEventListener('dragstart', event => {
           if (!moveEnabled || operations.isBusy()) { event.preventDefault(); return; }
           draggedPath = node.path;
@@ -453,7 +453,9 @@
           const source = draggedPath;
           draggedPath = null;
           clearDragHighlights();
-          showMoveDialog(source, combinePath(node.path, basename(source)));
+          // Explicit move mode + a deliberate drop authorize a direct move.
+          // Keep collision and unsaved-change protections, but no dialogs.
+          void renamePath(source, combinePath(node.path, basename(source)), { directDrop: true });
         });
       }
       if (node.path && bridge.getMode() === 'readwrite') {
@@ -593,7 +595,7 @@
     } catch (err) { notice('Deletion failed: ' + err.message, 'error'); }
     finally { endOperation('delete'); }
   }
-  async function renamePath(oldPath, requested) {
+  async function renamePath(oldPath, requested, options = {}) {
     if (!oldPath || bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
     if (isDirty()) {
       notice('Save or discard unsaved changes before moving a note.', 'error'); return;
@@ -617,7 +619,7 @@
         '\n\nOnly unambiguous Markdown and [[wiki]] links will be updated. ' +
         'Unsupported syntax is left unchanged. Multi-file operations are not atomic. ' +
         'Keep a backup of your wiki. Continue?';
-      if (plan.totalLinks > 0 && !window.confirm(summary)) { notice('Move cancelled.'); return; }
+      if (!options.directDrop && plan.totalLinks > 0 && !window.confirm(summary)) { notice('Move cancelled.'); return; }
       const result = await window.LocalWikiMigration.execute(bridge, plan, snapshots);
       invalidateWikiIndex();
       for (const prefix of newPath.split('/').slice(0, -1).map((_, i, all) => all.slice(0, i + 1).join('/'))) expanded.add(prefix);
@@ -836,7 +838,7 @@
     draggedPath = null; clearDragHighlights();
     updateMoveModeUI(); renderTree();
     notice(moveEnabled
-      ? 'Move mode enabled. Drag and drop a Markdown file onto a folder; review its destination in the dialog. Press M on a focused note for manual entry.'
+      ? 'Move mode enabled. Drag and drop a Markdown file onto a folder; move the note immediately. Press M on a focused note for manual entry.'
       : 'Move mode disabled. File dragging is off.');
   });
   $('new-file').addEventListener('click', () => startDraft('file'));

@@ -1,0 +1,37 @@
+name: Vendor verified offline renderers into source checkout
+on:
+  push:
+    branches:
+      - fix/offline-renderers-direct-dnd
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch exact pinned npm releases and verify SHA-512
+        run: python tools/vendor-renderers-for-repo.py
+      - name: Verify local checkout requires no renderer downloads
+        run: |
+          python tools/vendor-renderers-for-repo.py --check
+          python tools/release-audit.py --require-renderers
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run unit tests
+        run: node --test tests/*.test.cjs
+      - name: Commit complete renderers into the pull request branch
+        if: github.ref_name == 'fix/offline-renderers-direct-dnd'
+        run: |
+          git add vendor/mermaid vendor/abcjs tools/renderer-provenance.json
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'Vendor verified Mermaid 8.9.2 and ABCjs 6.4.4 for git clone offline'
+            git push origin HEAD:fix/offline-renderers-direct-dnd
+          fi
