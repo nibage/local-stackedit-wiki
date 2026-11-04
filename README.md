@@ -48,3 +48,22 @@ python tests/real-renderers-release-smoke.py --zip local-stackedit-wiki-offline.
 Playwright and a Chromium binary are required for browser smoke tests, not for ordinary use. The GitHub Actions release workflow performs the complete offline build and its mandatory renderer, layout and interaction tests.
 
 Historical development notes in Czech are preserved in [`docs/CHANGELOG_LEGACY_CS.md`](docs/CHANGELOG_LEGACY_CS.md).
+
+## RC5.1: Bundled renderers in the Git checkout
+
+The previous merged PR left ~210-byte placeholder files in `vendor/mermaid` and
+`vendor/abcjs`. Those files do not render diagrams or musical notation even
+though the separately downloaded release ZIP does.
+
+For RC5.1, the `vendor-offline-renderers.yml` workflow fetches pinned
+**Mermaid 8.9.2** and **ABCjs 6.4.4** from npm, checks upstream SHA-512 and
+the independent Mermaid SRI, then commits real JS files and licenses into the
+PR branch. **Merge only after the workflow has committed the actual files**
+(~848 KB Mermaid, ~483 KB ABCjs) and
+`python tools/vendor-renderers-for-repo.py --check` succeeds.
+A normal `git pull` will then run entirely offline without a build step.
+
+Move mode: drag a Markdown file onto a folder to move immediately, with no
+dialog or browser confirmation. Collisions, external changes and active
+unsaved edits still block unsafe moves. Link updates are not atomic, so
+keep a Git backup. Manual path-entry with keyboard **M** keeps its dialog.
