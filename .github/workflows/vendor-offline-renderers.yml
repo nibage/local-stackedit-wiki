@@ -28,9 +28,7 @@ jobs:
       - name: Commit complete renderers into the pull request branch
         if: github.ref_name == 'fix/offline-renderers-direct-dnd'
         run: |
-          git add vendor/mermaid/mermaid.min.js vendor/mermaid/LICENSE \
-            vendor/abcjs/abcjs-basic-min.js vendor/abcjs/LICENSE \
-            tools/renderer-provenance.json
+          git add vendor/mermaid vendor/abcjs tools/renderer-provenance.json
           if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
