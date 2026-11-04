@@ -373,6 +373,68 @@
       return newPath;
     }
 
+    // Images are binary data: never pass them through the UTF-8 note decoder.
+    // Moving is byte-for-byte copy, verification, then deletion of the source.
+    async function assetFingerprint(path) {
+      const file = await readAsset(path);
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      return fingerprintBytes(bytes, file.lastModified);
+    }
+    async function moveAsset(oldPath, rawDestination, expectedFingerprint) {
+      if (mode !== 'readwrite' || !rootHandle) throw new Error('Moving an image requires write permission.');
+      if (!assetHandles.has(oldPath)) throw new Error('The original image is no longer in the open wiki.');
+      const parts = creationSegments(rawDestination, 'asset');
+      const newPath = parts.join('/');
+      if (!IMAGE_EXTENSION.test(newPath)) throw new Error('Destination must have a supported image extension.');
+      // Moving a file is not format conversion: prevent accidental extension changes.
+      const oldExt = oldPath.split('.').pop().toLowerCase();
+      const newExt = newPath.split('.').pop().toLowerCase();
+      if (oldExt !== newExt) throw new Error('Moving an image cannot change its file format.');
+      if (newPath === oldPath) return newPath;
+      const sourceHandle = assetHandles.get(oldPath);
+      if (typeof sourceHandle.getFile !== 'function') throw new Error('Image is not writable.');
+      const sourceFile = await sourceHandle.getFile();
+      const originalBytes = new Uint8Array(await sourceFile.arrayBuffer());
+      const fingerprint = fingerprintBytes(originalBytes, sourceFile.lastModified);
+      if (expectedFingerprint !== fingerprint) {
+        const err = new Error('Image changed outside this application. Move blocked.');
+        err.code = 'EXTERNAL_CHANGE'; throw err;
+      }
+      const parent = await parentFor(parts);
+      const name = parts.at(-1);
+      await assertNotExists(parent, name);
+      const targetHandle = await parent.getFileHandle(name, { create: true });
+      try {
+        const writable = await targetHandle.createWritable();
+        try { await writable.write(originalBytes); await writable.close(); }
+        catch (err) { try { await writable.abort(); } catch (_) {} throw err; }
+        const copy = new Uint8Array(await (await targetHandle.getFile()).arrayBuffer());
+        if (copy.length !== originalBytes.length || copy.some((b, i) => b !== originalBytes[i])) {
+          throw new Error('Image copy verification failed; original preserved.');
+        }
+      } catch (error) {
+        try { await parent.removeEntry(name); } catch (_) { /* Partial copy might remain. */ }
+        throw error;
+      }
+      // Verify the source bytes again; a concurrent modification must not be deleted.
+      const latest = await sourceHandle.getFile();
+      const latestBytes = new Uint8Array(await latest.arrayBuffer());
+      if (fingerprintBytes(latestBytes, latest.lastModified) !== fingerprint) {
+        applyScanned(await scan(rootHandle));
+        throw new Error('Source image changed while copying; both copies were preserved.');
+      }
+      try {
+        const fromParts = oldPath.split('/');
+        const sourceParent = await parentFor(fromParts);
+        await sourceParent.removeEntry(fromParts.at(-1));
+      } catch (error) {
+        applyScanned(await scan(rootHandle));
+        throw new Error('Image copy succeeded, but source deletion failed: ' + error.message + '. Both copies remain.');
+      }
+      applyScanned(await scan(rootHandle));
+      return newPath;
+    }
+
     // Destructive operations are restricted to entries already exposed in the
     // scanned wiki tree. Hidden configuration directories are never deleted.
     function findNode(path, kind) {
@@ -432,8 +494,9 @@
       return applyScanned(await scan(rootHandle, onProgress));
     }
     return {
-      openWritable, openExisting, openReadOnly, read, readRaw, write, readAsset, refresh, createFile, createDirectory, missingParents, renameFile, deletionSnapshot, deleteEntry,
+      openWritable, openExisting, openReadOnly, read, readRaw, write, readAsset, refresh, createFile, createDirectory, missingParents, renameFile, moveAsset, assetFingerprint, deletionSnapshot, deleteEntry,
       normalizeDestination: raw => creationSegments(raw, 'file').join('/'),
+      normalizeAssetDestination: raw => creationSegments(raw, 'asset').join('/'),
       getTree: () => tree, getMode: () => mode, getRootHandle: () => rootHandle,
       hasFile: path => fileHandles.has(path), hasAsset: path => assetHandles.has(path),
       getFilePaths: () => Array.from(fileHandles.keys()), getAssetPaths: () => Array.from(assetHandles.keys())

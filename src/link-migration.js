@@ -171,5 +171,106 @@
       const failure = new Error(message); failure.code = 'MIGRATION_FAILED'; throw failure;
     }
   }
-  global.LocalWikiMigration = { plan, snapshotAll, execute, rewriteText, relative };
+  // Asset relocation has different semantics from note renames: the moved
+  // resource is binary; only Markdown documents that reference it are edited.
+  // Keep scope conservative: image wikilinks and Markdown link/image targets.
+  function planAsset(snapshots, oldPath, newPath, assetPaths) {
+    const assets = new Set(assetPaths);
+    if (!assets.has(oldPath)) throw new Error('Original image is not in the wiki.');
+    if (oldPath !== newPath && assets.has(newPath)) throw new Error('Destination image exists.');
+    const changes = [];
+    let totalLinks = 0;
+    const decoder = s => { try { return decodeURIComponent(s); } catch (_) { return s; } };
+    function resolves(raw, from, isWiki) {
+      const target = decoder(raw).replace(/\\/g, '/');
+      if (!target || target.startsWith('/') || /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(target)) return null;
+      const fromDir = from.split('/').slice(0, -1).join('/');
+      const rel = global.LocalWikiFS.normalizePath([fromDir, target].filter(Boolean).join('/'));
+      if (rel && assets.has(rel)) return rel;
+      if (assets.has(target)) return target;
+      if (!isWiki) return null;
+      const lower = target.toLocaleLowerCase();
+      const matches = Array.from(assets).filter(p => p.toLocaleLowerCase() === lower ||
+        (!target.includes('/') && p.split('/').pop().toLocaleLowerCase() === lower));
+      return matches.length === 1 ? matches[0] : null;
+    }
+    for (const [path, snapshot] of snapshots) {
+      const text = snapshot.text;
+      const mask = buildProtectedMask(text);
+      const patches = [];
+      function add(start, value, replacement) {
+        if (!value || value === replacement || mask.subarray(start, start + value.length).some(Boolean)) return;
+        if (patches.some(p => start < p.end && start + value.length > p.start)) return;
+        patches.push({ start, end: start + value.length, value: replacement });
+      }
+      for (const match of text.matchAll(wikiLink)) {
+        if (mask[match.index]) continue;
+        const content = match[1], separator = content.indexOf('|');
+        const body = separator < 0 ? content : content.slice(0, separator);
+        const suffixIdx = body.search(/[?#]/);
+        const target = suffixIdx < 0 ? body : body.slice(0, suffixIdx);
+        if (resolves(target, path, true) !== oldPath) continue;
+        const suffix = suffixIdx < 0 ? '' : body.slice(suffixIdx);
+        add(match.index + match[0].indexOf(content), body, relative(path, newPath) + suffix);
+      }
+      // Standard Markdown image embeds and hyperlinks to image files.
+      const inlineAsset = /!?\[[^\]\r\n]*\]\(\s*(<[^>\r\n]+>|[^\s)\r\n]+)(?:\s+(?:"[^"\r\n]*"|'[^'\r\n]*'))?\s*\)/g;
+      for (const match of text.matchAll(inlineAsset)) {
+        if (mask[match.index]) continue;
+        const raw = match[1], angled = raw.startsWith('<') && raw.endsWith('>');
+        const target = angled ? raw.slice(1, -1) : raw;
+        const suffixIdx = target.search(/[?#]/);
+        const pathname = suffixIdx < 0 ? target : target.slice(0, suffixIdx);
+        if (resolves(pathname, path, false) !== oldPath) continue;
+        const suffix = suffixIdx < 0 ? '' : target.slice(suffixIdx);
+        const replacement = encodePath(relative(path, newPath)) + suffix;
+        add(match.index + match[0].indexOf(raw), raw, angled ? `<${replacement}>` : replacement);
+      }
+      if (!patches.length) continue;
+      patches.sort((a, b) => b.start - a.start);
+      let rewritten = text;
+      for (const patch of patches) rewritten = rewritten.slice(0, patch.start) + patch.value + rewritten.slice(patch.end);
+      changes.push({ path, before: text, after: rewritten, fingerprint: snapshot.fingerprint, links: patches.length });
+      totalLinks += patches.length;
+    }
+    return { oldPath, newPath, changes, totalLinks, affectedFiles: changes.length };
+  }
+  async function executeAsset(bridge, migration, snapshots, expectedAssetFingerprint) {
+    // Check all note snapshots *before* moving the image. Unlike notes, the
+    // original binary bytes cannot be recovered by decoding text.
+    for (const [path, old] of snapshots) {
+      const fresh = await bridge.readRaw(path);
+      if (fresh.fingerprint !== old.fingerprint || fresh.text !== old.text) {
+        throw new Error('Notes changed during image move preparation; nothing was moved.');
+      }
+    }
+    await bridge.moveAsset(migration.oldPath, migration.newPath, expectedAssetFingerprint);
+    const committed = [];
+    try {
+      for (const change of migration.changes) {
+        const fresh = await bridge.readRaw(change.path);
+        if (fresh.text !== change.before) throw new Error('A note changed while moving the image.');
+        await bridge.write(change.path, change.after, fresh.fingerprint);
+        committed.push(change);
+      }
+      return { moved: migration.newPath, links: migration.totalLinks, updated: committed.length };
+    } catch (err) {
+      const problems = [];
+      for (const change of committed.reverse()) {
+        try {
+          const fresh = await bridge.readRaw(change.path);
+          if (fresh.text !== change.after) throw new Error('Note changed again');
+          await bridge.write(change.path, change.before, fresh.fingerprint);
+        } catch (error) { problems.push(change.path + ': ' + error.message); }
+      }
+      try {
+        const fp = await bridge.assetFingerprint(migration.newPath);
+        await bridge.moveAsset(migration.newPath, migration.oldPath, fp);
+      } catch (error) { problems.push('image: ' + error.message); }
+      throw new Error('Image move failed: ' + err.message +
+        (problems.length ? '; automatic recovery incomplete: ' + problems.join('; ') : '; changes rolled back.'));
+    }
+  }
+
+  global.LocalWikiMigration = { plan, snapshotAll, execute, rewriteText, relative, planAsset, executeAsset };
 })(typeof window !== 'undefined' ? window : globalThis);
