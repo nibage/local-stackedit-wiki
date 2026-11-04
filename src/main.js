@@ -81,7 +81,7 @@
     toggle.setAttribute('aria-pressed', String(moveEnabled));
     toggle.setAttribute('aria-label', moveEnabled ? 'Disable drag and drop mode' : 'Enable drag and drop mode');
     toggle.title = moveEnabled
-      ? 'Drag and drop a Markdown file onto a folder to move it. Press M on a focused note to enter a destination path. Automatic drop moves immediately without confirmation; manual M opens a dialog.'
+      ? 'Drag and drop a Markdown note or image onto a folder to move immediately. Existing destinations and unsaved edits are protected. Press M on a focused note to enter a destination path manually.'
       : 'Enable drag and drop file moves';
     ui.tree.classList.toggle('move-mode-enabled', moveEnabled);
   }
@@ -421,10 +421,10 @@
       if (node.kind === 'image') row.classList.add('tree-image');
       // Native HTML5 DnD is enabled only in explicit move mode. The source
       // comes from this tree, never from untrusted external drops.
-      if (node.kind === 'file' && moveEnabled && bridge.getMode() === 'readwrite') {
+      if ((node.kind === 'file' || node.kind === 'image') && moveEnabled && bridge.getMode() === 'readwrite') {
         row.draggable = true;
         row.classList.add('tree-draggable');
-        row.title = 'Drag and drop to move immediately, or press M for the manual move dialog';
+        row.title = 'Drag to a folder to move immediately' + (node.kind === 'file' ? ', or press M for a manual move' : '');
         row.addEventListener('dragstart', event => {
           if (!moveEnabled || operations.isBusy()) { event.preventDefault(); return; }
           draggedPath = node.path;
@@ -441,20 +441,20 @@
       }
       if (node.kind === 'directory') {
         row.addEventListener('dragover', event => {
-          if (!moveEnabled || !draggedPath || !bridge.hasFile(draggedPath) || operations.isBusy()) return;
+          if (!moveEnabled || !draggedPath || !(bridge.hasFile(draggedPath) || bridge.hasAsset(draggedPath)) || operations.isBusy()) return;
           event.preventDefault(); event.stopPropagation();
           event.dataTransfer.dropEffect = 'move';
           clearDragHighlights(); row.classList.add('tree-drop-target');
         });
         row.addEventListener('dragleave', () => row.classList.remove('tree-drop-target'));
         row.addEventListener('drop', event => {
-          if (!moveEnabled || !draggedPath || !bridge.hasFile(draggedPath) || operations.isBusy()) return;
+          if (!moveEnabled || !draggedPath || !(bridge.hasFile(draggedPath) || bridge.hasAsset(draggedPath)) || operations.isBusy()) return;
           event.preventDefault(); event.stopPropagation();
           const source = draggedPath;
           draggedPath = null;
           clearDragHighlights();
-          // Explicit move mode + a deliberate drop authorize a direct move.
-          // Keep collision and unsaved-change protections, but no dialogs.
+          // Explicit move mode and a deliberate drop authorize the move.
+          // Keep collision/external-change checks, but no confirm/modal for a drop.
           void renamePath(source, combinePath(node.path, basename(source)), { directDrop: true });
         });
       }
@@ -604,11 +604,14 @@
     updateMoveModeUI();
     let moved = null, summaryNotice = '';
     try {
-      const newPath = bridge.normalizeDestination(requested);
+      const movingImage = bridge.hasAsset(oldPath);
+      const newPath = movingImage ? bridge.normalizeAssetDestination(requested) : bridge.normalizeDestination(requested);
       if (newPath === oldPath) return;
       notice('Checking links across the wiki…');
       const snapshots = await window.LocalWikiMigration.snapshotAll(bridge);
-      const plan = window.LocalWikiMigration.plan(snapshots, oldPath, newPath);
+      const plan = movingImage
+        ? window.LocalWikiMigration.planAsset(snapshots, oldPath, newPath, bridge.getAssetPaths())
+        : window.LocalWikiMigration.plan(snapshots, oldPath, newPath);
       // A transaction spanning multiple disk files is not available in the
       // browser; request explicit user confirmation with the computed scope.
       const examples = plan.changes.slice(0, 6).map(x => `• ${x.path} (${x.links})`).join('\n');
@@ -620,7 +623,9 @@
         'Unsupported syntax is left unchanged. Multi-file operations are not atomic. ' +
         'Keep a backup of your wiki. Continue?';
       if (!options.directDrop && plan.totalLinks > 0 && !window.confirm(summary)) { notice('Move cancelled.'); return; }
-      const result = await window.LocalWikiMigration.execute(bridge, plan, snapshots);
+      const result = movingImage
+        ? await window.LocalWikiMigration.executeAsset(bridge, plan, snapshots, await bridge.assetFingerprint(oldPath))
+        : await window.LocalWikiMigration.execute(bridge, plan, snapshots);
       invalidateWikiIndex();
       for (const prefix of newPath.split('/').slice(0, -1).map((_, i, all) => all.slice(0, i + 1).join('/'))) expanded.add(prefix);
       moved = result.moved;
@@ -631,7 +636,7 @@
       try {
         await bridge.refresh();
         invalidateWikiIndex(); renderTree();
-        if (!bridge.hasFile(activePath)) clearEditor();
+        if (!activePath || !bridge.hasFile(activePath)) clearEditor();
       } catch (_) { /* Error message above is the authoritative status. */ }
     } finally {
       endOperation('rename');
@@ -838,7 +843,7 @@
     draggedPath = null; clearDragHighlights();
     updateMoveModeUI(); renderTree();
     notice(moveEnabled
-      ? 'Move mode enabled. Drag and drop a Markdown file onto a folder; move the note immediately. Press M on a focused note for manual entry.'
+      ? 'Move mode enabled. Drag a Markdown file to a folder to move it immediately; press M for manual entry. Unsaved edits and collisions still block the move.'
       : 'Move mode disabled. File dragging is off.');
   });
   $('new-file').addEventListener('click', () => startDraft('file'));

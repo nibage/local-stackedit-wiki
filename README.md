@@ -15,7 +15,7 @@ Chrome/Edge may ask to grant access to a folder when reopening it. Local storage
 
 - **Files / Full-text / Links:** browse notes and images, search note contents, view a document outline and backlinks.
 - **+ Note / + Folder:** enter the new name inline in the tree; Enter confirms, Escape cancels. Double-click a note in the tree to rename it.
-- **Move:** toggle the explicit drag-and-drop mode (green outline when enabled). Drag a Markdown note onto a folder. The existing **Move note** dialog opens with a prefilled destination path you can still edit. **The drop does not itself write anything**; click Continue to perform the move. Only existing destination folders are accepted. To move a focused note using the keyboard, press **M** while move mode is enabled.
+- **Move:** toggle drag-and-drop mode (green outline when enabled). Drag a Markdown note **or image** onto an existing folder to move it immediately, without a confirmation. Matching Markdown and Obsidian references are updated where unambiguous; if a conflict is detected, the operation is blocked. Use **M** on a focused Markdown note to enter a destination manually. Keep a backup: updating multiple linked notes is not atomic.
 - **Refresh:** rebuilds the folder tree and reloads the current note (asks before discarding unsaved edits).
 - **Editor / Side by side / Preview:** choose how to view Markdown.
 - **Theme:** System, Light or Dark; changes are remembered for this installation.
@@ -31,7 +31,7 @@ Developer/source checkouts can contain placeholder renderer files instead of bun
 ## Safety and limitations
 
 - File moves update unambiguous Markdown and Obsidian wiki links. Multi-file operations cannot be truly atomic through the browser File System Access API; keep a backup.
-- **Move mode currently supports Markdown notes**, not images or folders as drag sources. Folder rows (including the wiki root) are drop targets. The destination folder must exist.
+- **Move mode supports Markdown notes and PNG/JPG/JPEG/WebP/GIF/BMP/AVIF images** as drag sources. Folder rows (including the wiki root) are drop targets. The destination folder must already exist; other file types are not draggable. Image formats are not converted when moved. SVG is not currently supported as a local image asset.
 - The source notes are never sent to a server. The application is designed to run over `file://` on supported Chrome/Edge installations.
 - Browser support for directory writing varies. Check `tools/test-file-access.html` if opening a folder fails.
 - The editor uses CodeMirror rather than the original StackEdit `cledit` editor.
@@ -49,21 +49,32 @@ Playwright and a Chromium binary are required for browser smoke tests, not for o
 
 Historical development notes in Czech are preserved in [`docs/CHANGELOG_LEGACY_CS.md`](docs/CHANGELOG_LEGACY_CS.md).
 
-## RC5.1: Bundled renderers in the Git checkout
+## RC5.1: Using a Git checkout offline
 
-The previous merged PR left ~210-byte placeholder files in `vendor/mermaid` and
-`vendor/abcjs`. Those files do not render diagrams or musical notation even
-though the separately downloaded release ZIP does.
+The pull request that adds RC5.1 also includes a dedicated GitHub Actions workflow
+(`vendor-offline-renderers.yml`) which fetches the **exact pinned** Mermaid 8.9.2
+and ABCjs 6.4.4 bundles, validates npm SHA-512 and the pinned Mermaid SHA-512,
+then commits the real assets to the pull request branch. Do not merge the PR
+until this workflow completes and the files in `vendor/` have realistic sizes
+(around 848 KB for Mermaid and 483 KB for ABCjs, rather than ~210-byte stubs).
 
-For RC5.1, the `vendor-offline-renderers.yml` workflow fetches pinned
-**Mermaid 8.9.2** and **ABCjs 6.4.4** from npm, checks upstream SHA-512 and
-the independent Mermaid SRI, then commits real JS files and licenses into the
-PR branch. **Merge only after the workflow has committed the actual files**
-(~848 KB Mermaid, ~483 KB ABCjs) and
-`python tools/vendor-renderers-for-repo.py --check` succeeds.
-A normal `git pull` will then run entirely offline without a build step.
+Locally, `python tools/vendor-renderers-for-repo.py --check` verifies these
+assets without network access. The download/install mode is intended for
+maintainers, not ordinary users. Subsequent `git clone` and `git pull` can
+load renderers without a build step or Internet access.
 
-Move mode: drag a Markdown file onto a folder to move immediately, with no
-dialog or browser confirmation. Collisions, external changes and active
-unsaved edits still block unsafe moves. Link updates are not atomic, so
-keep a Git backup. Manual path-entry with keyboard **M** keeps its dialog.
+Drag and drop while **Move** mode is enabled now moves immediately, without
+an application modal or a browser `confirm`. Existing-file collisions,
+external changes, active unsaved edits and migration failures still block
+unsafe moves; move-and-backlink updates are not atomic. Keep a Git backup.
+Manual path entry (keyboard **M**) still uses its dialog.
+
+## RC5.2: Image moves and media support
+
+Image files can now be dragged to folders in Move mode. Binary bytes are verified before deletion of the source; relative Markdown image links, normal links to an image, and Obsidian image embeds are updated conservatively. Unsupported HTML `src` strings, ambiguous references and references inside code blocks are not rewritten. Keep a Git backup when moving shared assets.
+
+Audio, video and PDF embedding are not yet implemented in this app. Obsidian supports additional file formats, but they should not be assumed to work here until separately implemented and tested.
+
+## Roadmap
+
+Future attachment support, matching Obsidian's official file format list, is tracked in [TODO.md](TODO.md). The checklist covers file-tree visibility, safe local previews, Markdown/Obsidian embeds, moves and links, and browser compatibility. The TODO does **not** mean these formats already work in this app.
