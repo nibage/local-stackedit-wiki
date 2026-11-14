@@ -68,3 +68,16 @@ test('rejects collision, non-existent destination parent, extension change, old 
   await assert.rejects(()=>b.moveAsset('photo.png','new.png','wrong'),/changed/i);
   assert.ok(b.hasAsset('photo.png'));
 });
+test('moves all Obsidian binary/structured attachment types without corrupting bytes',async()=>{
+  const extensions = ['svg','flac','mp3','m4a','wav','ogg','3gp','mp4','webm','mov','mkv','ogv','pdf','canvas','base'];
+  for (const ext of extensions) {
+    const original=Buffer.from([0,255,7,13,128,10,0,254,33]);
+    const root=new MockDir('wiki',[new MockFile('file.'+ext,original),new MockDir('Assets')]);
+    const b=await setup(root);
+    const fp=await b.assetFingerprint('file.'+ext);
+    await b.moveAsset('file.'+ext,'Assets/file.'+ext,fp);
+    assert.equal(b.hasAsset('file.'+ext),false,ext);
+    assert.equal(b.hasAsset('Assets/file.'+ext),true,ext);
+    assert.deepEqual(root.entries.get('Assets').entries.get('file.'+ext).bytes,original,ext);
+  }
+});

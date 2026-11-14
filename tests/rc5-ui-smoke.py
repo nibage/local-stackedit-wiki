@@ -49,7 +49,7 @@ with sync_playwright() as pw:
     page.locator('#open-folder').click()
     page.wait_for_function("document.querySelector('#root-name').textContent==='Demo'")
     assert page.locator('.tree-row[aria-label="logo.png"]').count()==1
-    assert page.locator('#count').inner_text().startswith('2 .md · 1 images')
+    assert page.locator('#count').inner_text().startswith('2 .md · 1 attachments')
     # New folder must not open a native prompt: inline input appears immediately.
     page.locator('#new-folder').click()
     inline=page.locator('.tree-name-input')
@@ -96,8 +96,8 @@ with sync_playwright() as pw:
     assert page.locator('#rename-file').evaluate('(el)=>getComputedStyle(el).borderTopColor')=='rgb(84, 178, 115)'
     assert 'Drag and drop' in page.locator('#rename-file').get_attribute('title')
     assert page.locator('.tree-row[aria-label="Recipes/Beer-notes.md"]').get_attribute('draggable')=='true'
-    # Dropping directly moves the file. No modal or native dialog, even if
-    # Markdown backlinks must be updated in other notes.
+    # Dropping in explicit Move mode must apply the move immediately, with NO
+    # application modal and NO native confirm, even when backlinks need updating.
     page.evaluate("window.mockWiki.entries.get('Intro.md').body='[Beer](Recipes/Beer-notes.md)'")
     dialog_count = len(dialogs)
     page.locator('.tree-row[aria-label="Recipes/Beer-notes.md"]').drag_to(page.locator('.tree-row[aria-label="Demo"]'))
@@ -105,7 +105,7 @@ with sync_playwright() as pw:
     assert not page.evaluate("window.LocalWikiDebug.bridge.hasFile('Recipes/Beer-notes.md')")
     page.wait_for_function("document.querySelector('#filename').textContent==='Beer-notes.md'")
     assert not page.locator('#move-dialog').evaluate('(el)=>el.open')
-    assert len(dialogs)==dialog_count, 'A drop must not trigger browser confirmation'
+    assert len(dialogs)==dialog_count, 'Drag and drop must not open any browser confirmations'
     assert page.evaluate("window.mockWiki.entries.get('Intro.md').body")=='[Beer](Beer-notes.md)'
     # Toggle OFF: no native drag behavior.
     page.locator('#rename-file').click()
@@ -132,5 +132,5 @@ with sync_playwright() as pw:
     assert page.locator('#rename-file').is_disabled()
     assert page.locator('#rename-file').get_attribute('aria-pressed')=='false'
     assert not errors,errors
-    print('PASS RC5: English UI, checkbox order, move toggle, drag/drop immediate without dialog, with backlink migration, read-only, inline creation/rename, images, themes')
+    print('PASS RC5: English UI, checkbox order, move toggle, drag/drop immediate no-dialog with backlink update, read-only, inline creation/rename, images, themes')
     browser.close()

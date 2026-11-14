@@ -116,6 +116,12 @@
   <p id="image-dialog-path" class="dialog-hint"></p>
   <div class="dialog-actions"><button id="image-insert" type="button">Insert into note</button><button id="image-close" type="button">Close</button></div>
 </dialog>
+<dialog id="attachment-dialog" class="wiki-dialog attachment-dialog" aria-labelledby="attachment-dialog-title">
+  <h2 id="attachment-dialog-title">Attachment</h2>
+  <p id="attachment-dialog-path" class="dialog-hint"></p>
+  <div id="attachment-dialog-viewer" class="attachment-dialog-viewer" aria-live="polite"></div>
+  <div class="dialog-actions"><button id="attachment-insert" type="button">Insert into note</button><button id="attachment-close" type="button">Close</button></div>
+</dialog>
 <dialog id="renderer-dialog" aria-labelledby="renderer-dialog-title" class="renderer-dialog">
   <h2 id="renderer-dialog-title">Offline renderers</h2>
   <div id="renderer-details" aria-live="polite"></div><p class="panel-note">The test renders built-in sample diagrams and notation, not your wiki files.</p><div id="renderer-smoke-result" class="renderer-smoke-result" role="status" aria-live="polite"></div>
@@ -149,6 +155,7 @@
 <script src="src/navigation.js"></script>
 <script src="src/wiki-index.js"></script>
 <script src="src/editor-adapter.js"></script>
+<script src="src/attachment-types.js"></script>
 <script src="src/file-system.js"></script>
 <script src="src/renderer.js"></script>
 <script src="src/link-migration.js"></script>

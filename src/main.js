@@ -14,12 +14,13 @@
   let indexPromise = null;
   let activePath = null, originalText = '', fingerprint = null, lineEnding = '\n', hasBOM = false;
   let expanded = new Set(['']), renderTimer = null, renderSequence = 0;
-  let inlineDraft = null, imageDialogURL = null, pendingMovePath = null;
+  let inlineDraft = null, imageDialogURL = null, attachmentDialogURL = null, pendingMovePath = null;
   let selectedFolder = '', treeClickTimer = null;
   let moveEnabled = false, draggedPath = null;
   let blobURLs = [], selectedMode = 'split';
   const SIDEBAR_MIN = 190, SIDEBAR_MAX = 520, SIDEBAR_DEFAULT = 255;
-  const SAFE_IMAGE = /\.(png|jpe?g|gif|webp|bmp|avif)$/i;
+  const types = window.LocalWikiAttachmentTypes;
+  const SAFE_IMAGE = /\.(png|jpe?g|gif|webp|bmp|avif|svg)$/i;
   // Browser file:// origins may share storage across *different* index.html paths.
   // Never read legacy unscoped keys from another copy of the app.
   function safeStored(key, fallback) {
@@ -81,7 +82,7 @@
     toggle.setAttribute('aria-pressed', String(moveEnabled));
     toggle.setAttribute('aria-label', moveEnabled ? 'Disable drag and drop mode' : 'Enable drag and drop mode');
     toggle.title = moveEnabled
-      ? 'Drag and drop a Markdown note or image onto a folder to move immediately. Existing destinations and unsaved edits are protected. Press M on a focused note to enter a destination path manually.'
+      ? 'Drag and drop a note or attachment onto a folder to move immediately. Existing destinations and unsaved edits are protected. Press M on a focused note to enter a destination path manually.'
       : 'Enable drag and drop file moves';
     ui.tree.classList.toggle('move-mode-enabled', moveEnabled);
   }
@@ -225,6 +226,31 @@
       }
     }
   }
+  async function loadAttachments(nodes, sourcePath, sequence) {
+    for (const placeholder of nodes || []) {
+      let path;
+      try { path = resolveAttachment(placeholder.dataset.localAttachment || '', sourcePath, true); }
+      catch (_) { path = null; }
+      if (!path || !bridge.hasAsset(path)) {
+        placeholder.textContent = '[attachment missing or ambiguous]'; continue;
+      }
+      try {
+        const file = await bridge.readAsset(path);
+        if (sequence !== renderSequence) return;
+        const label = document.createElement('span'); label.className = 'attachment-label'; label.textContent = path;
+        if (types.kind(path) === 'canvas' || types.kind(path) === 'base') {
+          const link = document.createElement('button'); link.type = 'button'; link.textContent = 'Open structured file preview';
+          link.addEventListener('click', () => void showAttachment(path));
+          placeholder.replaceChildren(label, link);
+          continue;
+        }
+        const url = URL.createObjectURL(file); blobURLs.push(url);
+        const media = attachmentMedia(path, file, url);
+        if (media) placeholder.replaceChildren(label, media);
+        else placeholder.textContent = '[unsupported attachment]';
+      } catch (_) { if (sequence === renderSequence) placeholder.textContent = '[attachment failed to load]'; }
+    }
+  }
   function renderPreview() {
     clearTimeout(renderTimer);
     renderSequence++;
@@ -247,6 +273,7 @@
       report(result.diagrams);
       buildToc();
       void loadImages(result.imageNodes, activePath, sequence);
+      void loadAttachments(result.attachmentNodes, activePath, sequence);
     } catch (err) {
       const p = document.createElement('p'); p.textContent = `Preview failed: ${err.message}`;
       ui.preview.replaceChildren(p);
@@ -292,6 +319,130 @@
   function parentPath(path) { return path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : ''; }
   function basename(path) { return path.split('/').pop(); }
   function combinePath(parent, name) { return parent ? parent + '/' + name : name; }
+  function resolveAttachment(target, sourcePath, wikiSyntax = false) {
+    let decoded;
+    try { decoded = decodeURIComponent(target); } catch (_) { return null; }
+    if (!decoded || /^(?:[a-z][a-z\d+.-]*:|\/\/|\/)/i.test(decoded)) return null;
+    const path = decoded.split(/[?#]/)[0].replace(/\\/g, '/');
+    if (!types.isAttachment(path)) return null;
+    const relative = window.LocalWikiFS.relativePath(sourcePath, path);
+    if (relative && bridge.hasAsset(relative)) return relative;
+    if (bridge.hasAsset(path)) return path;
+    // Only Obsidian embeds/wiki links support basename lookup, and only
+    // when it resolves to a single file in the selected wiki.
+    if (wikiSyntax) {
+      const lowered = path.toLowerCase();
+      const matches = bridge.getAssetPaths().filter(candidate => candidate.toLowerCase() === lowered ||
+        (!path.includes('/') && candidate.split('/').pop().toLowerCase() === lowered));
+      if (matches.length === 1) return matches[0];
+    }
+    return null;
+  }
+  function relativeAssetPath(from, to) {
+    const base = parentPath(from).split('/').filter(Boolean);
+    const dest = to.split('/');
+    while (base.length && dest.length && base[0] === dest[0]) { base.shift(); dest.shift(); }
+    return [...base.map(() => '..'), ...dest].join('/');
+  }
+  function insertAttachment(path) {
+    if (!activePath || bridge.getMode() !== 'readwrite' || operations.isBusy()) return false;
+    const relative = relativeAssetPath(activePath, path);
+    const encoded = relative.split('/').map(segment => encodeURIComponent(segment)).join('/');
+    const name = basename(path);
+    const markup = types.isImage(path)
+      ? `![${name.replace(/\.(?:png|jpe?g|gif|webp|bmp|avif|svg)$/i, '')}](${encoded})`
+      : types.isEmbeddable(path) ? `![[${relative}]]` : `[[${relative}]]`;
+    editor.cm.replaceSelection(markup);
+    editor.focus();
+    return true;
+  }
+  // The viewer is built from DOM nodes with textContent, never from an
+  // attachment's HTML/SVG source. Blob URLs are scoped and revoked on close.
+  function attachmentMedia(path, file, url) {
+    const kind = types.mediaKind(path, file.type);
+    let element;
+    if (kind === 'image') {
+      element = document.createElement('img'); element.alt = basename(path);
+      element.src = url;
+    } else if (kind === 'audio' || kind === 'video') {
+      element = document.createElement(kind);
+      element.controls = true;
+      element.preload = kind === 'video' ? 'metadata' : 'none';
+      if (kind === 'video') element.playsInline = true;
+      element.src = url;
+      element.addEventListener('error', () => { element.title = 'Browser codec or format may be unsupported'; });
+    } else if (kind === 'pdf') {
+      element = document.createElement('object');
+      element.type = 'application/pdf'; element.data = url;
+      element.textContent = 'PDF preview is unavailable in this browser.';
+    }
+    return element || null;
+  }
+  async function attachmentTextPreview(file, path) {
+    const output = document.createElement('div');
+    if (file.size > 2 * 1024 * 1024) {
+      output.textContent = 'This structured attachment is larger than 2 MB. Use Obsidian or another local viewer.';
+      return output;
+    }
+    const text = await file.text();
+    if (types.kind(path) === 'canvas') {
+      try {
+        const canvas = JSON.parse(text);
+        const nodes = Array.isArray(canvas.nodes) ? canvas.nodes : [];
+        const edges = Array.isArray(canvas.edges) ? canvas.edges : [];
+        const summary = document.createElement('p');
+        summary.textContent = `JSON Canvas (read-only): ${nodes.length} nodes, ${edges.length} edges. This is a text overview, not an interactive canvas.`;
+        output.append(summary);
+        const list = document.createElement('ul');
+        for (const node of nodes.slice(0, 80)) {
+          const item = document.createElement('li');
+          item.textContent = String(node.text || node.file || node.url || node.label || node.id || '(empty node)').slice(0, 220);
+          list.append(item);
+        }
+        if (nodes.length > 80) { const end = document.createElement('p'); end.textContent = 'Showing first 80 nodes only.'; output.append(end); }
+        output.append(list);
+      } catch (_) { output.textContent = 'Invalid JSON Canvas. File content was not modified.'; }
+    } else {
+      const info = document.createElement('p'); info.textContent = 'Obsidian Bases (read-only YAML preview). Full Bases queries and editing are not implemented.';
+      const pre = document.createElement('pre'); pre.className = 'attachment-plain-text'; pre.textContent = text.slice(0, 100000);
+      output.append(info, pre);
+    }
+    return output;
+  }
+  async function showAttachment(path) {
+    if (types.isImage(path)) { showImage(path); return; }
+    const dialog = $('attachment-dialog');
+    const viewer = $('attachment-dialog-viewer');
+    if (attachmentDialogURL) { URL.revokeObjectURL(attachmentDialogURL); attachmentDialogURL = null; }
+    viewer.replaceChildren();
+    $('attachment-dialog-title').textContent = basename(path);
+    $('attachment-dialog-path').textContent = path;
+    $('attachment-insert').disabled = bridge.getMode() !== 'readwrite' || !activePath || operations.isBusy();
+    $('attachment-insert').onclick = () => { if (insertAttachment(path)) dialog.close(); };
+    dialog.showModal();
+    try {
+      const file = await bridge.readAsset(path);
+      if (!dialog.open || $('attachment-dialog-path').textContent !== path) return;
+      if (types.kind(path) === 'canvas' || types.kind(path) === 'base') {
+        const node = await attachmentTextPreview(file, path);
+        if (dialog.open && $('attachment-dialog-path').textContent === path) viewer.replaceChildren(node);
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      if (!dialog.open || $('attachment-dialog-path').textContent !== path) { URL.revokeObjectURL(url); return; }
+      attachmentDialogURL = url;
+      const node = attachmentMedia(path, file, url);
+      if (node) viewer.replaceChildren(node);
+      else viewer.textContent = 'This file type has no built-in viewer.';
+    } catch (error) {
+      if (dialog.open) viewer.textContent = 'Unable to open attachment: ' + error.message;
+    }
+  }
+  $('attachment-close').addEventListener('click', () => $('attachment-dialog').close());
+  $('attachment-dialog').addEventListener('close', () => {
+    $('attachment-dialog-viewer').replaceChildren();
+    if (attachmentDialogURL) { URL.revokeObjectURL(attachmentDialogURL); attachmentDialogURL = null; }
+  });
   function showImage(path) {
     const dialog = $('image-dialog');
     const img = $('image-dialog-preview');
@@ -301,13 +452,7 @@
     $('image-insert').disabled = bridge.getMode() !== 'readwrite' || !activePath || operations.isBusy();
     $('image-insert').onclick = () => {
       if (imageDialogURL === null || !activePath || bridge.getMode() !== 'readwrite') return;
-      const base = parentPath(activePath).split('/').filter(Boolean);
-      const target = path.split('/');
-      while (base.length && target.length && base[0] === target[0]) { base.shift(); target.shift(); }
-      const relative = [...base.map(() => '..'), ...target].join('/');
-      const encoded = relative.split('/').map(segment => encodeURIComponent(segment)).join('/');
-      editor.cm.replaceSelection('![' + basename(path).replace(/\.(?:png|jpe?g|gif|webp|bmp|avif)$/i, '') + '](' + encoded + ')');
-      editor.focus(); dialog.close();
+      if (insertAttachment(path)) dialog.close();
     };
     bridge.readAsset(path).then(file => {
       if (!dialog.open || $('image-dialog-path').textContent !== path) return;
@@ -413,15 +558,16 @@
       row.setAttribute('aria-label', node.path || node.name);
       const open = expanded.has(node.path) || Boolean(needle);
       const glyph = document.createElement('span'); glyph.className = 'glyph';
-      glyph.textContent = node.kind === 'directory' ? (open ? '▾' : '▸') : node.kind === 'image' ? '▧' : '◦';
+      const icons = {image:'▧',audio:'♫',video:'▶',pdf:'▤',canvas:'◇',base:'▦'};
+      glyph.textContent = node.kind === 'directory' ? (open ? '▾' : '▸') : icons[node.kind] || '◦';
       const label = document.createElement('span'); label.textContent = node.name;
       row.append(glyph, label);
       const entry = document.createElement('div'); entry.className = 'tree-entry';
       entry.append(row);
-      if (node.kind === 'image') row.classList.add('tree-image');
+      if (bridge.hasAsset(node.path)) row.classList.add('tree-attachment');
       // Native HTML5 DnD is enabled only in explicit move mode. The source
       // comes from this tree, never from untrusted external drops.
-      if ((node.kind === 'file' || node.kind === 'image') && moveEnabled && bridge.getMode() === 'readwrite') {
+      if ((node.kind === 'file' || bridge.hasAsset(node.path)) && moveEnabled && bridge.getMode() === 'readwrite') {
         row.draggable = true;
         row.classList.add('tree-draggable');
         row.title = 'Drag to a folder to move immediately' + (node.kind === 'file' ? ', or press M for a manual move' : '');
@@ -476,8 +622,8 @@
         row.addEventListener('dblclick', event => {
           event.preventDefault(); clearTimeout(treeClickTimer); startInlineRename(node);
         });
-      } else if (node.kind === 'image') {
-        row.addEventListener('click', () => showImage(node.path));
+      } else if (bridge.hasAsset(node.path)) {
+        row.addEventListener('click', () => void showAttachment(node.path));
       } else {
         row.addEventListener('click', () => { selectedFolder = node.path; if (open) expanded.delete(node.path); else expanded.add(node.path); renderTree(); });
         if (open) {
@@ -493,7 +639,7 @@
     };
     make(root, ui.tree);
     const count = node => node.kind === 'file' ? 1 : node.kind === 'directory' ? node.children.reduce((n, child) => n + count(child), 0) : 0;
-    ui.count.textContent = `${count(root)} .md · ${bridge.getAssetPaths().length} images`;
+    ui.count.textContent = `${count(root)} .md · ${bridge.getAssetPaths().length} attachments`;
     ui.rootName.textContent = root.name;
   }
   function showScanProgress(progress) {
@@ -598,7 +744,7 @@
   async function renamePath(oldPath, requested, options = {}) {
     if (!oldPath || bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
     if (isDirty()) {
-      notice('Save or discard unsaved changes before moving a note.', 'error'); return;
+      notice('Save or discard unsaved changes before moving a file.', 'error'); return;
     }
     if (!requested || !requested.trim() || !beginOperation('rename')) return;
     updateMoveModeUI();
@@ -843,7 +989,7 @@
     draggedPath = null; clearDragHighlights();
     updateMoveModeUI(); renderTree();
     notice(moveEnabled
-      ? 'Move mode enabled. Drag a Markdown file to a folder to move it immediately; press M for manual entry. Unsaved edits and collisions still block the move.'
+      ? 'Move mode enabled. Drag notes or attachments onto a folder. Unsaved edits and collisions still block moves.'
       : 'Move mode disabled. File dragging is off.');
   });
   $('new-file').addEventListener('click', () => startDraft('file'));
@@ -877,12 +1023,14 @@
     const href = a.getAttribute('href') || '';
     const parsed = window.LocalWikiNavigation.splitTarget(href);
     const doc = findDoc(href);
+    const attachment = resolveAttachment(parsed.path || href, activePath, Boolean(parsed.isWiki));
     if (doc) {
       evt.preventDefault();
       // Do not scroll if switching documents was cancelled due to unsaved text.
       void selectFile(doc).then(opened => { if (opened) jumpToHeading(parsed.anchor); });
       return;
     }
+    if (attachment) { evt.preventDefault(); void showAttachment(attachment); return; }
     if (/^https?:\/\//i.test(href) || /^mailto:/i.test(href)) {
       evt.preventDefault(); window.open(href, '_blank', 'noopener,noreferrer'); return;
     }

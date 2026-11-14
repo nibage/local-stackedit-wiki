@@ -13,9 +13,9 @@ Chrome/Edge may ask to grant access to a folder when reopening it. Local storage
 
 ## Editing and navigation
 
-- **Files / Full-text / Links:** browse notes and images, search note contents, view a document outline and backlinks.
+- **Files / Full-text / Links:** browse notes and Obsidian-compatible attachments, search note contents, view a document outline and backlinks.
 - **+ Note / + Folder:** enter the new name inline in the tree; Enter confirms, Escape cancels. Double-click a note in the tree to rename it.
-- **Move:** toggle drag-and-drop mode (green outline when enabled). Drag a Markdown note **or image** onto an existing folder to move it immediately, without a confirmation. Matching Markdown and Obsidian references are updated where unambiguous; if a conflict is detected, the operation is blocked. Use **M** on a focused Markdown note to enter a destination manually. Keep a backup: updating multiple linked notes is not atomic.
+- **Move:** toggle drag-and-drop mode (green outline when enabled). Drag a Markdown note **or supported attachment** onto an existing folder to move it immediately, without a confirmation. Matching Markdown and Obsidian references are updated where unambiguous; if a conflict is detected, the operation is blocked. Use **M** on a focused Markdown note to enter a destination manually. Keep a backup: updating multiple linked notes is not atomic.
 - **Refresh:** rebuilds the folder tree and reloads the current note (asks before discarding unsaved edits).
 - **Editor / Side by side / Preview:** choose how to view Markdown.
 - **Theme:** System, Light or Dark; changes are remembered for this installation.
@@ -24,14 +24,14 @@ Chrome/Edge may ask to grant access to a folder when reopening it. Local storage
 
 ## Offline rendering
 
-The complete offline distribution bundles **marked, CodeMirror, MathJax, Mermaid, ABCjs and Prism**. Markdown, mathematics, diagrams, musical notation and syntax highlighting work without internet access. Images inside the wiki are visible in the file tree and can be inserted as relative Markdown links.
+The complete offline distribution bundles **marked, CodeMirror, MathJax, Mermaid, ABCjs and Prism**. Markdown, mathematics, diagrams, musical notation and syntax highlighting work without internet access. Images, audio, video, PDFs, JSON Canvas and Bases files inside the selected wiki are visible in the tree. Open a file to preview it and insert a relative link into a Markdown note. Obsidian-style embeds such as `![[audio.mp3]]`, `![[movie.mp4]]` and `![[manual.pdf]]` use local browser viewers. SVG images are displayed using `<img>`, never injected as executable SVG markup. See [`docs/OBSIDIAN_ATTACHMENTS.md`](docs/OBSIDIAN_ATTACHMENTS.md).
 
 Developer/source checkouts can contain placeholder renderer files instead of bundled Mermaid and ABCjs distributions. Use `.github/workflows/offline-release.yml` to build an audited complete offline ZIP. Details: [`docs/RENDERERS.md`](docs/RENDERERS.md). Do not confuse a development checkout with the complete offline ZIP.
 
 ## Safety and limitations
 
 - File moves update unambiguous Markdown and Obsidian wiki links. Multi-file operations cannot be truly atomic through the browser File System Access API; keep a backup.
-- **Move mode supports Markdown notes and PNG/JPG/JPEG/WebP/GIF/BMP/AVIF images** as drag sources. Folder rows (including the wiki root) are drop targets. The destination folder must already exist; other file types are not draggable. Image formats are not converted when moved. SVG is not currently supported as a local image asset.
+- **Move mode supports Markdown notes and all listed Obsidian attachments**, including SVG, audio, video, PDF, Canvas and Bases. Folder rows (including the wiki root) are drop targets. The destination folder must already exist. Extension changes and destination collisions are blocked. Only unambiguous Markdown references are updated; references inside Canvas/Bases are not rewritten. The operation is not atomic.
 - The source notes are never sent to a server. The application is designed to run over `file://` on supported Chrome/Edge installations.
 - Browser support for directory writing varies. Check `tools/test-file-access.html` if opening a folder fails.
 - The editor uses CodeMirror rather than the original StackEdit `cledit` editor.
@@ -73,8 +73,10 @@ Manual path entry (keyboard **M**) still uses its dialog.
 
 Image files can now be dragged to folders in Move mode. Binary bytes are verified before deletion of the source; relative Markdown image links, normal links to an image, and Obsidian image embeds are updated conservatively. Unsupported HTML `src` strings, ambiguous references and references inside code blocks are not rewritten. Keep a Git backup when moving shared assets.
 
-Audio, video and PDF embedding are not yet implemented in this app. Obsidian supports additional file formats, but they should not be assumed to work here until separately implemented and tested.
+Since RC6, local audio/video/PDF embeds, SVG images and read-only JSON Canvas/Bases previews are supported. Full Canvas editing, Bases queries and cross-file reference rewriting in Canvas/Bases are not supported. Available playback codecs still depend on Chrome/Edge and the operating system. See the attachment guide.
 
-## Roadmap
+## RC6: Obsidian attachments in the file tree
 
-Future attachment support, matching Obsidian's official file format list, is tracked in [TODO.md](TODO.md). The checklist covers file-tree visibility, safe local previews, Markdown/Obsidian embeds, moves and links, and browser compatibility. The TODO does **not** mean these formats already work in this app.
+The following file extensions now appear alongside notes: images (`avif bmp gif jpeg jpg png svg webp`), audio (`flac m4a mp3 ogg wav 3gp`), video (`mkv mov mp4 ogv webm`), PDF (`pdf`), JSON Canvas (`canvas`) and Bases (`base`). Audio-only WebM files are previewed with an audio player when their MIME type identifies them as audio. Double-clicking or selecting an asset opens a local preview dialog. The **Insert into note** button adds a relative Markdown/Obsidian embed or link; new content never leaves the chosen folder.
+
+**Limitations:** The Canvas viewer is a read-only node summary and Bases is a read-only YAML preview (not the full Obsidian editing engine). Audio/video playback depends on installed browser codecs. PDF preview depends on browser PDF support. Moving files updates Markdown links where unambiguous, not cross-references stored inside Canvas/Bases. See [`docs/OBSIDIAN_ATTACHMENTS.md`](docs/OBSIDIAN_ATTACHMENTS.md).

@@ -1,0 +1,7 @@
+{
+  "nodes": [
+    { "id": "intro", "type": "text", "text": "Offline wiki", "x": 0, "y": 0, "width": 250, "height": 110 },
+    { "id": "next", "type": "text", "text": "Add your own files", "x": 320, "y": 0, "width": 250, "height": 110 }
+  ],
+  "edges": [ { "id": "edge", "fromNode": "intro", "fromSide": "right", "toNode": "next", "toSide": "left" } ]
+}

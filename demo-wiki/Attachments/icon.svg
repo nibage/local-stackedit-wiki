@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="96" viewBox="0 0 240 96" role="img" aria-label="Offline wiki demo">
+  <rect width="240" height="96" rx="12" fill="#20242c"/>
+  <rect x="15" y="16" width="63" height="64" rx="7" fill="#f6a622"/>
+  <text x="28" y="63" fill="#17130b" font-size="43" font-family="sans-serif" font-weight="bold">W</text>
+  <text x="93" y="45" fill="#f5f7fa" font-size="18" font-family="sans-serif">Offline</text>
+  <text x="93" y="70" fill="#f6a622" font-size="19" font-family="sans-serif">Attachments</text>
+</svg>
