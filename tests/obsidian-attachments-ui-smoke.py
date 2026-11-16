@@ -73,11 +73,13 @@ with sync_playwright() as pw:
     assert not page.evaluate('Boolean(window.svgExecuted)'), 'SVG script executed in image context'
     page.locator('.tree-row[aria-label="board.canvas"]').click()
     page.wait_for_function("document.querySelector('#attachment-dialog').open")
+    page.wait_for_function("document.querySelector('#attachment-dialog-viewer').textContent.includes('1 nodes, 0 edges')")
     assert '1 nodes, 0 edges' in page.locator('#attachment-dialog-viewer').inner_text()
     assert not page.locator('#attachment-dialog-viewer img').count(), 'Canvas text was injected as HTML'
     page.locator('#attachment-close').click()
     page.locator('.tree-row[aria-label="query.base"]').click()
     page.wait_for_function("document.querySelector('#attachment-dialog').open")
+    page.wait_for_function("document.querySelector('#attachment-dialog-viewer').textContent.includes('read-only YAML')")
     assert 'read-only YAML' in page.locator('#attachment-dialog-viewer').inner_text()
     page.locator('#attachment-insert').click()
     assert '[[query.base]]' in page.locator('.CodeMirror-code').inner_text()
