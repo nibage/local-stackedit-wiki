@@ -76,7 +76,8 @@
     // Canvas file paths are relative to the vault root, not the canvas itself.
     if (typeof input !== 'string' || !input || input.length > 800) return null;
     const path = input.replace(/\\/g,'/');
-    if (path.startsWith('/') || /[?#\\x00-\\x1f]/.test(path) || /^[a-z]+:/i.test(path)) return null;
+    if (path.startsWith('/') || path.includes('?') || path.includes('#') ||
+        Array.from(path).some(char => char.charCodeAt(0) < 32) || /^[a-z]+:/i.test(path)) return null;
     const parts = path.split('/');
     if (parts.some(part => !part || part === '.' || part === '..')) return null;
     return parts.join('/');
@@ -118,8 +119,6 @@
     if (!model.nodes.length) {
       viewport.append(create('p','canvas-empty','This canvas has no supported nodes.'));
     }
-    const minX = Math.min(...model.nodes.map(n=>n.x),0);
-    const minY = Math.min(...model.nodes.map(n=>n.y),0);
     // Compute bounding box across actual nodes, including negative coordinates.
     const smallestX = model.nodes.length ? Math.min(...model.nodes.map(n=>n.x)) : 0;
     const smallestY = model.nodes.length ? Math.min(...model.nodes.map(n=>n.y)) : 0;
@@ -186,7 +185,7 @@
         card.append(create('div','canvas-node-kind','Local file'));
         card.append(create('div','canvas-node-content',node.file));
         const path=canonicalPath(node.file);
-        if (path && /\\.(?:png|jpe?g|gif|webp|bmp|avif|svg)$/i.test(path) &&
+        if (path && ['png','jpg','jpeg','gif','webp','bmp','avif','svg'].includes(path.split('.').pop().toLowerCase()) &&
             typeof options.readImage === 'function') {
           Promise.resolve().then(()=>options.readImage(path)).then(file=>{
             if (disposed || !file || !card.isConnected) return;
