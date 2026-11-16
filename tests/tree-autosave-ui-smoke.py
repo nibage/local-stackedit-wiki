@@ -28,7 +28,9 @@ with sync_playwright() as pw:
     page.route('https://wiki-autosave.test/**',serve)
     html=(ROOT/'index.html').read_text().replace('<head>','<head><base href="https://wiki-autosave.test/">',1)
     page.set_content(html,wait_until='load')
-    assert page.locator('#notice').is_hidden(), 'The old permanent notice strip should be absent'
+    # A remembered wiki can generate a temporary startup toast; it must not occupy layout height.
+    assert page.locator('#notice').evaluate("(el)=>getComputedStyle(el).position")=='fixed'
+    assert page.evaluate("document.querySelector('.workspace').getBoundingClientRect().top - document.querySelector('.topbar').getBoundingClientRect().bottom < 2")
     assert page.locator('[data-side="search"]').inner_text()=='Search'
     page.evaluate("""() => {
       function file(name,body){return {kind:'file',name,body,lastModified:100,
