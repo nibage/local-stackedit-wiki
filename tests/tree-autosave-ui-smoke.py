@@ -64,7 +64,7 @@ with sync_playwright() as pw:
     assert 'Opened note:' not in page.locator('#notice').text_content()
     assert page.locator('#notice').evaluate("(el)=>getComputedStyle(el).position")=='static'
     page.locator('#rename-file').click()
-    page.wait_for_function("document.querySelector('#notice').textContent.includes('Drag and drop')")
+    page.wait_for_function("document.querySelector('#notice').textContent.includes('Move mode enabled')")
     assert page.locator('#notice').get_attribute('title')==page.locator('#notice').inner_text()
     # The message must be contained in the header and never cover the folder buttons.
     assert page.evaluate("""() => {
