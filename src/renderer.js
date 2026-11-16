@@ -5,7 +5,8 @@
   const REMOVE = new Set('SCRIPT STYLE IFRAME OBJECT EMBED FORM BUTTON INPUT SELECT TEXTAREA META LINK BASE SVG MATH'.split(' '));
   const ALLOWED_CODE_CLASSES = /^language-[a-z\d_+.-]+$/i;
   const MATH_MARKER = 'LOCALWIKIMATHBLOCK';
-  const OBSIDIAN_IMAGE = /\.(?:png|jpe?g|gif|webp|bmp|avif)$/i;
+  const OBSIDIAN_IMAGE = /\.(?:png|jpe?g|gif|webp|bmp|avif|svg)$/i;
+  const OBSIDIAN_MEDIA = /\.(?:flac|m4a|mp3|ogg|wav|webm|3gp|mkv|mov|mp4|ogv|pdf|canvas|base)$/i;
   const CALLOUT_LABELS = { note: 'Note', abstract: 'Summary', info: 'Info', todo: 'Todo', tip: 'Tip', success: 'Success', question: 'Question', warning: 'Warning', failure: 'Failure', danger: 'Danger', bug: 'Bug', example: 'Example', quote: 'Quote' }; 
   const tokenCounter = () => Math.floor(Math.random() * 1000000000).toString(36);
   function convertWikiLinks(line) {
@@ -30,7 +31,13 @@
     return piece.replace(/!\[\[([^\]\n]+)\]\]/g, (original, inner) => {
       const segments = inner.split('|');
       const target = segments.shift().trim();
-      if (!OBSIDIAN_IMAGE.test(target)) return original; // Note transclusion is not implemented.
+      if (!OBSIDIAN_IMAGE.test(target)) {
+        // Render attachments as locally resolved placeholders, never remote media.
+        // Markdown-note transclusions are intentionally not supported.
+        if (!OBSIDIAN_MEDIA.test(target)) return original;
+        const caption = (segments[0] || target.split('/').pop()).replace(/[\\[\]()]/g, '\\$&');
+        return `[${caption}](<obsidian-attachment:${encodeURIComponent(target)}>)`;
+      }
       const option = (segments[0] || '').trim();
       const widthMatch = /^(\d{2,4})(?:x\d{2,4})?$/.exec(option);
       const width = widthMatch && Number(widthMatch[1]) >= 32 && Number(widthMatch[1]) <= 1600 ? Number(widthMatch[1]) : null;
@@ -119,6 +126,19 @@
     Array.from(template.content.childNodes).forEach(clean);
     return template.content;
   }
+  function markAttachments(fragment) {
+    const nodes = [];
+    for (const link of fragment.querySelectorAll('a[href^="obsidian-attachment:"]')) {
+      const original = link.getAttribute('href');
+      const placeholder = document.createElement('span');
+      placeholder.className = 'wiki-attachment-embed';
+      placeholder.dataset.localAttachment = original.slice('obsidian-attachment:'.length);
+      placeholder.textContent = 'Loading attachment: ' + link.textContent;
+      link.replaceWith(placeholder);
+      nodes.push(placeholder);
+    }
+    return nodes;
+  }
   function restoreMath(fragment, expressions) {
     if (!expressions.length) return;
     const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT);
@@ -184,6 +204,7 @@
     const { prepared, expressions, frontmatter } = prepareSource(text);
     const html = global.marked.parse(prepared, { gfm: true, breaks: false, headerIds: false, mangle: false });
     const fragment = sanitize(html);
+    const attachmentNodes = markAttachments(fragment);
     restoreMath(fragment, expressions);
     const callouts = enhanceCallouts(fragment);
     const properties = prependFrontmatter(fragment, frontmatter);
@@ -215,7 +236,7 @@
       try { global.MathJax.Hub.Queue(['Typeset', global.MathJax.Hub, container]); }
       catch (err) { console.warn('MathJax:', err); }
     }
-    return { imageNodes: Array.from(container.querySelectorAll('img[data-local-source]')), headings: idx, expressions: expressions.length, callouts, properties, diagrams };
+    return { imageNodes: Array.from(container.querySelectorAll('img[data-local-source]')), attachmentNodes, headings: idx, expressions: expressions.length, callouts, properties, diagrams };
   }
   global.LocalWikiRender = { render, prepareSource, convertWikiLinks, convertEmbeds, extractFrontmatter };
 })(window);

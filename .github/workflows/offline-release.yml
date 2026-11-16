@@ -1,11 +1,12 @@
 name: Build complete offline wiki ZIP
 on:
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -32,6 +33,10 @@ jobs:
         run: python tests/rc5-ui-smoke.py
       - name: Verify binary image moves and updated links
         run: python tests/rc52-image-ui-smoke.py
+      - name: Verify Obsidian attachments, previews, SVG isolation and binary media moves
+        run: python tests/obsidian-attachments-ui-smoke.py
+      - name: Verify tree controls, status layout and 5-second autosave
+        run: python tests/tree-autosave-ui-smoke.py
       - name: Upload verified ZIP
         uses: actions/upload-artifact@v4
         with:

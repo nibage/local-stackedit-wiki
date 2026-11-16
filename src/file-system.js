@@ -3,7 +3,19 @@
   'use strict';
   const SKIP_DIRS = new Set(['.git', '.obsidian', '.github', '.vscode', '.venv', 'node_modules', '_viewer', '.stackedit-data']);
   const MD_EXTENSION = /\.(md|markdown)$/i;
-  const IMAGE_EXTENSION = /\.(png|jpe?g|gif|webp|bmp|avif)$/i;
+  // The standalone bridge is also used by legacy test harnesses without the
+  // browser bootstrap. Keep a minimal type classifier as a safe fallback.
+  const types = global.LocalWikiAttachmentTypes || {
+    kind(path) {
+      const ext = /\.([a-z0-9]+)$/i.exec(path)?.[1]?.toLowerCase();
+      if (['png','jpg','jpeg','webp','gif','bmp','avif','svg'].includes(ext)) return 'image';
+      if (['mp3','m4a','wav','ogg','flac','3gp'].includes(ext)) return 'audio';
+      if (['mp4','webm','mov','mkv','ogv'].includes(ext)) return 'video';
+      return ['pdf','canvas','base'].includes(ext) ? ext : null;
+    }
+  };
+  const isAsset = path => Boolean(types.kind(path));
+  const kindFor = path => types.kind(path);
   const collator = new Intl.Collator('cs', { numeric: true, sensitivity: 'base' });
   function sortEntries(a, b) {
     if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
@@ -54,7 +66,7 @@
       const nextTree = createTree(handle.name);
       const nextFiles = new Map();
       const nextAssets = new Map();
-      const stats = { directories: 0, entries: 0, files: 0, images: 0, skipped: 0 };
+      const stats = { directories: 0, entries: 0, files: 0, images: 0, attachments: 0, skipped: 0 };
       const skippedPaths = [];
       let lastReport = 0;
       function report(force = false) {
@@ -106,10 +118,11 @@
             nextFiles.set(path, entry);
             parent.children.push({ kind: 'file', name: entry.name, path });
             stats.files++;
-          } else if (entry.kind === 'file' && IMAGE_EXTENSION.test(entry.name)) {
+          } else if (entry.kind === 'file' && isAsset(entry.name)) {
             nextAssets.set(path, entry);
-            parent.children.push({ kind: 'image', name: entry.name, path });
-            stats.images++;
+            parent.children.push({ kind: kindFor(entry.name), name: entry.name, path });
+            stats.attachments++;
+            if (kindFor(entry.name) === 'image') stats.images++;
           }
           report();
         }
@@ -153,7 +166,7 @@
         const path = normalizePath(parts.join('/'));
         if (!path) continue;
         if (MD_EXTENSION.test(path)) { nextFiles.set(path, file); insertNode(nextTree, path); }
-        else if (IMAGE_EXTENSION.test(path)) { nextAssets.set(path, file); insertNode(nextTree, path, 'image'); }
+        else if (isAsset(path)) { nextAssets.set(path, file); insertNode(nextTree, path, kindFor(path)); }
       }
       sortTree(nextTree);
       rootHandle = null; mode = 'readonly';
@@ -200,7 +213,7 @@
     }
     async function readAsset(path) {
       const handle = assetHandles.get(path);
-      if (!handle) throw new Error(`Image not found: ${path}`);
+      if (!handle) throw new Error(`Attachment not found: ${path}`);
       return typeof handle.getFile === 'function' ? handle.getFile() : handle;
     }
     async function write(path, text, expectedFingerprint) {
@@ -381,23 +394,23 @@
       return fingerprintBytes(bytes, file.lastModified);
     }
     async function moveAsset(oldPath, rawDestination, expectedFingerprint) {
-      if (mode !== 'readwrite' || !rootHandle) throw new Error('Moving an image requires write permission.');
-      if (!assetHandles.has(oldPath)) throw new Error('The original image is no longer in the open wiki.');
+      if (mode !== 'readwrite' || !rootHandle) throw new Error('Moving an attachment requires write permission.');
+      if (!assetHandles.has(oldPath)) throw new Error('The original attachment is no longer in the open wiki.');
       const parts = creationSegments(rawDestination, 'asset');
       const newPath = parts.join('/');
-      if (!IMAGE_EXTENSION.test(newPath)) throw new Error('Destination must have a supported image extension.');
+      if (!isAsset(newPath)) throw new Error('Destination must have a supported attachment extension.');
       // Moving a file is not format conversion: prevent accidental extension changes.
       const oldExt = oldPath.split('.').pop().toLowerCase();
       const newExt = newPath.split('.').pop().toLowerCase();
-      if (oldExt !== newExt) throw new Error('Moving an image cannot change its file format.');
+      if (oldExt !== newExt) throw new Error('Moving an attachment cannot change its file format.');
       if (newPath === oldPath) return newPath;
       const sourceHandle = assetHandles.get(oldPath);
-      if (typeof sourceHandle.getFile !== 'function') throw new Error('Image is not writable.');
+      if (typeof sourceHandle.getFile !== 'function') throw new Error('Attachment is not writable.');
       const sourceFile = await sourceHandle.getFile();
       const originalBytes = new Uint8Array(await sourceFile.arrayBuffer());
       const fingerprint = fingerprintBytes(originalBytes, sourceFile.lastModified);
       if (expectedFingerprint !== fingerprint) {
-        const err = new Error('Image changed outside this application. Move blocked.');
+        const err = new Error('Attachment changed outside this application. Move blocked.');
         err.code = 'EXTERNAL_CHANGE'; throw err;
       }
       const parent = await parentFor(parts);
@@ -410,7 +423,7 @@
         catch (err) { try { await writable.abort(); } catch (_) {} throw err; }
         const copy = new Uint8Array(await (await targetHandle.getFile()).arrayBuffer());
         if (copy.length !== originalBytes.length || copy.some((b, i) => b !== originalBytes[i])) {
-          throw new Error('Image copy verification failed; original preserved.');
+          throw new Error('Attachment copy verification failed; original preserved.');
         }
       } catch (error) {
         try { await parent.removeEntry(name); } catch (_) { /* Partial copy might remain. */ }
@@ -421,7 +434,7 @@
       const latestBytes = new Uint8Array(await latest.arrayBuffer());
       if (fingerprintBytes(latestBytes, latest.lastModified) !== fingerprint) {
         applyScanned(await scan(rootHandle));
-        throw new Error('Source image changed while copying; both copies were preserved.');
+        throw new Error('Source attachment changed while copying; both copies were preserved.');
       }
       try {
         const fromParts = oldPath.split('/');
@@ -429,7 +442,7 @@
         await sourceParent.removeEntry(fromParts.at(-1));
       } catch (error) {
         applyScanned(await scan(rootHandle));
-        throw new Error('Image copy succeeded, but source deletion failed: ' + error.message + '. Both copies remain.');
+        throw new Error('Attachment copy succeeded, but source deletion failed: ' + error.message + '. Both copies remain.');
       }
       applyScanned(await scan(rootHandle));
       return newPath;

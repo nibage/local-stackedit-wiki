@@ -49,7 +49,7 @@ with sync_playwright() as pw:
     page.locator('#open-folder').click()
     page.wait_for_function("document.querySelector('#root-name').textContent==='Demo'")
     assert page.locator('.tree-row[aria-label="logo.png"]').count()==1
-    assert page.locator('#count').inner_text().startswith('2 .md · 1 images')
+    assert page.locator('#count').inner_text().startswith('2 .md · 1 attachments')
     # Images are draggable in move mode, with no confirmation and no loss of bytes.
     page.evaluate("window.mockWiki.entries.get('Intro.md').body='![Logo](logo.png) ![[logo.png|200]] [open](logo.png)'")
     original=page.evaluate("Array.from(window.mockWiki.entries.get('logo.png').body)")

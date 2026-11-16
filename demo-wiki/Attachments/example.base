@@ -1,0 +1,6 @@
+filters:
+  and:
+    - file.ext == "md"
+views:
+  - type: table
+    name: Markdown files

@@ -1,0 +1,44 @@
+# Obsidian-style attachments (RC6)
+
+This is a lightweight offline browser-based wiki, **not the Obsidian application**. It recognizes all extensions listed on [Obsidian's accepted file formats page](https://obsidian.md/help/file-formats) as of November 2026, but full feature parity is not claimed.
+
+| Type | Extensions | Tree | Preview | Embed in `.md` |
+|---|---|---|---|---|
+| Markdown | `.md`, `.markdown` | Yes | Markdown editor & preview | Markdown links, Obsidian wiki links; note transclusion not implemented |
+| Images | `.avif` `.bmp` `.gif` `.jpeg` `.jpg` `.png` `.svg` `.webp` | Yes | Image dialog, HTML image embeds | `![caption](file.ext)` or `![[file.ext]]` |
+| Audio | `.flac` `.m4a` `.mp3` `.ogg` `.wav` `.3gp` (and audio `.webm` by MIME) | Yes | Local `<audio controls>` | `![[file.ext]]` |
+| Video | `.mkv` `.mov` `.mp4` `.ogv` `.webm` | Yes | Local `<video controls>` | `![[file.ext]]` |
+| PDF | `.pdf` | Yes | Native browser PDF viewer | `![[file.pdf]]` |
+| JSON Canvas | `.canvas` | Yes | Read-only node/edge summary | Link (`[[file.canvas]]`); click to open a summary |
+| Bases | `.base` | Yes | Read-only YAML text | Link (`[[file.base]]`); click to open YAML |
+
+Both `.webm` audio and video are detected as `.webm` files in the tree. If the file's MIME type begins with `audio/`, the preview uses the audio player; otherwise the video player. **Recognizing a file is not a promise that its codec is supported** by Chrome/Edge.
+
+## Safety and offline behavior
+
+- Works with a selected local folder through the browser File System Access API, with no required server or cloud.
+- Binary file contents are not decoded as Markdown. File moves verify copied bytes and block existing destinations; link migration only rewrites unambiguous references in Markdown notes.
+- SVG is shown only through a browser image element. We do not insert raw SVG markup into the HTML document or execute scripts found in SVG files.
+- Canvas and Bases previews use `textContent` to prevent HTML injection. Oversized structured files are not parsed (2 MB limit for previews); Canvas summaries cap visible nodes at 80.
+- Object URLs for local media are revoked when the preview changes/closes. The application does not upload attachments.
+- File deletion is permanent (not a recycle bin). Test in `demo-wiki` and maintain backups.
+- References inside `.canvas` and `.base` are **not** updated automatically when moving an asset. Check those files if you rely on embedded assets in Canvas/Bases.
+- Full Obsidian Canvas graph rendering/editing, Bases view/query execution, and Markdown-note transclusion are separate future features.
+
+## Basic examples
+
+```md
+![Screenshot](Images/screen.webp)
+![[Images/diagram.svg]]
+![[Audio/meeting.mp3]]
+![[Videos/tutorial.mp4]]
+![[Documents/manual.pdf]]
+[[Boards/project.canvas]]
+[[Data/issues.base]]
+```
+
+Click a file in the tree and select **Insert into note** to create a link/embedding automatically. `Move` mode can drag attachments into a different **existing** folder. Ordinary `[file](path)` links can open attachment previews; all resolution stays within the selected wiki.
+
+## Validation
+
+`node --test tests/*.test.cjs` checks all accepted extensions, moves, bytes and link migration. `tests/obsidian-attachments-ui-smoke.py` verifies real DOM media elements and user interactions in Chromium (with mocked File System Access API). Final double-click `file://` behavior and codec playback still depend on your local Chrome/Edge installation.
