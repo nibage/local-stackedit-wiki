@@ -90,10 +90,12 @@ with sync_playwright() as pw:
     assert abs(layout['nav']-layout['ariaMax'])<=2,layout
     preferred=layout['nav']
     page.set_viewport_size({'width':1000,'height':850})
+    page.wait_for_function("document.querySelector('.main-area').getBoundingClientRect().width >= 389")
     smaller=page.evaluate("document.querySelector('.sidebar').getBoundingClientRect().width")
     main=page.evaluate("document.querySelector('.main-area').getBoundingClientRect().width")
     assert smaller<preferred and main>=389,(smaller,main,preferred)
     page.set_viewport_size({'width':1480,'height':850})
+    page.wait_for_function("(width)=>Math.abs(document.querySelector('.sidebar').getBoundingClientRect().width-width)<2",arg=preferred)
     expanded=page.evaluate("document.querySelector('.sidebar').getBoundingClientRect().width")
     assert abs(expanded-preferred)<2,(expanded,preferred)
     assert not errors, errors
