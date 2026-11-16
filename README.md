@@ -88,3 +88,9 @@ Use **Expand all** or **Collapse all** at the bottom of the Files panel to open 
 Markdown edits are saved automatically to the original file every **5 seconds**, provided the wiki is open in read/write mode and a note has changed. You can still press **Ctrl+S** or click **Save**. Autosave uses the same fingerprint/conflict protection as manual saving, never overwrites detected external changes, and does not run while another file operation is in progress. A failed automatic save remains unsaved and is not retried until the text changes or Save is clicked. Read-only mode never autosaves.
 
 Routine "Opened note" banners have been removed; warnings and file-operation messages appear as temporary floating notices instead of consuming workspace height.
+
+## Large trees and sidebar width (RC6.1)
+
+The Files navigation pane can be resized by dragging its separator, or by focusing the separator and pressing **Home** (minimum), **End** (maximum), or the left/right arrow keys. Double-click resets it to 255 px. Its maximum width is approximately **70% of the workspace**, while leaving at least **390 px** to the editor/preview where the viewport allows. The requested width is remembered when the window is resized.
+
+Long filenames and deeply nested paths stay on a single line. The tree scrolls **vertically and horizontally**, without resizing the editor or the bottom Expand/Collapse controls. Test in `demo-wiki/Test-stromu-a-posouvani`. The Move button's green outline no longer changes the button border thickness or displaces other controls.

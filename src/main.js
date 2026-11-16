@@ -20,7 +20,8 @@
   let noticeTimer = null, autosaveBlocked = null;
   const AUTOSAVE_INTERVAL_MS = 5000;
   let blobURLs = [], selectedMode = 'split';
-  const SIDEBAR_MIN = 190, SIDEBAR_MAX = 520, SIDEBAR_DEFAULT = 255;
+  const SIDEBAR_MIN = 190, SIDEBAR_DEFAULT = 255;
+  const SIDEBAR_MAX_SHARE = 0.70, MAIN_MIN_WIDTH = 390;
   const types = window.LocalWikiAttachmentTypes;
   const SAFE_IMAGE = /\.(png|jpe?g|gif|webp|bmp|avif|svg)$/i;
   // Browser file:// origins may share storage across *different* index.html paths.
@@ -43,14 +44,28 @@
   if (mediaDark.addEventListener) mediaDark.addEventListener('change', applyTheme);
   applyTheme();
   const resizer = $('sidebar-resizer');
-  function setSidebarWidth(width) {
-    const value = Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, Math.round(width)));
+  let preferredSidebarWidth = SIDEBAR_DEFAULT;
+  function maxSidebarWidth() {
+    // Limit by screen share AND remaining editor/preview space.
+    // On very small screens the minimum sidebar takes precedence.
+    const workspace = document.querySelector('.workspace');
+    const width = workspace?.clientWidth || window.innerWidth;
+    return Math.max(SIDEBAR_MIN,
+      Math.floor(Math.min(width * SIDEBAR_MAX_SHARE, width - MAIN_MIN_WIDTH - 6)));
+  }
+  function setSidebarWidth(width, persist = true) {
+    if (!Number.isFinite(width)) return;
+    preferredSidebarWidth = Math.max(SIDEBAR_MIN, Math.round(width));
+    const max = maxSidebarWidth(), value = Math.min(preferredSidebarWidth, max);
     document.documentElement.style.setProperty('--sidebar-width', value + 'px');
+    resizer.setAttribute('aria-valuemin', String(SIDEBAR_MIN));
+    resizer.setAttribute('aria-valuemax', String(max));
     resizer.setAttribute('aria-valuenow', String(value));
-    safeStore('local-wiki-sidebar-width', String(value));
+    if (persist) safeStore('local-wiki-sidebar-width', String(preferredSidebarWidth));
   }
   const storedWidth = Number(safeStored('local-wiki-sidebar-width', String(SIDEBAR_DEFAULT)));
-  setSidebarWidth(Number.isFinite(storedWidth) ? storedWidth : SIDEBAR_DEFAULT);
+  setSidebarWidth(Number.isFinite(storedWidth) ? storedWidth : SIDEBAR_DEFAULT, false);
+  window.addEventListener('resize', () => setSidebarWidth(preferredSidebarWidth, false));
   resizer.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;
     event.preventDefault();
@@ -71,7 +86,7 @@
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
     const current = Number(resizer.getAttribute('aria-valuenow')) || SIDEBAR_DEFAULT;
-    const next = event.key === 'Home' ? SIDEBAR_MIN : event.key === 'End' ? SIDEBAR_MAX :
+    const next = event.key === 'Home' ? SIDEBAR_MIN : event.key === 'End' ? maxSidebarWidth() :
       current + (event.key === 'ArrowRight' ? 20 : -20);
     setSidebarWidth(next);
   });
