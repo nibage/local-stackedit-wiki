@@ -13,11 +13,11 @@
   <link rel="stylesheet" href="vendor/codemirror/addon/dialog/dialog.css">
   <script>
     window.MathJax = {
-      jax: ['input/TeX', 'output/SVG'],
-      extensions: ['tex2jax.js'],
+      jax: ['input/TeX', 'output/NativeMML'],
+      extensions: ['tex2jax.js', 'MathMenu.js'],
       tex2jax: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]'], ['$$','$$']], processEscapes: true, ignoreClass: 'no-mathjax' },
       TeX: { extensions: ['AMSmath.js', 'AMSsymbols.js'] },
-      SVG: { font: 'STIX-Web' },
+      NativeMML: { scale: 100 },
       showMathMenu: true,
       messageStyle: 'none',
       skipStartupTypeset: true
