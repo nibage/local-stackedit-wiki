@@ -58,5 +58,5 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 
 ## Other planned improvements
 
-- [ ] Test a selectable/copyable MathJax CommonHTML output mode with a complete local font bundle and accessibility regression checks; current SVG output cannot be drag-selected.
+- [x] Make MathJax mathematics selectable directly using the browser's native MathML text renderer; retain MathJax context menu. [ ] Review differences in fonts/complex formulas and optional fallback on older browsers.
 - [ ] Evaluate optional `.md` OS associations via an installable offline PWA (HTTPS origin and File Handling API) or small signed native wrapper for Windows/Linux. Retain support for plain portable `file://` and don't seize default associations without an explicit user choice.
