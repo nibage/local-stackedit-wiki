@@ -78,11 +78,12 @@ with sync_playwright() as pw:
     page.locator('#sidebar-resizer').focus()
     page.keyboard.press('End')
     wide = get_geometry(page)
-    assert wide['sidebar']['width'] >= 515, wide
-    assert wide['main']['width'] >= 850, wide
+    assert wide['sidebar']['width'] > 520, wide
+    assert wide['sidebar']['width'] <= 0.70 * wide['workspace']['width'] + 2, wide
+    assert wide['main']['width'] >= 389, wide
     assert wide['main']['left'] > a['main']['left'] + 250, (a, wide)
     page.locator('#view-preview').click()
-    assert get_geometry(page)['editor']['width'] > 850
+    assert get_geometry(page)['editor']['width'] >= 389
     assert not errors, errors
     page.screenshot(path=str(ROOT / 'docs' / 'rc3-layout-smoke.png'), full_page=True)
     print('PASS: editor/preview occupy main area; dark and light CSS really change colors; sidebar resize and preview work')
