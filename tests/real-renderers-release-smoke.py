@@ -8,6 +8,7 @@ intercepted and served from the extracted archive; external network is rejected.
 import argparse
 import json
 import mimetypes
+import xml.etree.ElementTree as ET
 from pathlib import Path
 import tempfile
 from urllib.parse import unquote, urlsplit
@@ -45,7 +46,7 @@ def run(root, browser_path=None):
         if browser_path:
             kwargs['executable_path'] = browser_path
         browser = playwright.chromium.launch(**kwargs)
-        page = browser.new_page(viewport={'width': 1200, 'height': 820})
+        page = browser.new_page(viewport={'width': 1200, 'height': 820}, accept_downloads=True)
         page.on('pageerror', lambda exc: failures.append('JS: ' + str(exc)))
 
         def local_files(route):
@@ -91,6 +92,19 @@ def run(root, browser_path=None):
                 preview.querySelectorAll('.visualization-abc svg').length === 1;
         }''', timeout=15000)
         assert not page.locator('#release-preview .visualization svg script').count(), 'SVG obsahuje script'
+        for kind in ('mermaid', 'abc'):
+            with page.expect_download(timeout=10000) as pending:
+                page.locator(f'#release-preview .visualization-{kind} .diagram-export').click()
+            exported = pending.value
+            assert exported.suggested_filename.startswith(kind + '-') and exported.suggested_filename.endswith('.svg')
+            exported_path = exported.path()
+            xml = exported_path.read_text(encoding='utf-8')
+            root_svg = ET.fromstring(xml)
+            assert root_svg.tag == '{http://www.w3.org/2000/svg}svg', f'{kind}: není platné SVG'
+            assert len(xml) > 400 and len(list(root_svg.iter())) > 5, f'{kind}: prázdný export'
+            if kind == 'abc':
+                assert root_svg.get('width') and root_svg.get('height'), 'ABC SVG musí mít samostatné rozměry'
+                assert any(element.tag.endswith('path') for element in root_svg.iter()), 'ABC SVG neobsahuje notové glyfy'
         assert not failures, json.dumps(failures, ensure_ascii=False)
         browser.close()
     return result
@@ -108,7 +122,7 @@ def main():
             result = run(prepare_root(args.zip_path, Path(tmp)), args.chromium)
     else:
         result = run(args.root, args.chromium)
-    print('OK: skutečné Mermaid a ABCjs vytvořily SVG i v náhledu, bez síťových požadavků')
+    print('OK: Mermaid a ABCjs fungují offline a oba stahují platné samostatné SVG soubory')
     print(json.dumps(result, ensure_ascii=False))
 
 

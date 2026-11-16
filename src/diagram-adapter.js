@@ -56,19 +56,50 @@
     return document.importNode(doc.documentElement, true);
   }
 
+  // An ABCjs SVG is often responsive (100% dimensions or CSS-only sizing).
+  // Copying it verbatim can produce a blank standalone file in an image viewer.
+  // Export real pixel dimensions while preserving the SVG viewBox and graphics.
+  function standaloneSvg(svg) {
+    if (!svg || svg.localName !== 'svg' || svg.namespaceURI !== 'http://www.w3.org/2000/svg') {
+      throw new Error('The renderer did not provide SVG.');
+    }
+    const copy = svg.cloneNode(true);
+    scrubSvg(copy);
+    copy.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    const rect = svg.getBoundingClientRect();
+    const viewBox = svg.viewBox?.baseVal;
+    const size = (attribute, pixels, viewBoxSize) => {
+      const raw = copy.getAttribute(attribute);
+      if (!raw || /%|auto/i.test(raw)) {
+        const measured = Math.ceil(pixels || viewBoxSize || 0);
+        if (measured > 0 && Number.isFinite(measured)) copy.setAttribute(attribute, String(measured));
+      }
+    };
+    size('width', rect.width, viewBox?.width);
+    size('height', rect.height, viewBox?.height);
+    return new XMLSerializer().serializeToString(copy);
+  }
+
   function addExportButton(target, type, svg) {
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'diagram-export';
     button.textContent = 'Save SVG';
-    button.title = 'Saves the rendered diagram without modifying the note.';
+    button.title = 'Download standalone SVG without modifying the note.';
     button.addEventListener('click', () => {
-      const output = new XMLSerializer().serializeToString(svg);
-      const blob = new Blob([output], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url; link.download = `${type}-${Date.now()}.svg`;
-      document.body.appendChild(link); link.click(); link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      try {
+        const output = standaloneSvg(svg);
+        const blob = new Blob([output], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url; link.download = `${type}-${Date.now()}.svg`;
+        document.body.appendChild(link);
+        try { link.click(); }
+        finally { link.remove(); setTimeout(() => URL.revokeObjectURL(url), 15000); }
+      } catch (err) {
+        button.title = 'SVG export failed: ' + err.message;
+        button.textContent = 'Save SVG failed';
+        button.setAttribute('aria-label', button.title);
+      }
     });
     target.appendChild(button);
   }
@@ -150,5 +181,5 @@
     notify();
     return counters;
   }
-  global.LocalWikiDiagrams = { enhance, capabilities, scrubSvg, safeSvgFromString };
+  global.LocalWikiDiagrams = { enhance, capabilities, scrubSvg, safeSvgFromString, standaloneSvg };
 })(window);

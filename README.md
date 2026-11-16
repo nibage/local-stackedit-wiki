@@ -87,10 +87,18 @@ Use **Expand all** or **Collapse all** at the bottom of the Files panel to open 
 
 Markdown edits are saved automatically to the original file every **5 seconds**, provided the wiki is open in read/write mode and a note has changed. You can still press **Ctrl+S** or click **Save**. Autosave uses the same fingerprint/conflict protection as manual saving, never overwrites detected external changes, and does not run while another file operation is in progress. A failed automatic save remains unsaved and is not retried until the text changes or Save is clicked. Read-only mode never autosaves.
 
-Routine "Opened note" banners have been removed; warnings and file-operation messages appear as temporary floating notices instead of consuming workspace height.
+Routine "Opened note" banners have been removed; warnings and file-operation messages appear temporarily **beside the Local StackEdit Wiki logo**, never over file controls. Long messages are ellipsized in narrow windows; hover the message to read the full text.
 
 ## Large trees and sidebar width (RC6.1)
 
 The Files navigation pane can be resized by dragging its separator, or by focusing the separator and pressing **Home** (minimum), **End** (maximum), or the left/right arrow keys. Double-click resets it to 255 px. Its maximum width is approximately **70% of the workspace**, while leaving at least **390 px** to the editor/preview where the viewport allows. The requested width is remembered when the window is resized.
 
 Long filenames and deeply nested paths stay on a single line. The tree scrolls **vertically and horizontally**, without resizing the editor or the bottom Expand/Collapse controls. Test in `demo-wiki/Test-stromu-a-posouvani`. The Move button's green outline no longer changes the button border thickness or displaces other controls.
+
+## SVG scores, copyable mathematics, and opening Markdown from the OS
+
+The **Save SVG** button below Mermaid diagrams and ABCjs notation exports a standalone SVG with explicit dimensions where the original renderer used responsive sizing. Both downloads are checked in Chromium against actual offline-bundled renderer output. Downloads are not written to the wiki automatically.
+
+MathJax currently uses the **SVG** output renderer: the visible glyphs are vector paths, so browser drag-selection of the rendered letters is not supported. You can right-click a rendered formula and use **Show Math As → TeX Commands** in MathJax's context menu to access and copy its source. Switching to selectable CommonHTML requires bundling and verifying the correct offline fonts (tracked in TODO); it is not yet enabled.
+
+An ordinary `file://` `index.html` cannot register itself as the operating system's handler for `.md`. A future optional installable PWA (secure origin) or a lightweight native desktop wrapper could do that, while retaining offline document storage. See TODO; no new installation or file-handler permissions are introduced in this update.

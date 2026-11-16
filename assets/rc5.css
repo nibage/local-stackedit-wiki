@@ -39,11 +39,25 @@
 .tree-expand-controls button { flex:1;min-width:0;padding:6px 4px;font-size:11px;white-space:nowrap; }
 [data-theme] .tree-expand-controls button:focus-visible { outline:2px solid var(--accent);outline-offset:2px; }
 
-/* Floating status messages don't consume workspace height. The opened-note
-   confirmation is intentionally omitted; the editor title already shows it. */
+/* Notices share the logo/header row instead of covering the editor action buttons.
+   The brand expands into available flex space; messages truncate in narrow windows. */
+.topbar .brand { flex:1 1 230px; min-width:0; }
+.topbar .brand-title { flex:0 0 auto; }
+.topbar .actions { flex:0 0 auto; }
 #notice[hidden] { display:none !important; }
-#notice.notice { position:fixed;top:65px;right:14px;z-index:30;max-width:min(520px,calc(100vw - 28px));max-height:35vh;overflow:auto;
-  padding:10px 14px;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px #0002;font-size:12px;pointer-events:none; }
+.topbar #notice.notice {
+  position:static; flex:1 1 0; min-width:0; max-width:500px;
+  margin-left:10px; padding:7px 10px;
+  overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+  border:1px solid var(--line); border-radius:7px; box-shadow:none;
+  font-size:12px; line-height:1.25; pointer-events:auto;
+}
+/* Allow the existing topbar flex-wrap to keep controls separate on small screens;
+   no status message is ever layered over a button. */
+@media(max-width:850px) {
+  .topbar .brand { flex-basis:100%; }
+  .topbar #notice.notice { max-width:none; }
+}
 
 /* RC6.1: two-axis scrolling for long names and deeply nested folders.
    The tree scrolls independently, while its controls remain in place. */
@@ -54,3 +68,8 @@
   white-space:nowrap; overflow-wrap:normal;
 }
 .sidebar #tree .tree-children { width:max-content; min-width:calc(100% - 20px); }
+
+/* ABCjs may give its responsive SVG an oversized hit box that overlaps
+   the export control. Keep the notation visual-only and the button clickable. */
+.visualization-abc svg { pointer-events:none; }
+.visualization-abc .diagram-export { position:relative; z-index:2; }
