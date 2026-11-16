@@ -74,11 +74,11 @@ with sync_playwright() as pw:
     page.locator('.tree-row[aria-label="board.canvas"]').click()
     page.wait_for_function("document.querySelector('#attachment-dialog').open")
     page.wait_for_function("document.querySelector('#attachment-dialog-viewer').textContent.includes('2 nodes, 1 edges')")
-    assert '1 nodes, 0 edges' in page.locator('#attachment-dialog-viewer').inner_text()
+    assert '2 nodes, 1 edges' in page.locator('#attachment-dialog-viewer').inner_text()
     assert page.locator('#attachment-dialog-viewer .canvas-node').count()==2
     assert page.locator('#attachment-dialog-viewer .canvas-connections path').count()>=2
     assert page.locator('#attachment-dialog-viewer .canvas-node[data-kind="text"] .canvas-node-content').inner_text()=='Hello <img src=x onerror=alert(1)>'
-    page.wait_for_function("document.querySelector('#attachment-dialog-viewer .canvas-node-image[src^=\\\"blob:\\"]') !== null")
+    page.locator('#attachment-dialog-viewer .canvas-node-image[src^="blob:"]').wait_for(timeout=10000)
     assert not page.locator('#attachment-dialog-viewer script, #attachment-dialog-viewer [onerror]').count(), 'Canvas injected unsafe markup'
     assert not page.evaluate('Boolean(window.svgExecuted)'), 'Canvas image executed SVG script'
     page.locator('#attachment-dialog-viewer .canvas-control',has_text='+').click()
