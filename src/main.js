@@ -118,9 +118,10 @@
   function notice(message, variant = '') {
     clearTimeout(noticeTimer);
     ui.notice.textContent = message;
+    ui.notice.title = message; // Full message remains available when header space is limited.
     ui.notice.className = `notice ${variant}`.trim();
     ui.notice.hidden = false;
-    // Status and failures remain available without a permanent toolbar-height strip.
+    // Status and failures live next to the logo, never over file controls.
     if (!message.startsWith('Scanning folders')) {
       noticeTimer = setTimeout(() => { ui.notice.hidden = true; }, variant === 'error' ? 10000 : 4500);
     }

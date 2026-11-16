@@ -18,7 +18,7 @@
       tex2jax: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]'], ['$$','$$']], processEscapes: true, ignoreClass: 'no-mathjax' },
       TeX: { extensions: ['AMSmath.js', 'AMSsymbols.js'] },
       SVG: { font: 'STIX-Web' },
-      showMathMenu: false,
+      showMathMenu: true,
       messageStyle: 'none',
       skipStartupTypeset: true
     };
@@ -28,7 +28,7 @@
 <body>
 <div class="app-shell">
   <header class="topbar">
-    <div class="brand"><span class="brand-icon">W</span><div><strong>Local StackEdit Wiki</strong><small>Offline Markdown wiki</small></div></div>
+    <div class="brand"><span class="brand-icon">W</span><div class="brand-title"><strong>Local StackEdit Wiki</strong><small>Offline Markdown wiki</small></div><div id="notice" class="notice" role="status" aria-live="polite" hidden></div></div>
     <div class="actions">
       <label class="readonly-option" title="Open the selected folder without write permission"><input id="read-only-toggle" type="checkbox"> Open read-only</label>
       <button id="open-folder" class="primary" type="button">Open folder</button>
@@ -36,7 +36,6 @@
       <label class="theme-label" for="theme-select">Theme <select id="theme-select" aria-label="Color theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
     </div>
   </header>
-  <div id="notice" class="notice" role="status" hidden></div>
   <div class="workspace">
     <aside class="sidebar">
       <div class="sidebar-head"><span id="root-name">No folder</span><span id="count">0 files</span></div>
