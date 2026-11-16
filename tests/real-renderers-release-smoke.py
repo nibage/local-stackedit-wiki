@@ -8,6 +8,7 @@ intercepted and served from the extracted archive; external network is rejected.
 import argparse
 import json
 import mimetypes
+import unicodedata
 import xml.etree.ElementTree as ET
 from pathlib import Path
 import tempfile
@@ -106,7 +107,21 @@ def run(root, browser_path=None):
             selection.removeAllRanges();
             return text;
         }""")
-        assert 'E' in selection and 'm' in selection and 'c' in selection, selection
+        normalized = unicodedata.normalize('NFKC', selection)
+        assert 'E' in normalized and 'm' in normalized and 'c' in normalized, normalized
+        # Real mouse drag over the formula must also select visible mathematical glyphs.
+        formula = page.locator('#release-preview .MathJax_MathML math').first
+        box = formula.bounding_box()
+        assert box and box['width'] > 15, box
+        y = box['y'] + box['height'] / 2
+        page.mouse.move(box['x'] + 2, y)
+        page.mouse.down()
+        page.mouse.move(box['x'] + box['width'] - 2, y, steps=24)
+        page.mouse.up()
+        mouse_selection = unicodedata.normalize('NFKC',
+            page.evaluate("window.getSelection().toString()"))
+        assert mouse_selection.strip(), 'MathML formula cannot be selected by mouse'
+
         # MathJax's contextual math menu must remain registered.
         assert page.evaluate("Boolean(window.MathJax && MathJax.Extension.MathMenu)"), 'MathMenu unavailable'
 
