@@ -1,7 +1,7 @@
 /* RC5 - explicit, keyboard-accessible drag-and-drop mode for Markdown notes. */
 [data-theme] .file-actions #rename-file.move-enabled,
 [data-theme] .file-actions #rename-file.move-enabled:hover {
-  border: 2px solid #54b273 !important;
+  border: 1px solid #54b273 !important;
   box-shadow: inset 0 0 0 1px #54b273, 0 0 0 1px #54b273 !important;
   color: var(--text) !important;
   background: color-mix(in srgb, #54b273 16%, var(--panel)) !important;
@@ -44,3 +44,13 @@
 #notice[hidden] { display:none !important; }
 #notice.notice { position:fixed;top:65px;right:14px;z-index:30;max-width:min(520px,calc(100vw - 28px));max-height:35vh;overflow:auto;
   padding:10px 14px;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px #0002;font-size:12px;pointer-events:none; }
+
+/* RC6.1: two-axis scrolling for long names and deeply nested folders.
+   The tree scrolls independently, while its controls remain in place. */
+.sidebar #tree { min-width:0; overflow-x:auto; overflow-y:auto; }
+.sidebar #tree .tree-entry { width:max-content; min-width:100%; }
+.sidebar #tree .tree-entry > .tree-row {
+  flex:1 0 auto; width:auto; min-width:max-content;
+  white-space:nowrap; overflow-wrap:normal;
+}
+.sidebar #tree .tree-children { width:max-content; min-width:calc(100% - 20px); }

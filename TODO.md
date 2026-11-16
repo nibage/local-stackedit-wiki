@@ -39,3 +39,9 @@ Reference: [Obsidian accepted file formats](https://obsidian.md/help/file-format
 ## Non-goals
 
 Do not execute scripts from attachments, automatically upload media, or rewrite media bytes. Avoid interpreting YAML/JSON file contents as HTML. Keep file handling within the user-selected folder, and do not bypass browser permission prompts.
+
+## Future: richer structured diagrams and database views
+
+- [ ] **Canvas (.canvas):** replace the current read-only node/edge count with a safe, visual graph viewer (cards, text and connections, zoom/pan). Full editing and link updates require separate design and regression tests.
+- [ ] **Bases (.base):** the current preview only shows the YAML source. Consider a read-only table backed by local Markdown frontmatter first; implement filtering/formulas/views and property editing only with explicit compatibility and data-safety tests. Do not treat a .base file as a database that stores note rows.
+- [ ] **draw.io/diagrams.net:** consider an **offline, read-only .drawio viewer** with page support and robust handling of compressed/uncompressed mxfile XML; likely bundle the official viewer rather than invent a partial SVG converter. Verify its licensing, size and external-resource restrictions. Optionally support already-renderable `.drawio.svg` exports as images. Editing can be a separate feature.

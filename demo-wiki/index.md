@@ -38,3 +38,7 @@ Mermaid a ABC notace se vykreslí po jednorázovém doplnění originálních JS
 ## Obsidian-compatible attachments (RC6)
 
 Open [the attachment examples](Attachments/Examples.md) to test media inside a Markdown note, or expand the **Attachments** folder on the left. Examples include WAV audio in two pitches, WebM video, an SVG image, a sample PDF, and safe read-only Canvas/Bases files. All demos are local and work without uploading anything.
+
+## Test dlouhého stromu
+
+Otevři [Test stromu a posouvání](Test-stromu-a-posouvani/README.md), klikni na **Expand all** a vyzkoušej vodorovný i svislý posuvník ve stromu. Nejhlubší poznámka má dlouhý název a složka s řadou souborů ukazuje chování při desítkách položek. Vyzkoušej také změnu šířky levého panelu a tlačítko **Move**.
