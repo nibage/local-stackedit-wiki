@@ -34,3 +34,7 @@ V levém panelu přepni na **Fulltext** a vyhledej slovo `Python` nebo `notový`
 V panelu **Odkazy** se zobrazí obsah aktuální stránky a po kliknutí na tlačítko i zpětné odkazy. Zkus otevřít `Programovani/Python.md` a vyhledat, kdo na něj odkazuje.
 
 Mermaid a ABC notace se vykreslí po jednorázovém doplnění originálních JS knihoven podle `docs/RENDERERY.md`. Bez nich se zdrojový kód zachovává.
+
+## Obsidian-compatible attachments (RC6)
+
+Open [the attachment examples](Attachments/Examples.md) to test media inside a Markdown note, or expand the **Attachments** folder on the left. Examples include WAV audio in two pitches, WebM video, an SVG image, a sample PDF, and safe read-only Canvas/Bases files. All demos are local and work without uploading anything.

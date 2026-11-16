@@ -29,3 +29,18 @@
 .attachment-plain-text { max-height:56vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;background:var(--panel-alt);border:1px solid var(--line);border-radius:8px; }
 .wiki-attachment-embed { display:block;margin:.75rem 0;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-alt);max-width:100%;overflow:auto; }
 .wiki-attachment-embed .attachment-label { display:block;color:var(--muted);margin-bottom:8px;font-size:.85em; }
+
+/* Strong folder arrows, note dots, and always-available tree expansion controls. */
+[data-theme] .tree-row .glyph { display:inline-grid;place-items:center;flex:0 0 18px;width:18px;line-height:1.2;color:var(--accent);font-weight:900; }
+[data-theme] .tree-row .glyph-folder { font-size:14px; }
+[data-theme] .tree-row .glyph-note { font-size:11px; }
+[data-theme] .tree-row .glyph-asset { font-size:15px; }
+.tree-expand-controls { display:flex;gap:6px;padding:9px 10px;border-top:1px solid var(--line);flex-shrink:0; }
+.tree-expand-controls button { flex:1;min-width:0;padding:6px 4px;font-size:11px;white-space:nowrap; }
+[data-theme] .tree-expand-controls button:focus-visible { outline:2px solid var(--accent);outline-offset:2px; }
+
+/* Floating status messages don't consume workspace height. The opened-note
+   confirmation is intentionally omitted; the editor title already shows it. */
+#notice[hidden] { display:none !important; }
+#notice.notice { position:fixed;top:65px;right:14px;z-index:30;max-width:min(520px,calc(100vw - 28px));max-height:35vh;overflow:auto;
+  padding:10px 14px;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px #0002;font-size:12px;pointer-events:none; }

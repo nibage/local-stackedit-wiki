@@ -80,3 +80,11 @@ Since RC6, local audio/video/PDF embeds, SVG images and read-only JSON Canvas/Ba
 The following file extensions now appear alongside notes: images (`avif bmp gif jpeg jpg png svg webp`), audio (`flac m4a mp3 ogg wav 3gp`), video (`mkv mov mp4 ogv webm`), PDF (`pdf`), JSON Canvas (`canvas`) and Bases (`base`). Audio-only WebM files are previewed with an audio player when their MIME type identifies them as audio. Double-clicking or selecting an asset opens a local preview dialog. The **Insert into note** button adds a relative Markdown/Obsidian embed or link; new content never leaves the chosen folder.
 
 **Limitations:** The Canvas viewer is a read-only node summary and Bases is a read-only YAML preview (not the full Obsidian editing engine). Audio/video playback depends on installed browser codecs. PDF preview depends on browser PDF support. Moving files updates Markdown links where unambiguous, not cross-references stored inside Canvas/Bases. See [`docs/OBSIDIAN_ATTACHMENTS.md`](docs/OBSIDIAN_ATTACHMENTS.md).
+
+## Tree navigation and automatic saving
+
+Use **Expand all** or **Collapse all** at the bottom of the Files panel to open or close every folder in the navigation tree. Filtering by name temporarily expands matching branches. Folder arrows and note dots are emphasized in both themes.
+
+Markdown edits are saved automatically to the original file every **5 seconds**, provided the wiki is open in read/write mode and a note has changed. You can still press **Ctrl+S** or click **Save**. Autosave uses the same fingerprint/conflict protection as manual saving, never overwrites detected external changes, and does not run while another file operation is in progress. A failed automatic save remains unsaved and is not retried until the text changes or Save is clicked. Read-only mode never autosaves.
+
+Routine "Opened note" banners have been removed; warnings and file-operation messages appear as temporary floating notices instead of consuming workspace height.

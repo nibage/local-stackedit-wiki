@@ -17,6 +17,8 @@
   let inlineDraft = null, imageDialogURL = null, attachmentDialogURL = null, pendingMovePath = null;
   let selectedFolder = '', treeClickTimer = null;
   let moveEnabled = false, draggedPath = null;
+  let noticeTimer = null, autosaveBlocked = null;
+  const AUTOSAVE_INTERVAL_MS = 5000;
   let blobURLs = [], selectedMode = 'split';
   const SIDEBAR_MIN = 190, SIDEBAR_MAX = 520, SIDEBAR_DEFAULT = 255;
   const types = window.LocalWikiAttachmentTypes;
@@ -99,8 +101,14 @@
     requestAnimationFrame(() => $('move-destination').focus());
   }
   function notice(message, variant = '') {
+    clearTimeout(noticeTimer);
     ui.notice.textContent = message;
     ui.notice.className = `notice ${variant}`.trim();
+    ui.notice.hidden = false;
+    // Status and failures remain available without a permanent toolbar-height strip.
+    if (!message.startsWith('Scanning folders')) {
+      noticeTimer = setTimeout(() => { ui.notice.hidden = true; }, variant === 'error' ? 10000 : 4500);
+    }
   }
   function beginOperation(name) {
     if (!operations.acquire(name)) {
@@ -126,7 +134,7 @@
     const dirty = isDirty();
     ui.dirty.textContent = dirty ? '● Unsaved' : '';
     ui.save.disabled = operations.isBusy() || bridge.getMode() !== 'readwrite' || !dirty;
-    $('save-status').textContent = dirty ? 'Unsaved changes' : activePath ? 'No unsaved changes' : 'No file';
+    $('save-status').textContent = dirty ? (bridge.getMode() === 'readwrite' ? 'Unsaved changes · autosave every 5s' : 'Unsaved changes') : activePath ? 'No unsaved changes' : 'No file';
     $('stats').textContent = `${editor.getValue().length} characters · ${editor.getValue() ? editor.getValue().split('\n').length : 0} lines`;
   }
   function releaseImages() { blobURLs.forEach(url => URL.revokeObjectURL(url)); blobURLs = []; }
@@ -304,7 +312,6 @@
       $('backlinks-results').textContent = 'Click Find incoming links.'; 
       redrawDirty(); renderTree(); renderPreview();
       ui.preview.scrollTop = 0;
-      notice(`Opened note: ${path}`, 'success');
       return true;
     } catch (err) {
       if (operations.isCurrentRead(ticket)) notice(`Cannot open note: ${err.message}`, 'error');
@@ -557,9 +564,10 @@
       if (node.kind === 'directory' && node.path && node.path === selectedFolder) row.classList.add('selected-folder');
       row.setAttribute('aria-label', node.path || node.name);
       const open = expanded.has(node.path) || Boolean(needle);
-      const glyph = document.createElement('span'); glyph.className = 'glyph';
+      const glyph = document.createElement('span');
+      glyph.className = 'glyph ' + (node.kind === 'directory' ? 'glyph-folder' : node.kind === 'file' ? 'glyph-note' : 'glyph-asset');
       const icons = {image:'▧',audio:'♫',video:'▶',pdf:'▤',canvas:'◇',base:'▦'};
-      glyph.textContent = node.kind === 'directory' ? (open ? '▾' : '▸') : icons[node.kind] || '◦';
+      glyph.textContent = node.kind === 'directory' ? (open ? '▼' : '▶') : icons[node.kind] || '●';
       const label = document.createElement('span'); label.textContent = node.name;
       row.append(glyph, label);
       const entry = document.createElement('div'); entry.className = 'tree-entry';
@@ -642,6 +650,20 @@
     ui.count.textContent = `${count(root)} .md · ${bridge.getAssetPaths().length} attachments`;
     ui.rootName.textContent = root.name;
   }
+  function setExpandedAll(expand) {
+    if (bridge.getMode() === 'none') return;
+    const directories = new Set(['']);
+    if (expand) {
+      const visit = node => {
+        if (node.kind !== 'directory') return;
+        directories.add(node.path);
+        node.children.forEach(visit);
+      };
+      visit(bridge.getTree());
+    }
+    expanded = directories;
+    renderTree();
+  }
   function showScanProgress(progress) {
     notice(`Scanning folders… ${progress.directories} folders, ${progress.files} notes` +
       (progress.skipped ? ` · inaccessible folders: ${progress.skipped}` : '') + ' (please wait)');
@@ -652,6 +674,8 @@
     clearEditor(); inlineDraft = null; selectedFolder = ''; expanded = new Set(['']); ui.search.value = '';
     ui.mode.textContent = result.mode === 'readwrite' ? 'Read/write' : 'Read-only';
     ui.refresh.disabled = !bridge.getRootHandle();
+    $('expand-all').disabled = false;
+    $('collapse-all').disabled = false;
     ui.readonlyToggle.checked = result.mode === 'readonly';
     $('new-file').disabled = result.mode !== 'readwrite';
     $('new-folder').disabled = result.mode !== 'readwrite';
@@ -667,7 +691,7 @@
         (sample ? ` (e.g. ${sample})` : '') + '. These contents are not shown; other folders are available.', 'error');
     } else {
       notice(result.mode === 'readwrite'
-        ? `Wiki opened with read/write access (${result.scanInfo?.files ?? '?'} notes). Notes are written to disk only when you click Save.`
+        ? `Wiki opened with read/write access (${result.scanInfo?.files ?? '?'} notes). Edited notes are automatically saved every 5 seconds (Ctrl+S also works).`
         : 'Wiki opened read-only. Preview and links remain available.', 'success');
     }
   }
@@ -997,26 +1021,39 @@
   editor.onChange(() => { redrawDirty(); scheduleRender(); });
   document.querySelectorAll('[data-format]').forEach(button => button.addEventListener('click', () => editor.format(button.dataset.format)));
   ui.search.addEventListener('input', renderTree);
+  $('expand-all').addEventListener('click', () => setExpandedAll(true));
+  $('collapse-all').addEventListener('click', () => setExpandedAll(false));
   document.querySelectorAll('.view-switch button').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
-  ui.save.addEventListener('click', async () => {
-    if (!activePath || !isDirty() || !beginOperation('save')) return;
-    // Capture the full write context before the first await. An edit that is
-    // typed while saving belongs to the *next* save, not the in-flight one.
+  async function saveCurrent(automatic = false) {
+    if (!activePath || !isDirty() || bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
     const path = activePath, savedText = editor.getValue();
+    // Do not retry a failed autosave forever: the user must make another edit
+    // or explicitly press Save. Manual save always remains available.
+    if (automatic && autosaveBlocked?.path === path && autosaveBlocked.text === savedText) return;
+    if (!beginOperation('save')) return;
+    // Capture write context before awaiting; later edits remain dirty.
     const expected = fingerprint, bom = hasBOM, eol = lineEnding;
     try {
       const result = await bridge.write(path, (bom ? '\uFEFF' : '') + savedText.replace(/\n/g, eol), expected);
+      autosaveBlocked = null;
       if (activePath === path) {
         originalText = savedText;
         fingerprint = result.fingerprint;
         wikiIndex.update(path, savedText);
-        if (editor.getValue() === savedText) notice(`Saved to original file: ${path}`, 'success');
-        else notice(`Saved an earlier version of ${path}. Newer edits in the editor still need saving.`, 'success');
+        // Autosave must be quiet; manual Save retains immediate feedback.
+        if (!automatic) {
+          notice(editor.getValue() === savedText
+            ? `Saved to original file: ${path}`
+            : `Saved an earlier version of ${path}. Newer edits still need saving.`, 'success');
+        }
       }
     } catch (err) {
-      notice(`Save blocked: ${err.message} The text remains in the editor.`, 'error');
+      autosaveBlocked = { path, text: savedText };
+      notice(`${automatic ? 'Autosave' : 'Save'} blocked: ${err.message} The text remains in the editor.`, 'error');
     } finally { endOperation('save'); }
-  });
+  }
+  ui.save.addEventListener('click', () => { void saveCurrent(false); });
+  setInterval(() => { void saveCurrent(true); }, AUTOSAVE_INTERVAL_MS);
   ui.preview.addEventListener('click', evt => {
     const a = evt.target.closest('a');
     if (!a || !ui.preview.contains(a)) return;
