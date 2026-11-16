@@ -1,7 +1,82 @@
 {
   "nodes": [
-    { "id": "intro", "type": "text", "text": "Offline wiki", "x": 0, "y": 0, "width": 250, "height": 110 },
-    { "id": "next", "type": "text", "text": "Add your own files", "x": 320, "y": 0, "width": 250, "height": 110 }
+    {
+      "id": "overview",
+      "type": "group",
+      "label": "Projekt offline wiki",
+      "x": -60,
+      "y": -60,
+      "width": 785,
+      "height": 390,
+      "color": "5"
+    },
+    {
+      "id": "note",
+      "type": "text",
+      "text": "# Poznámka\nMarkdown v kartě Canvas\n**offline a bezpečně**",
+      "x": 0,
+      "y": 0,
+      "width": 260,
+      "height": 150,
+      "color": "3"
+    },
+    {
+      "id": "image",
+      "type": "file",
+      "file": "Attachments/icon.svg",
+      "x": 360,
+      "y": 0,
+      "width": 280,
+      "height": 210,
+      "color": "4"
+    },
+    {
+      "id": "details",
+      "type": "text",
+      "text": "Vyzkoušej: přiblížení (+/-), Fit, 100 %, přetažení prázdného místa a čtení textu.",
+      "x": 0,
+      "y": 230,
+      "width": 300,
+      "height": 145,
+      "color": "6"
+    },
+    {
+      "id": "link",
+      "type": "link",
+      "url": "https://jsoncanvas.org/spec/1.0/",
+      "x": 770,
+      "y": 60,
+      "width": 310,
+      "height": 145,
+      "color": "2"
+    }
   ],
-  "edges": [ { "id": "edge", "fromNode": "intro", "fromSide": "right", "toNode": "next", "toSide": "left" } ]
+  "edges": [
+    {
+      "id": "first",
+      "fromNode": "note",
+      "fromSide": "right",
+      "toNode": "image",
+      "toSide": "left",
+      "label": "lokální obrázek",
+      "toEnd": "arrow",
+      "color": "5"
+    },
+    {
+      "id": "second",
+      "fromNode": "details",
+      "fromSide": "top",
+      "toNode": "note",
+      "toSide": "bottom",
+      "toEnd": "arrow"
+    },
+    {
+      "id": "third",
+      "fromNode": "image",
+      "fromSide": "right",
+      "toNode": "link",
+      "toSide": "left",
+      "toEnd": "arrow"
+    }
+  ]
 }

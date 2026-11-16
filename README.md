@@ -102,3 +102,7 @@ The **Save SVG** button below Mermaid diagrams and ABCjs notation exports a stan
 MathJax currently uses the **SVG** output renderer: the visible glyphs are vector paths, so browser drag-selection of the rendered letters is not supported. You can right-click a rendered formula and use **Show Math As → TeX Commands** in MathJax's context menu to access and copy its source. Switching to selectable CommonHTML requires bundling and verifying the correct offline fonts (tracked in TODO); it is not yet enabled.
 
 An ordinary `file://` `index.html` cannot register itself as the operating system's handler for `.md`. A future optional installable PWA (secure origin) or a lightweight native desktop wrapper could do that, while retaining offline document storage. See TODO; no new installation or file-handler permissions are introduced in this update.
+
+## Visual read-only JSON Canvas viewer
+
+Open `demo-wiki/Attachments/example.canvas` from the file tree to explore a safe, entirely offline graph viewer. It supports text/file/link/group cards, colored connections, edge labels and arrows, Fit/100%/zoom buttons, pointer panning and Ctrl+wheel zoom. Local image file nodes may show isolated thumbnails, but external links are rendered as inert text. Editing Canvas is not enabled and viewing never writes back to a file. Graph preview is capped at 400 nodes / 1000 edges and 2 MB per Canvas file.

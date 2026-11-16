@@ -9,7 +9,7 @@ This is a lightweight offline browser-based wiki, **not the Obsidian application
 | Audio | `.flac` `.m4a` `.mp3` `.ogg` `.wav` `.3gp` (and audio `.webm` by MIME) | Yes | Local `<audio controls>` | `![[file.ext]]` |
 | Video | `.mkv` `.mov` `.mp4` `.ogv` `.webm` | Yes | Local `<video controls>` | `![[file.ext]]` |
 | PDF | `.pdf` | Yes | Native browser PDF viewer | `![[file.pdf]]` |
-| JSON Canvas | `.canvas` | Yes | Read-only node/edge summary | Link (`[[file.canvas]]`); click to open a summary |
+| JSON Canvas | `.canvas` | Yes | Read-only visual graph with cards, groups, arrows, zoom/pan and local thumbnails | Link (`[[file.canvas]]`); click to open graph |
 | Bases | `.base` | Yes | Read-only YAML text | Link (`[[file.base]]`); click to open YAML |
 
 Both `.webm` audio and video are detected as `.webm` files in the tree. If the file's MIME type begins with `audio/`, the preview uses the audio player; otherwise the video player. **Recognizing a file is not a promise that its codec is supported** by Chrome/Edge.
@@ -19,11 +19,11 @@ Both `.webm` audio and video are detected as `.webm` files in the tree. If the f
 - Works with a selected local folder through the browser File System Access API, with no required server or cloud.
 - Binary file contents are not decoded as Markdown. File moves verify copied bytes and block existing destinations; link migration only rewrites unambiguous references in Markdown notes.
 - SVG is shown only through a browser image element. We do not insert raw SVG markup into the HTML document or execute scripts found in SVG files.
-- Canvas and Bases previews use `textContent` to prevent HTML injection. Oversized structured files are not parsed (2 MB limit for previews); Canvas summaries cap visible nodes at 80.
+- Canvas and Bases previews build only safe DOM text for untrusted labels and content. Oversized structured files are not parsed (2 MB limit). Canvas graphs cap at 400 nodes / 1000 edges, external links are inert text, and only vault-local image thumbnails load as isolated images. Viewing never modifies Canvas data.
 - Object URLs for local media are revoked when the preview changes/closes. The application does not upload attachments.
 - File deletion is permanent (not a recycle bin). Test in `demo-wiki` and maintain backups.
 - References inside `.canvas` and `.base` are **not** updated automatically when moving an asset. Check those files if you rely on embedded assets in Canvas/Bases.
-- Full Obsidian Canvas graph rendering/editing, Bases view/query execution, and Markdown-note transclusion are separate future features.
+- Canvas editing, rich Markdown formatting inside graph cards, Bases view/query execution, and Markdown-note transclusion remain future features.
 
 ## Basic examples
 

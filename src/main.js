@@ -411,20 +411,19 @@
     if (types.kind(path) === 'canvas') {
       try {
         const canvas = JSON.parse(text);
-        const nodes = Array.isArray(canvas.nodes) ? canvas.nodes : [];
-        const edges = Array.isArray(canvas.edges) ? canvas.edges : [];
-        const summary = document.createElement('p');
-        summary.textContent = `JSON Canvas (read-only): ${nodes.length} nodes, ${edges.length} edges. This is a text overview, not an interactive canvas.`;
-        output.append(summary);
-        const list = document.createElement('ul');
-        for (const node of nodes.slice(0, 80)) {
-          const item = document.createElement('li');
-          item.textContent = String(node.text || node.file || node.url || node.label || node.id || '(empty node)').slice(0, 220);
-          list.append(item);
-        }
-        if (nodes.length > 80) { const end = document.createElement('p'); end.textContent = 'Showing first 80 nodes only.'; output.append(end); }
-        output.append(list);
-      } catch (_) { output.textContent = 'Invalid JSON Canvas. File content was not modified.'; }
+        const graph = window.LocalWikiCanvas.render(canvas, {
+          readImage: async target => {
+            // JSON Canvas file paths are wiki-root-relative.
+            // Never load external files or allow image thumbnails above 8 MB.
+            if (!bridge.hasAsset(target) || !types.isImage(target)) return null;
+            const image = await bridge.readAsset(target);
+            return image.size <= 8 * 1024 * 1024 ? image : null;
+          }
+        });
+        output.append(graph);
+      } catch (error) {
+        output.textContent = 'Invalid JSON Canvas: ' + error.message + ' The file was not modified.';
+      }
     } else {
       const info = document.createElement('p'); info.textContent = 'Obsidian Bases (read-only YAML preview). Full Bases queries and editing are not implemented.';
       const pre = document.createElement('pre'); pre.className = 'attachment-plain-text'; pre.textContent = text.slice(0, 100000);
@@ -436,8 +435,10 @@
     if (types.isImage(path)) { showImage(path); return; }
     const dialog = $('attachment-dialog');
     const viewer = $('attachment-dialog-viewer');
+    viewer.querySelector('.wiki-canvas-viewer')?.dispose?.();
     if (attachmentDialogURL) { URL.revokeObjectURL(attachmentDialogURL); attachmentDialogURL = null; }
     viewer.replaceChildren();
+    dialog.classList.toggle('canvas-dialog-open', types.kind(path) === 'canvas');
     $('attachment-dialog-title').textContent = basename(path);
     $('attachment-dialog-path').textContent = path;
     $('attachment-insert').disabled = bridge.getMode() !== 'readwrite' || !activePath || operations.isBusy();
@@ -449,6 +450,7 @@
       if (types.kind(path) === 'canvas' || types.kind(path) === 'base') {
         const node = await attachmentTextPreview(file, path);
         if (dialog.open && $('attachment-dialog-path').textContent === path) viewer.replaceChildren(node);
+        else node.querySelector('.wiki-canvas-viewer')?.dispose?.();
         return;
       }
       const url = URL.createObjectURL(file);
@@ -463,7 +465,9 @@
   }
   $('attachment-close').addEventListener('click', () => $('attachment-dialog').close());
   $('attachment-dialog').addEventListener('close', () => {
+    $('attachment-dialog-viewer').querySelector('.wiki-canvas-viewer')?.dispose?.();
     $('attachment-dialog-viewer').replaceChildren();
+    $('attachment-dialog').classList.remove('canvas-dialog-open');
     if (attachmentDialogURL) { URL.revokeObjectURL(attachmentDialogURL); attachmentDialogURL = null; }
   });
   function showImage(path) {
