@@ -68,3 +68,8 @@
   white-space:nowrap; overflow-wrap:normal;
 }
 .sidebar #tree .tree-children { width:max-content; min-width:calc(100% - 20px); }
+
+/* ABCjs may give its responsive SVG an oversized hit box that overlaps
+   the export control. Keep the notation visual-only and the button clickable. */
+.visualization-abc svg { pointer-events:none; }
+.visualization-abc .diagram-export { position:relative; z-index:2; }
