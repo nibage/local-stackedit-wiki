@@ -93,7 +93,7 @@ Routine "Opened note" banners have been removed; warnings and file-operation mes
 
 The Files navigation pane can be resized by dragging its separator, or by focusing the separator and pressing **Home** (minimum), **End** (maximum), or the left/right arrow keys. Double-click resets it to 255 px. Its maximum width is approximately **70% of the workspace**, while leaving at least **390 px** to the editor/preview where the viewport allows. The requested width is remembered when the window is resized.
 
-Long filenames and deeply nested paths stay on a single line. The tree scrolls **vertically and horizontally**, without resizing the editor or the bottom Expand/Collapse controls. Test in `demo-wiki/Test-stromu-a-posouvani`. The Move button's green outline no longer changes the button border thickness or displaces other controls.
+Long filenames and deeply nested paths stay on a single line. The tree scrolls **vertically and horizontally**, without resizing the editor or the bottom Expand/Collapse controls. Test in `demo-wiki/Tree-Test`. The Move button's green outline no longer changes the button border thickness or displaces other controls.
 
 ## SVG scores, copyable mathematics, and opening Markdown from the OS
 

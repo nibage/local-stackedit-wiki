@@ -41,4 +41,4 @@ Open [the attachment examples](Attachments/Examples.md) to test media inside a M
 
 ## Test dlouhého stromu
 
-Otevři [Test stromu a posouvání](Test-stromu-a-posouvani/README.md), klikni na **Expand all** a vyzkoušej vodorovný i svislý posuvník ve stromu. Nejhlubší poznámka má dlouhý název a složka s řadou souborů ukazuje chování při desítkách položek. Vyzkoušej také změnu šířky levého panelu a tlačítko **Move**.
+Otevři [Test stromu a posouvání](Tree-Test/README.md), klikni na **Expand all** a vyzkoušej vodorovný i svislý posuvník ve stromu. Nejhlubší poznámka má dlouhý název a složka s řadou souborů ukazuje chování při desítkách položek. Vyzkoušej také změnu šířky levého panelu a tlačítko **Move**.

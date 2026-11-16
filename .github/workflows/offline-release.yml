@@ -19,6 +19,7 @@ jobs:
         run: |
           node --test tests/*.test.cjs
           python tests/offline-release-build.test.py
+          python tests/windows-path-portability.test.py
       - name: Download and validate pinned renderers; build complete ZIP
         run: python tools/build-offline-release.py --output local-stackedit-wiki-offline.zip
       - name: Install Chromium for actual renderer smoke tests
