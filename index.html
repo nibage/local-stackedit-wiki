@@ -46,12 +46,16 @@
         <button type="button" data-side="files" class="active">Files</button>
         <button type="button" data-side="search">Search</button>
         <button type="button" data-side="links">Links</button>
+        <button type="button" data-side="toc" title="Table of contents" aria-label="Table of contents">Contents</button>
       </div>
       <section id="side-files" class="sidebar-panel">
-        <div class="file-actions" role="group" aria-label="File actions"><button id="new-file" type="button" disabled title="Create Markdown note (Ctrl+N)">+ Note</button><button id="new-folder" type="button" disabled title="Create a folder">+ Folder</button><button id="rename-file" type="button" disabled aria-pressed="false" title="Enable drag and drop to move Markdown files">Move</button></div>
+        <div class="file-actions" role="group" aria-label="File actions"><button id="new-file" type="button" disabled title="Create Markdown note (Ctrl+N)">+ Note</button><button id="new-folder" type="button" disabled title="Create a folder">+ Folder</button><button id="rename-file" type="button" disabled aria-pressed="false" title="Enable drag and drop to move Markdown files">-&gt; Move</button></div>
         <label class="search-label" for="search">Filter files by name</label>
         <input id="search" type="search" placeholder="Name or path…" autocomplete="off">
         <div id="tree" role="tree" aria-label="Folder tree"><p class="empty">Open a wiki first.</p></div>
+        <button id="tree-delete-overlay" class="tree-delete tree-delete-overlay" type="button" hidden aria-label="Permanently delete selected item" title="Permanently delete (confirmation required)">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 4h4M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>
+        </button>
         <div class="tree-expand-controls" role="group" aria-label="Folder expansion"><button id="expand-all" type="button" disabled>Expand all</button><button id="collapse-all" type="button" disabled>Collapse all</button></div>
       </section>
       <section id="side-search" class="sidebar-panel" hidden>
@@ -61,10 +65,14 @@
         <div id="fulltext-results" class="panel-results" role="region" aria-label="Search results"></div>
       </section>
       <section id="side-links" class="sidebar-panel" hidden>
-        <div class="toc-title-row"><h3>Table of contents</h3><button id="nav-back" class="toc-back" type="button" title="Back to previous note" aria-label="Back to previous note" hidden>← Back</button></div>
+        <div class="toc-title-row"><h3>Out-links</h3><button id="nav-back" class="toc-back" type="button" title="Back to previous note" aria-label="Back to previous note" hidden>← Back</button></div>
+        <div id="outlinks-results" class="panel-results" role="region" aria-label="Links from this note"></div>
+        <h3>In-links</h3>
+        <div id="backlinks-results" class="panel-results" role="region" aria-label="Links to this note"></div>
+      </section>
+      <section id="side-toc" class="sidebar-panel" hidden>
+        <div class="toc-title-row"><h3>Table of contents</h3><button id="toc-back" class="toc-back" type="button" title="Back to previous note" aria-label="Back to previous note" hidden>← Back</button></div>
         <div id="toc" class="panel-results"><p class="empty">Open a note.</p></div>
-        <h3>Backlinks</h3>
-        <div id="backlinks-results" class="panel-results"></div>
       </section>
     </aside>
     <div class="sidebar-resizer" id="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" tabindex="0" aria-valuemin="190" aria-valuemax="520" aria-valuenow="255" title="Drag to resize; double-click to reset"></div>
