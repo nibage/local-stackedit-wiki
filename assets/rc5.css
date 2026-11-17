@@ -87,3 +87,58 @@
 .toc-title-row h3 { margin:0; }
 .toc-title-row .toc-back { font-size:11px; padding:4px 7px; flex:none; }
 .toc-title-row .toc-back[hidden] { display:none !important; }
+
+/* RC8 navigation: consistent labels, link colors and a neutral selected tab.
+   Green active borders are retained, including in the light theme. */
+[data-theme] .sidebar-tabs button.active,
+[data-theme="dark"] .sidebar-tabs button.active {
+  border:1px solid #58a36a !important;
+  background:var(--panel-alt) !important;
+  color:var(--text) !important;
+}
+[data-theme="light"] .sidebar-tabs button.active { background:#edf0f3 !important; }
+[data-theme] .sidebar-panel h3,
+[data-theme="dark"] .sidebar-panel h3 {
+  font-size:11px; font-weight:400; line-height:1.5;
+  color:var(--muted); margin:5px 13px 9px;
+}
+[data-theme] .toc-title-row h3 { margin:0; }
+[data-theme] .sidebar .result-item,
+[data-theme] .sidebar .result-item strong,
+[data-theme] .sidebar .toc-item,
+[data-theme="dark"] .sidebar-panel .result-item strong,
+[data-theme="dark"] .sidebar-panel .toc-item {
+  color:var(--text) !important;
+  font-size:12px; font-weight:400;
+}
+[data-theme] .sidebar .result-item .snippet { color:var(--muted); font-size:11px; }
+[data-theme] .sidebar .result-item:hover,
+[data-theme] .sidebar .toc-item:hover {
+  background:color-mix(in srgb,var(--accent) 8%,var(--panel));
+}
+.sidebar .link-location { color:var(--muted); font-size:10px; }
+.sidebar .result-item .link-target { font-weight:400; }
+.sidebar .result-item .snippet { max-width:100%; overflow-wrap:anywhere; }
+.sidebar .link-kind { font-size:10px; color:var(--muted); }
+.sidebar .toc-item { line-height:1.4; }
+
+/* A single trash action is pinned to the *visible tree viewport*, never to
+   the variable width of a path. Vertical position follows the hovered row. */
+#side-files { position:relative; }
+#tree-delete-overlay {
+  position:absolute !important; right:16px; top:0;
+  z-index:5; display:grid; place-items:center; width:26px; height:26px;
+  padding:4px; margin:0; border:1px solid var(--line); border-radius:5px;
+  background:var(--panel); color:#b64b53; box-shadow:0 1px 4px #0002;
+  opacity:1; cursor:pointer;
+}
+#tree-delete-overlay[hidden] { display:none !important; }
+#tree-delete-overlay svg { width:16px; height:16px; pointer-events:none; }
+#tree-delete-overlay:hover { color:#9c2028; background:color-mix(in srgb,#c74747 12%,var(--panel)); }
+#tree-delete-overlay:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+[data-theme="dark"] #tree-delete-overlay { background:var(--panel); color:#e9a7ab; }
+[data-theme] .tree-row .glyph-note {font-size:15px; }
+.markdown-preview a.wiki-link-location {
+  outline:2px solid var(--accent); outline-offset:3px;
+  border-radius:2px; background:color-mix(in srgb,var(--accent) 14%,transparent);
+}

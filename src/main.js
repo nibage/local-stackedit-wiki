@@ -165,11 +165,14 @@
     ui.preview.replaceChildren();
     releaseImages(); redrawDirty();
     $('toc').replaceChildren(); $('backlinks-results').replaceChildren();
+    $('outlinks-results').replaceChildren();
     backlinksForPath = null;
   }
   function updateBackButton() {
-    $('nav-back').hidden = !navigationHistory.length;
-    $('nav-back').disabled = !navigationHistory.length;
+    for (const id of ['nav-back','toc-back']) {
+      $(id).hidden = !navigationHistory.length;
+      $(id).disabled = !navigationHistory.length;
+    }
   }
   async function navigateTo(path, options = {}) {
     const previous = activePath;
@@ -181,13 +184,14 @@
     }
     return opened;
   }
-  $('nav-back').addEventListener('click', async () => {
+  async function goBack() {
     const target = navigationHistory.at(-1);
     if (!target) return;
     if (await navigateTo(target, { history: true })) {
       navigationHistory.pop(); updateBackButton();
     }
-  });
+  }
+  for (const id of ['nav-back','toc-back']) $(id).addEventListener('click', () => void goBack());
   function resolvePathFrom(source, path) {
     try { path = decodeURIComponent(path); } catch (_) { /* Preserve unescaped path. */ }
     return window.LocalWikiFS.relativePath(source, path);
@@ -320,6 +324,7 @@
         result.callouts ? `Callouts: ${result.callouts}` : ''].filter(Boolean).join(' · ') || 'Offline Markdown';
       report(result.diagrams);
       buildToc();
+      if (!$('side-links').hidden) buildOutlinks();
       void loadImages(result.imageNodes, activePath, sequence);
       void loadAttachments(result.attachmentNodes, activePath, sequence);
     } catch (err) {
@@ -350,9 +355,10 @@
       ui.filename.textContent = path;
       updateMoveModeUI();
       $('backlinks-results').replaceChildren();
+      $('outlinks-results').replaceChildren();
       backlinksForPath = null;
       redrawDirty(); renderTree(); renderPreview();
-      if (!$('side-links').hidden) void doBacklinks();
+      if (!$('side-links').hidden) { buildOutlinks(); void doBacklinks(); }
       ui.preview.scrollTop = 0;
       return true;
     } catch (err) {
@@ -637,7 +643,52 @@
       input.setSelectionRange(0, draft.kind !== 'directory' && dot > 0 ? dot : input.value.length);
     });
   }
+  const floatingDelete = $('tree-delete-overlay');
+  let deleteHover = null;
+  function hideTreeDelete() { deleteHover = null; floatingDelete.hidden = true; }
+  function positionTreeDelete() {
+    if (!deleteHover || bridge.getMode() !== 'readwrite' || !deleteHover.row.isConnected) {
+      hideTreeDelete(); return;
+    }
+    const row = deleteHover.row.getBoundingClientRect();
+    const viewport = ui.tree.getBoundingClientRect();
+    if (row.bottom <= viewport.top + 2 || row.top >= viewport.bottom - 2) {
+      floatingDelete.hidden = true; return;
+    }
+    const panel = $('side-files').getBoundingClientRect();
+    const top = Math.max(viewport.top+2, Math.min(row.top+row.height/2-13,viewport.bottom-28));
+    floatingDelete.style.top = (top-panel.top)+'px';
+    floatingDelete.setAttribute('aria-label',
+      'Delete '+(deleteHover.kind === 'directory' ? 'folder ' : 'file ')+deleteHover.path);
+    floatingDelete.hidden = false;
+  }
+  ui.tree.addEventListener('pointerover', event => {
+    const row = event.target.closest('.tree-row');
+    if (!row || !ui.tree.contains(row) || !row.dataset.deletePath) return;
+    deleteHover = {row, path:row.dataset.deletePath, kind:row.dataset.deleteKind};
+    positionTreeDelete();
+  });
+  ui.tree.addEventListener('focusin', event => {
+    const row = event.target.closest('.tree-row');
+    if (!row || !row.dataset.deletePath) return;
+    deleteHover = {row, path:row.dataset.deletePath, kind:row.dataset.deleteKind};
+    positionTreeDelete();
+  });
+  ui.tree.addEventListener('pointerleave', event => {
+    if (event.relatedTarget !== floatingDelete && !floatingDelete.contains(event.relatedTarget)) hideTreeDelete();
+  });
+  ui.tree.addEventListener('scroll', positionTreeDelete, {passive:true});
+  floatingDelete.addEventListener('pointerleave', event => {
+    if (!ui.tree.contains(event.relatedTarget)) hideTreeDelete();
+  });
+  floatingDelete.addEventListener('click', event => {
+    event.preventDefault();
+    const selected=deleteHover;
+    hideTreeDelete();
+    if (selected && bridge.getMode() === 'readwrite') void deleteItem(selected.path,selected.kind);
+  });
   function renderTree() {
+    hideTreeDelete();
     const root = bridge.getTree();
     const needle = ui.search.value.trim().toLocaleLowerCase('cs');
     ui.tree.replaceChildren();
@@ -652,7 +703,8 @@
       const glyph = document.createElement('span');
       glyph.className = 'glyph ' + (node.kind === 'directory' ? 'glyph-folder' : node.kind === 'file' ? 'glyph-note' : 'glyph-asset');
       const icons = {image:'▧',audio:'♫',video:'▶',pdf:'▤',canvas:'◇',base:'▦',drawio:'⬡'};
-      glyph.textContent = node.kind === 'directory' ? (open ? '▼' : '▶') : icons[node.kind] || '●';
+      glyph.textContent = node.kind === 'directory' ? (open ? '▼' : '▶') :
+        node.kind === 'file' ? '★' : icons[node.kind] || '◆';
       const label = document.createElement('span'); label.textContent = node.name;
       row.append(glyph, label);
       const entry = document.createElement('div'); entry.className = 'tree-entry';
@@ -697,14 +749,9 @@
           void renamePath(source, combinePath(node.path, basename(source)), { directDrop: true });
         });
       }
-      if (node.path && bridge.getMode() === 'readwrite') {
-        const remove = document.createElement('button');
-        remove.type = 'button'; remove.className = 'tree-delete'; remove.textContent = '×';
-        remove.setAttribute('aria-label', `Delete ${node.kind === 'directory' ? 'folder' : 'file'} ${node.path}`);
-        remove.title = 'Permanently delete (confirmation required)';
-        remove.addEventListener('click', () => void deleteItem(node.path, node.kind));
-        entry.append(remove);
-      }
+      // One shared trash action stays pinned to the visible tree viewport.
+      row.dataset.deletePath = node.path || '';
+      row.dataset.deleteKind = node.kind;
       parent.append(entry);
       if (node.kind === 'file') {
         row.addEventListener('click', event => {
@@ -930,8 +977,10 @@
   }
   function setSideTab(tab) {
     for (const b of document.querySelectorAll('[data-side]')) b.classList.toggle('active', b.dataset.side === tab);
-    for (const id of ['files', 'search', 'links']) $(`side-${id}`).hidden = id !== tab;
-    if (tab === 'links') { buildToc(); void doBacklinks(); }
+    for (const id of ['files','search','links','toc']) $(`side-${id}`).hidden = id !== tab;
+    if (tab === 'toc') buildToc();
+    if (tab === 'links') { buildOutlinks(); void doBacklinks(); }
+    if (tab !== 'files') hideTreeDelete();
   }
   function addResult(parent, path, detail, click) {
     const row = document.createElement('button'); row.type = 'button'; row.className = 'result-item';
@@ -939,17 +988,41 @@
     const info = document.createElement('span'); info.className = 'snippet'; info.textContent = detail;
     row.append(label, info); row.addEventListener('click', click); parent.append(row);
   }
+  function buildOutlinks() {
+    const area = $('outlinks-results'); area.replaceChildren();
+    if (!activePath) return;
+    const outgoing = wikiIndex.outgoing(activePath, editor.getValue());
+    for (const link of outgoing) {
+      addResult(area, link.target, 'Line '+link.line+' · '+link.label,
+        () => void goToLinkOccurrence(link));
+    }
+  }
   function buildToc() {
     const target = $('toc'); target.replaceChildren();
     if (!activePath) { target.textContent = 'Open a note.'; return; }
-    const heads = ui.preview.querySelectorAll('h1,h2,h3,h4,h5,h6');
-    if (!heads.length) { target.textContent = 'No headings in this note.'; return; }
-    heads.forEach(h => {
+    const headings = Array.from(ui.preview.querySelectorAll('h1,h2,h3,h4,h5,h6'));
+    if (!headings.length) { target.textContent = 'No headings in this note.'; return; }
+    const lines=editor.getValue().split('\n');
+    let lastLine=-1;
+    headings.forEach(h => {
       const b = document.createElement('button'); b.className = 'toc-item'; b.type = 'button';
       const depth = Number(h.tagName.slice(1)); b.style.paddingLeft = `${8 + (depth - 1) * 10}px`;
-      b.textContent = h.textContent.trim(); b.addEventListener('click', () => {
+      b.textContent = h.textContent.trim();
+      b.addEventListener('click', () => {
         if (selectedMode === 'edit') setView('split');
-        h.scrollIntoView({ behavior: 'instant', block: 'nearest' });
+        h.scrollIntoView({ behavior: 'instant', block: 'center' });
+        if (selectedMode !== 'preview') {
+          // Find the corresponding ATX Markdown heading after the preceding one.
+          let line=lines.findIndex((text,i)=>i>lastLine &&
+            /^ {0,3}#{1,6}\s+/.test(text) &&
+            window.LocalWikiNavigation.headingSlug(text.replace(/^ {0,3}#{1,6}\s+/,'').replace(/\s+#+\s*$/,''))
+              === window.LocalWikiNavigation.headingSlug(h.textContent));
+          if (line < 0) line=lines.findIndex(text=>text.includes(h.textContent.trim()));
+          if (line>=0) {
+            lastLine=line;editor.cm.setCursor(line,0);
+            editor.cm.scrollIntoView({line,ch:0},75);
+          }
+        }
       });
       target.append(b);
     });
@@ -1025,9 +1098,35 @@
       const area = $('fulltext-results'); area.replaceChildren();
       for (const hit of results) addResult(area, `${hit.path}:${hit.line}`, hit.snippet,
         () => void openResult(hit.path, hit.line, query));
-      if (!results.length) area.textContent = 'Nic nenalezeno.';
+      // The results count already says '0 matches'; keep the panel clean.
       $('fulltext-status').textContent = `${results.length} matches (up to 3 per file, maximum 100 results).`;
     } finally { $('fulltext-run').disabled = false; }
+  }
+  function highlightLinkInPreview(link) {
+    ui.preview.querySelectorAll('a.wiki-link-location').forEach(a=>a.classList.remove('wiki-link-location'));
+    const matches=Array.from(ui.preview.querySelectorAll('a')).filter(a=>
+      findDoc(a.getAttribute('href')||'') === link.target);
+    const found = matches[link.ordinal] || matches.find(a=>a.textContent.trim() === link.label);
+    if (!found) return false;
+    found.classList.add('wiki-link-location');
+    found.scrollIntoView({ behavior:'instant', block:'center' });
+    return true;
+  }
+  async function goToLinkOccurrence(link) {
+    // Out-links locate the link in this note. In-links first open the source
+    // note, then jump to the specific occurrence, even if it is repeated.
+    if (!link || !bridge.hasFile(link.path)) return;
+    const opened=link.path === activePath || await navigateTo(link.path);
+    if (!opened || activePath !== link.path) return;
+    if (selectedMode !== 'preview') {
+      const line=Math.max(0,link.line-1), ch=Math.max(0,link.column);
+      editor.cm.setCursor(line,ch);
+      editor.cm.scrollIntoView({line,ch},70);
+      editor.focus();
+    }
+    if (selectedMode !== 'edit' && !highlightLinkInPreview(link)) {
+      notice('The source link is at line '+link.line+'; it has no rendered anchor in the preview.');
+    }
   }
   async function doBacklinks() {
     const path = activePath, request = ++backlinkRequest;
@@ -1037,12 +1136,18 @@
     area.replaceChildren();
     backlinksForPath = path;
     try {
-      if (!await ensureIndex() || path !== activePath || request !== backlinkRequest) return;
-      const refs = wikiIndex.backlinks(path);
+      if (!await ensureIndex() || path !== activePath || request !== backlinkRequest) {
+        if (backlinksForPath === path) backlinksForPath = null;
+        return;
+      }
+      const refs = wikiIndex.incoming(path);
       if (!refs.length) notice('No other notes link to this document.');
-      else refs.forEach(from => addResult(area, from, 'Links to this note', () => void openResult(from)));
+      else refs.forEach(link => addResult(area, link.path,
+        'Line '+link.line+' · '+link.label, () => void goToLinkOccurrence(link)));
     } catch (error) {
-      if (request === backlinkRequest) notice('Backlink lookup failed: '+error.message,'error');
+      if (request === backlinkRequest) {
+        backlinksForPath = null; notice('Backlink lookup failed: '+error.message,'error');
+      }
     }
   }
   document.querySelectorAll('[data-side]').forEach(b => b.addEventListener('click', () => setSideTab(b.dataset.side)));

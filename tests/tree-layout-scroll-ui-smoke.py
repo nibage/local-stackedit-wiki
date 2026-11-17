@@ -77,6 +77,35 @@ with sync_playwright() as pw:
     assert page.evaluate("document.querySelector('#tree').scrollLeft")>0
     page.evaluate("document.querySelector('#tree').scrollTop=9999")
     assert page.evaluate("document.querySelector('#tree').scrollTop")>0
+    # One trash control must stay a few pixels from the same scrollbar, even
+    # when long/nested rows extend far beyond the horizontal viewport.
+    assert page.locator('#tree-delete-overlay svg').count()==1
+    page.evaluate("document.querySelector('#tree').scrollTop=90")
+    anchored=page.evaluate("""() => {
+      const tree=document.querySelector('#tree');
+      const viewport=tree.getBoundingClientRect();
+      const candidates=[...tree.querySelectorAll('.tree-row[data-delete-path]')]
+        .filter(row=>{
+          const rect=row.getBoundingClientRect();
+          return row.dataset.deletePath &&
+            rect.bottom>viewport.top+2 && rect.top<viewport.bottom-2;
+        });
+      const choose=kind=>candidates.find(row=>row.dataset.deleteKind===kind);
+      const button=document.querySelector('#tree-delete-overlay');
+      function show(row) {
+        row.dispatchEvent(new PointerEvent('pointerover',{bubbles:true}));
+        const t=tree.getBoundingClientRect(),b=button.getBoundingClientRect();
+        return {left:b.left, rightGap:t.right-b.right, visible:!button.hidden,
+          label:button.getAttribute('aria-label')};
+      }
+      const folder=show(choose('directory')),note=show(choose('file'));
+      return {folder,note,single:document.querySelectorAll('#tree-delete-overlay').length};
+    }""")
+    assert anchored['single']==1,anchored
+    assert anchored['folder']['visible'] and anchored['note']['visible'],anchored
+    assert abs(anchored['folder']['left']-anchored['note']['left'])<1,anchored
+    assert 0<=anchored['folder']['rightGap']<=30,anchored
+    assert anchored['note']['label'].startswith('Delete file '),anchored
     page.locator('#sidebar-resizer').focus()
     page.keyboard.press('End')
     layout=page.evaluate("""() => {
