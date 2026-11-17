@@ -54,11 +54,12 @@ with sync_playwright() as pw:
     assert page.locator('.tree-row[aria-label="Deep/Nested/Child.md"]').count()==0
     page.locator('#expand-all').click()
     assert page.locator('.tree-row[aria-label="Deep/Nested/Child.md"]').count()==1
-    assert page.locator('.tree-row[aria-label="Deep"]').locator('.glyph-folder').inner_text()=='▼'
+    assert page.locator('.tree-row[aria-label="Deep"]').locator('.glyph-folder').inner_text()=='📂'
     page.locator('#collapse-all').click()
     assert page.locator('.tree-row[aria-label="Deep/Nested/Child.md"]').count()==0
-    assert page.locator('.tree-row[aria-label="Deep"]').locator('.glyph-folder').inner_text()=='▶'
-    assert page.locator('.tree-row[aria-label="Intro.md"]').locator('.glyph-note').inner_text()=='★'
+    assert page.locator('.tree-row[aria-label="Deep"]').locator('.glyph-folder').inner_text()=='📁'
+    assert page.locator('.tree-row[aria-label="Intro.md"]').locator('.glyph-note').inner_text()=='📝'
+    assert page.locator('.tree-row[aria-label="Deep/Nested.md"] .glyph-note').inner_text()=='📄'
     page.locator('.tree-row[aria-label="Intro.md"]').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Intro.md'")
     assert 'Opened note:' not in page.locator('#notice').text_content()

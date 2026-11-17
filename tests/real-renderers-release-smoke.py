@@ -27,7 +27,7 @@ def prepare_root(zip_path, output):
             raise AssertionError(f'Poškozený soubor ZIP: {bad}')
         allow_root = {'index.html', 'README.md'}
         allow_dirs = {'src', 'assets', 'vendor'}
-        allow_images = {'docs/editor-smoke.png', 'docs/ui-smoke.png', 'docs/batch11-smoke.png'}
+        allow_images = {'docs/app-dark-diagrams.jpg'}
         shipped=set()
         for info in archive.infolist():
             target = output / info.filename
@@ -39,8 +39,8 @@ def prepare_root(zip_path, output):
                    Path(relative).parts[0] in allow_dirs):
                 raise AssertionError('Development-only file leaked into user ZIP: '+relative)
             shipped.add(relative)
-        if not (allow_root | allow_images).issubset(shipped):
-            raise AssertionError('Essential offline README/screenshots missing from ZIP')
+        if not allow_root.issubset(shipped):
+            raise AssertionError('Essential offline README missing from ZIP')
         archive.extractall(output)
     matches = list(output.glob('*/index.html'))
     if len(matches) != 1:
