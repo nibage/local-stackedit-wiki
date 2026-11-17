@@ -165,11 +165,14 @@
     ui.preview.replaceChildren();
     releaseImages(); redrawDirty();
     $('toc').replaceChildren(); $('backlinks-results').replaceChildren();
+    $('outlinks-results').replaceChildren();
     backlinksForPath = null;
   }
   function updateBackButton() {
-    $('nav-back').hidden = !navigationHistory.length;
-    $('nav-back').disabled = !navigationHistory.length;
+    for (const id of ['nav-back','toc-back']) {
+      $(id).hidden = !navigationHistory.length;
+      $(id).disabled = !navigationHistory.length;
+    }
   }
   async function navigateTo(path, options = {}) {
     const previous = activePath;
@@ -181,13 +184,14 @@
     }
     return opened;
   }
-  $('nav-back').addEventListener('click', async () => {
+  async function goBack() {
     const target = navigationHistory.at(-1);
     if (!target) return;
     if (await navigateTo(target, { history: true })) {
       navigationHistory.pop(); updateBackButton();
     }
-  });
+  }
+  for (const id of ['nav-back','toc-back']) $(id).addEventListener('click', () => void goBack());
   function resolvePathFrom(source, path) {
     try { path = decodeURIComponent(path); } catch (_) { /* Preserve unescaped path. */ }
     return window.LocalWikiFS.relativePath(source, path);
@@ -350,9 +354,10 @@
       ui.filename.textContent = path;
       updateMoveModeUI();
       $('backlinks-results').replaceChildren();
+      $('outlinks-results').replaceChildren();
       backlinksForPath = null;
       redrawDirty(); renderTree(); renderPreview();
-      if (!$('side-links').hidden) void doBacklinks();
+      if (!$('side-links').hidden) { buildOutlinks(); void doBacklinks(); }
       ui.preview.scrollTop = 0;
       return true;
     } catch (err) {
@@ -637,7 +642,52 @@
       input.setSelectionRange(0, draft.kind !== 'directory' && dot > 0 ? dot : input.value.length);
     });
   }
+  const floatingDelete = $('tree-delete-overlay');
+  let deleteHover = null;
+  function hideTreeDelete() { deleteHover = null; floatingDelete.hidden = true; }
+  function positionTreeDelete() {
+    if (!deleteHover || bridge.getMode() !== 'readwrite' || !deleteHover.row.isConnected) {
+      hideTreeDelete(); return;
+    }
+    const row = deleteHover.row.getBoundingClientRect();
+    const viewport = ui.tree.getBoundingClientRect();
+    if (row.bottom <= viewport.top + 2 || row.top >= viewport.bottom - 2) {
+      floatingDelete.hidden = true; return;
+    }
+    const panel = $('side-files').getBoundingClientRect();
+    const top = Math.max(viewport.top+2, Math.min(row.top+row.height/2-13,viewport.bottom-28));
+    floatingDelete.style.top = (top-panel.top)+'px';
+    floatingDelete.setAttribute('aria-label',
+      'Delete '+(deleteHover.kind === 'directory' ? 'folder ' : 'file ')+deleteHover.path);
+    floatingDelete.hidden = false;
+  }
+  ui.tree.addEventListener('pointerover', event => {
+    const row = event.target.closest('.tree-row');
+    if (!row || !ui.tree.contains(row) || !row.dataset.deletePath) return;
+    deleteHover = {row, path:row.dataset.deletePath, kind:row.dataset.deleteKind};
+    positionTreeDelete();
+  });
+  ui.tree.addEventListener('focusin', event => {
+    const row = event.target.closest('.tree-row');
+    if (!row || !row.dataset.deletePath) return;
+    deleteHover = {row, path:row.dataset.deletePath, kind:row.dataset.deleteKind};
+    positionTreeDelete();
+  });
+  ui.tree.addEventListener('pointerleave', event => {
+    if (event.relatedTarget !== floatingDelete && !floatingDelete.contains(event.relatedTarget)) hideTreeDelete();
+  });
+  ui.tree.addEventListener('scroll', positionTreeDelete, {passive:true});
+  floatingDelete.addEventListener('pointerleave', event => {
+    if (!ui.tree.contains(event.relatedTarget)) hideTreeDelete();
+  });
+  floatingDelete.addEventListener('click', event => {
+    event.preventDefault();
+    const selected=deleteHover;
+    hideTreeDelete();
+    if (selected && bridge.getMode() === 'readwrite') void deleteItem(selected.path,selected.kind);
+  });
   function renderTree() {
+    hideTreeDelete();
     const root = bridge.getTree();
     const needle = ui.search.value.trim().toLocaleLowerCase('cs');
     ui.tree.replaceChildren();
@@ -652,7 +702,8 @@
       const glyph = document.createElement('span');
       glyph.className = 'glyph ' + (node.kind === 'directory' ? 'glyph-folder' : node.kind === 'file' ? 'glyph-note' : 'glyph-asset');
       const icons = {image:'▧',audio:'♫',video:'▶',pdf:'▤',canvas:'◇',base:'▦',drawio:'⬡'};
-      glyph.textContent = node.kind === 'directory' ? (open ? '▼' : '▶') : icons[node.kind] || '●';
+      glyph.textContent = node.kind === 'directory' ? (open ? '▼' : '▶') :
+        node.kind === 'file' ? '★' : icons[node.kind] || '◆';
       const label = document.createElement('span'); label.textContent = node.name;
       row.append(glyph, label);
       const entry = document.createElement('div'); entry.className = 'tree-entry';
@@ -697,14 +748,9 @@
           void renamePath(source, combinePath(node.path, basename(source)), { directDrop: true });
         });
       }
-      if (node.path && bridge.getMode() === 'readwrite') {
-        const remove = document.createElement('button');
-        remove.type = 'button'; remove.className = 'tree-delete'; remove.textContent = '×';
-        remove.setAttribute('aria-label', `Delete ${node.kind === 'directory' ? 'folder' : 'file'} ${node.path}`);
-        remove.title = 'Permanently delete (confirmation required)';
-        remove.addEventListener('click', () => void deleteItem(node.path, node.kind));
-        entry.append(remove);
-      }
+      // One shared trash action stays pinned to the visible tree viewport.
+      row.dataset.deletePath = node.path || '';
+      row.dataset.deleteKind = node.kind;
       parent.append(entry);
       if (node.kind === 'file') {
         row.addEventListener('click', event => {
