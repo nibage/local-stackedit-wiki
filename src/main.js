@@ -568,7 +568,7 @@
       $('backlinks-results').replaceChildren();
       $('outlinks-results').replaceChildren();
       backlinksForPath = null;
-      redrawDirty(); renderTree(); renderPreview();
+      redrawDirty(); renderTree(); renderPreview(); updatePreviewExportEnabled();
       if (!$('side-links').hidden) { buildOutlinks(); void doBacklinks(); }
       ui.preview.scrollTop = 0;
       return true;
