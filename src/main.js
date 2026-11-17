@@ -470,7 +470,7 @@
           },
           readNote: async target => {
             // Only an already opened wiki note; no traversal, network or writes.
-            if (!bridge.hasFile(target) || !/\\.(md|markdown)$/i.test(target)) return null;
+            if (!bridge.hasFile(target) || !(/\.md$|\.markdown$/i.test(target))) return null;
             const source = await bridge.read(target);
             return source.text.length <= 160000 ? source.text : source.text.slice(0,160000);
           }
