@@ -49,7 +49,7 @@
         <button type="button" data-side="toc" title="Table of contents" aria-label="Table of contents">Contents</button>
       </div>
       <section id="side-files" class="sidebar-panel">
-        <div class="file-actions" role="group" aria-label="File actions"><button id="new-file" type="button" disabled title="Create Markdown note (Ctrl+N)">+ Note</button><button id="new-folder" type="button" disabled title="Create a folder">+ Folder</button><button id="rename-file" type="button" disabled aria-pressed="false" title="Enable drag and drop to move Markdown files">-&gt; Move</button></div>
+        <div class="file-actions" role="group" aria-label="File actions"><button id="new-file" type="button" disabled title="Create Markdown note (Ctrl+N)">+ Note</button><button id="new-folder" type="button" disabled title="Create a folder">+ Folder</button><button id="rename-file" type="button" disabled aria-pressed="false" title="Enable drag and drop to move notes, attachments and folders">-&gt; Move</button><button id="delete-toggle" type="button" disabled aria-pressed="false" title="Show trash on hover; permanent deletion still requires confirmation">- Delete</button></div>
         <label class="search-label" for="search">Filter files by name</label>
         <input id="search" type="search" placeholder="Name or path…" autocomplete="off">
         <div id="tree" role="tree" aria-label="Folder tree"><p class="empty">Open a wiki first.</p></div>
@@ -86,7 +86,7 @@
             <button id="view-split" type="button" data-view="split" class="active">Side by side</button>
             <button id="view-preview" type="button" data-view="preview">Preview</button>
           </div>
-          <button id="renderer-check" type="button" title="Offline renderer information">Renderers</button>
+          <button id="renderer-check" type="button" title="Offline library status and diagnostics">Status</button>
           <button id="refresh" type="button" disabled title="Refresh folder tree and current note from disk; unsaved changes require confirmation">Refresh</button>
           <button id="save" class="primary" type="button" disabled>Save</button>
         </div>
@@ -132,12 +132,16 @@
   <div class="dialog-actions"><button id="attachment-insert" type="button">Insert into note</button><button id="attachment-close" type="button">Close</button></div>
 </dialog>
 <dialog id="renderer-dialog" aria-labelledby="renderer-dialog-title" class="renderer-dialog">
-  <h2 id="renderer-dialog-title">Offline renderers</h2>
+  <h2 id="renderer-dialog-title">Offline libraries and diagnostics</h2>
   <div id="renderer-details" aria-live="polite"></div><p id="diag-api" class="panel-note" aria-label="Local file access diagnostics"></p><p class="panel-note">The test renders built-in sample diagrams and notation, not your wiki files.</p><div id="renderer-smoke-result" class="renderer-smoke-result" role="status" aria-live="polite"></div>
-  <p>MathJax is bundled. Mermaid and ABCjs can be installed once via HTTPS into the application folder. After reloading, all libraries are loaded locally. If automatic downloads fail, choose official downloaded .js files below, or use the installer script <code>tools/download-renderers.ps1</code>.</p><p><strong>Installation:</strong> connect to the internet once, click below and choose <strong>the application folder containing index.html</strong>, not your wiki. Only the following files will be written: <code>vendor/mermaid/mermaid.min.js</code> and <code>vendor/abcjs/abcjs-basic-min.js</code>.</p><p id="renderer-install-status" class="panel-note" role="status" aria-live="polite"></p>
-  <p class="panel-note"><a href="tools/test-file-access.html" target="_blank" rel="noopener noreferrer">Test local folder access with file://</a> — use only a test folder, never your original wiki.</p>
+  <p class="panel-note" id="renderer-ready-note">The offline libraries are included in the complete release. This panel is for diagnostics, not everyday editing.</p>
+  <div id="renderer-repair-tools" hidden>
+    <p>A renderer is missing in this developer/source checkout. Use the verified offline release, or install the missing libraries into the <strong>application folder containing index.html</strong> (never your wiki).</p>
+    <p id="renderer-install-status" class="panel-note" role="status" aria-live="polite"></p>
+    <div class="renderer-dialog-actions"><button id="renderer-install" type="button">Install offline renderers…</button><label for="renderer-local-files" class="renderer-file-label">Or choose downloaded .js files:</label><input id="renderer-local-files" type="file" accept=".js,application/javascript,text/javascript" multiple><button id="renderer-install-local" type="button" disabled>Install selected JS offline…</button></div>
+  </div>
   <p class="panel-note">Diagnostics do not contain wiki content, file names, or paths. They are saved only to your computer.</p>
-  <div class="renderer-dialog-actions"><button id="renderer-smoke" type="button">Test real rendering</button><button id="renderer-install" type="button">Install offline renderers…</button><label for="renderer-local-files" class="renderer-file-label">Or choose downloaded .js files:</label><input id="renderer-local-files" type="file" accept=".js,application/javascript,text/javascript" multiple><button id="renderer-install-local" type="button" disabled>Install selected JS offline…</button><button id="diagnostics-export" type="button">Save diagnostic JSON</button><button id="renderer-close" type="button">Close</button></div>
+  <div class="renderer-dialog-actions"><button id="renderer-smoke" type="button">Test real rendering</button><button id="diagnostics-export" type="button">Save diagnostic JSON</button><button id="renderer-close" type="button">Close</button></div>
 </dialog>
 <script src="vendor/marked/marked.js"></script>
 <script src="vendor/codemirror/lib/codemirror.js"></script>

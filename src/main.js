@@ -16,7 +16,7 @@
   let expanded = new Set(['']), renderTimer = null, renderSequence = 0;
   let inlineDraft = null, imageDialogURL = null, attachmentDialogURL = null, pendingMovePath = null;
   let selectedFolder = '', treeClickTimer = null;
-  let moveEnabled = false, draggedPath = null;
+  let moveEnabled = false, deleteEnabled = false, draggedPath = null;
   let noticeTimer = null, autosaveBlocked = null;
   const navigationHistory = [];
   let backlinkRequest = 0, backlinksForPath = null;
@@ -105,6 +105,23 @@
       : 'Enable drag and drop file moves';
     ui.tree.classList.toggle('move-mode-enabled', moveEnabled);
   }
+  function updateDeleteModeUI() {
+    const button = $('delete-toggle');
+    const allowed = bridge.getMode() === 'readwrite' && !operations.isBusy();
+    if (bridge.getMode() !== 'readwrite') deleteEnabled = false;
+    button.disabled = !allowed;
+    button.classList.toggle('move-enabled', deleteEnabled);
+    button.setAttribute('aria-pressed', String(deleteEnabled));
+    button.title = deleteEnabled
+      ? 'Hide trash icons (deleting still requires confirmation)'
+      : 'Enable trash icons on hover or keyboard focus';
+    if (!deleteEnabled) hideTreeDelete();
+  }
+  $('delete-toggle').addEventListener('click', () => {
+    if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
+    deleteEnabled = !deleteEnabled;
+    updateDeleteModeUI();
+  });
   function clearDragHighlights() {
     ui.tree.querySelectorAll('.tree-drop-target,.tree-drag-source').forEach(
       row => row.classList.remove('tree-drop-target', 'tree-drag-source'));
@@ -136,13 +153,13 @@
     // Prevent editing a document that may be replaced by a move, open or refresh.
     // Saving is the exception: edits made while a write is in progress remain dirty.
     if (name !== 'save') editor.setReadOnly(true);
-    redrawDirty(); updateMoveModeUI();
+    redrawDirty(); updateMoveModeUI(); updateDeleteModeUI();
     return true;
   }
   function endOperation(name) {
     operations.release(name);
     editor.setReadOnly(bridge.getMode() !== 'readwrite' || !activePath);
-    redrawDirty(); updateMoveModeUI();
+    redrawDirty(); updateMoveModeUI(); updateDeleteModeUI();
   }
   function isDirty() { return activePath !== null && editor.getValue() !== originalText; }
   function confirmDiscard() {
@@ -647,7 +664,7 @@
   let deleteHover = null;
   function hideTreeDelete() { deleteHover = null; floatingDelete.hidden = true; }
   function positionTreeDelete() {
-    if (!deleteHover || bridge.getMode() !== 'readwrite' || !deleteHover.row.isConnected) {
+    if (!deleteHover || !deleteEnabled || bridge.getMode() !== 'readwrite' || !deleteHover.row.isConnected) {
       hideTreeDelete(); return;
     }
     const row = deleteHover.row.getBoundingClientRect();
@@ -685,7 +702,7 @@
     event.preventDefault();
     const selected=deleteHover;
     hideTreeDelete();
-    if (selected && bridge.getMode() === 'readwrite') void deleteItem(selected.path,selected.kind);
+    if (selected && deleteEnabled && bridge.getMode() === 'readwrite') void deleteItem(selected.path,selected.kind);
   });
   function renderTree() {
     hideTreeDelete();
@@ -816,7 +833,7 @@
     ui.readonlyToggle.checked = result.mode === 'readonly';
     $('new-file').disabled = result.mode !== 'readwrite';
     $('new-folder').disabled = result.mode !== 'readwrite';
-    draggedPath = null; moveEnabled = false; updateMoveModeUI();
+    draggedPath = null; moveEnabled = false; deleteEnabled = false; updateMoveModeUI(); updateDeleteModeUI();
     wikiIndex.invalidate(); indexPromise = null;
     $('fulltext-results').replaceChildren(); $('backlinks-results').replaceChildren();
     backlinksForPath = null;
@@ -1301,6 +1318,9 @@
       details.appendChild(row);
     }
     const dialog = $('renderer-dialog');
+    const ready = items.every(([,available])=>available);
+    $('renderer-repair-tools').hidden = ready;
+    $('renderer-ready-note').hidden = !ready;
     if (typeof dialog.showModal === 'function') dialog.showModal();
     else dialog.setAttribute('open','');
   });

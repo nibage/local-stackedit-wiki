@@ -142,3 +142,16 @@
   outline:2px solid var(--accent); outline-offset:3px;
   border-radius:2px; background:color-mix(in srgb,var(--accent) 14%,transparent);
 }
+
+/* 4 compact file actions fit the minimum-width sidebar.
+   Deletion is explicitly opt-in; green matches Move while enabled. */
+.file-actions #delete-toggle { flex:1 1 0; min-width:0; }
+.file-actions #rename-file { flex:1 1 0; min-width:0; }
+.file-actions button { font-size:10px; padding-inline:1px; }
+[data-theme] .file-actions #delete-toggle.move-enabled,
+[data-theme] .file-actions #delete-toggle.move-enabled:hover {
+  border:1px solid #54b273 !important;
+  box-shadow:inset 0 0 0 1px #54b273,0 0 0 1px #54b273 !important;
+  background:color-mix(in srgb,#54b273 13%,var(--panel)) !important;
+  color:var(--text) !important;
+}
