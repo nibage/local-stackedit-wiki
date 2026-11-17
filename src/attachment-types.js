@@ -7,7 +7,8 @@
     video: ['mkv', 'mov', 'mp4', 'ogv', 'webm'],
     pdf: ['pdf'],
     canvas: ['canvas'],
-    base: ['base']
+    base: ['base'],
+    drawio: ['drawio']
   });
   const known = new Map();
   for (const [type, list] of Object.entries(extensions)) for (const ext of list) known.set(ext, type);
@@ -16,7 +17,7 @@
     svg: 'image/svg+xml', webp: 'image/webp', flac: 'audio/flac', m4a: 'audio/mp4', mp3: 'audio/mpeg',
     ogg: 'audio/ogg', wav: 'audio/wav', '3gp': 'audio/3gpp', mkv: 'video/x-matroska', mov: 'video/quicktime',
     mp4: 'video/mp4', ogv: 'video/ogg', webm: 'video/webm', pdf: 'application/pdf',
-    canvas: 'application/json', base: 'text/yaml'
+    canvas: 'application/json', base: 'text/yaml', drawio: 'application/xml'
   });
   function extension(path) { return /\.([a-z\d]+)$/i.exec(String(path || ''))?.[1]?.toLowerCase() || ''; }
   function kind(path) { return known.get(extension(path)) || null; }

@@ -11,7 +11,7 @@
       if (['png','jpg','jpeg','webp','gif','bmp','avif','svg'].includes(ext)) return 'image';
       if (['mp3','m4a','wav','ogg','flac','3gp'].includes(ext)) return 'audio';
       if (['mp4','webm','mov','mkv','ogv'].includes(ext)) return 'video';
-      return ['pdf','canvas','base'].includes(ext) ? ext : null;
+      return ['pdf','canvas','base','drawio'].includes(ext) ? ext : null;
     }
   };
   const isAsset = path => Boolean(types.kind(path));

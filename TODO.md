@@ -11,8 +11,9 @@ Reference: [Obsidian accepted file formats](https://obsidian.md/help/file-format
 | Audio | `.flac`, `.m4a`, `.mp3`, `.ogg`, `.wav`, `.3gp`, audio `.webm` | Tree, HTML5 controls, embeds, insert, move; codec dependent |
 | Video | `.mkv`, `.mov`, `.mp4`, `.ogv`, `.webm` | Tree, HTML5 controls, embeds, insert, move; codec dependent |
 | PDF | `.pdf` | Tree, browser PDF preview/embed, insert and move |
-| JSON Canvas | `.canvas` | Tree and read-only node/edge summary (not an editor) |
+| JSON Canvas | `.canvas` | Tree and read-only visual graph (not an editor) |
 | Bases | `.base` | Tree and read-only Markdown/frontmatter tables with restricted filters |
+| diagrams.net | `.drawio` | Tree, read-only multi-page XML graph (basic shapes; no editor) |
 
 ## Implemented
 
@@ -30,7 +31,7 @@ Reference: [Obsidian accepted file formats](https://obsidian.md/help/file-format
 - [ ] Full interactive **Canvas** rendering and editing (JSON Canvas graphs and embedded nodes).
 - [ ] Full **Bases** views, query/filter execution and editing.
 - [ ] Transclusion of Markdown notes via `![[note.md]]` (currently intentionally not implemented).
-- [ ] Rewrite links stored *inside* Canvas and Bases when moving an asset; currently only `.md` references are updated.
+- [ ] Rewrite references stored *inside* Canvas, Bases and draw.io when moving an asset; currently only `.md` references are updated.
 - [ ] Rich PDF navigation such as `![[document.pdf#page=3]]` with page-level deep links.
 - [ ] Browser codec matrix for all audio/video formats across current Chrome/Edge and platforms. Showing an extension does not guarantee decoding or playback.
 - [ ] Manual acceptance tests for all supported types via `file://` in the user's Chrome/Edge. Automated Chromium tests emulate directory handles but cannot guarantee every desktop codec or PDF plugin.
@@ -44,13 +45,13 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 
 - [x] **Canvas (.canvas):** read-only visual graph with cards, connections, groups and zoom/pan. [x] Safe Markdown card formatting; [ ] note-file content previews. Editing/link updates require separate design and regression tests.
 - [x] **Bases (.base):** read-only tables backed by local Markdown frontmatter, multiple table views and basic filters. [ ] Full expression/formula compatibility, alternative view layouts and property editing. A .base file is not a database storing note rows.
-- [ ] **draw.io/diagrams.net:** consider an **offline, read-only .drawio viewer** with page support and robust handling of compressed/uncompressed mxfile XML; likely bundle the official viewer rather than invent a partial SVG converter. Verify its licensing, size and external-resource restrictions. Optionally support already-renderable `.drawio.svg` exports as images. Editing can be a separate feature.
+- [x] **draw.io/diagrams.net first-stage:** offline read-only `.drawio` graph with multipage UI and decompression of the official compressed format. Basic shapes/connections are drawn as safe SVG, no network or embedded code. [ ] Full-fidelity official viewer integration after security/license/size audit (current upstream bundle ~4.9 MB and can refer to hosted assets); complex stencils/layout currently approximate. `.drawio.svg` / `.drawio.png` remain normal images. **No draw.io editing is planned.**
 
 ## Ordered implementation roadmap — advance in these stages when requested
 
 1. [x] **Canvas read-only viewer (first stage)**: graph cards, groups, edges, labels/colors, pan and zoom, vault-local image thumbnails, no remote content. Sanitized Markdown is displayed in text cards. Next: richer note-file content previews.
 2. [x] **Bases read-only table (first stage)**: safe subset YAML, local Markdown/frontmatter, table views, columns, limits, supported filters and sorting; unsupported formulas and expressions identified.
-3. [ ] **draw.io/diagrams.net read-only**: local standalone `.drawio` previews including multiple pages, compressed and uncompressed diagrams; use reviewed offline components and no remote image/script loading.
+3. [x] **draw.io/diagrams.net read-only first stage**: local `.drawio` graph with pages, compressed/uncompressed mxfile support and no remote/script loading; compatibility of advanced stencils is limited and tracked above.
 4. [ ] **Canvas editing** (optional, after the viewers): manipulate cards and edges and save JSON Canvas safely with conflict checks and undo/redo.
 5. [ ] **Bases editing** (optional): modify table views/properties without unsafe bulk rewrites, preserving Markdown/frontmatter and migration semantics.
 
