@@ -82,7 +82,6 @@ def main():
         assert page.locator('.CodeMirror-dialog input').count() == 1
         assert not errors, f'Javascript errors: {errors}'
         assert not missing, f'Missing assets: {missing}'
-        page.screenshot(path=str(ROOT / 'docs' / 'editor-smoke.png'))
         print('PASS: CodeMirror, formatting, CRLF disk save, external edit conflict, search dialog')
         browser.close()
 

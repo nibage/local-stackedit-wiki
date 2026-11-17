@@ -76,7 +76,6 @@ def main():
         assert page.locator('#preview script').count() == 0
         assert not errors, errors
         assert not missing, missing
-        page.screenshot(path=str(ROOT/'docs'/'batch04-smoke.png'))
         print('PASS: fulltext, backlinks, TOC, optional diagram adapters, no missing scripts')
         browser.close()
 if __name__ == '__main__': main()

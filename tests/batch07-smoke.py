@@ -65,7 +65,6 @@ def main():
         assert page.evaluate("() => window.mockRoot.entries.get('Moved').entries.get('Renamed.md').body") == '# Target\r\n[Domů](../index.md)\r\n'
         assert page.evaluate("() => window.mockRoot.entries.get('index.md').body") == '# Hlavní stránka\r\n[Odkaz](Moved/Renamed.md) a [[Moved/Renamed|alias]]\r\n'
         assert 'Upraveno 2 odkazů' in page.locator('#notice').inner_text()
-        page.screenshot(path=str(ROOT / 'docs' / 'batch07-smoke.png'))
         assert not errors, errors
         print('PASS: rename and link migration via UI, source and backlinks updated, no JS errors')
         browser.close()

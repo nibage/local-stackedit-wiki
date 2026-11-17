@@ -94,7 +94,6 @@ def main():
         page.wait_for_function("() => window.LocalWikiDebug.editor.getValue()==='newer edit'")
         assert page.locator('#filename').inner_text() == 'B.md'
         assert not errors, errors
-        page.screenshot(path=str(ROOT/'docs'/'batch11-smoke.png'))
         print('PASS: stale reads rejected; switch blocked during write; new edits stay dirty; second save; safe reload')
         browser.close()
 

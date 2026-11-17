@@ -65,7 +65,6 @@ def main():
         page.wait_for_function("() => document.querySelector('#notice').textContent.includes('UTF-8')")
         assert page.locator('#filename').inner_text() == 'Stealth.md'
         assert not errors, errors
-        page.screenshot(path=str(ROOT/'docs'/'batch10-smoke.png'))
         print('PASS: BOM+CRLF saved unchanged, same-size/mtime external edit blocked, invalid UTF-8 rejected')
         browser.close()
 

@@ -58,7 +58,6 @@ def main():
         assert saved == '# Nová stránka', saved
         page.get_by_role('button', name='Nová.md').click()
         assert page.locator('#filename').inner_text() == 'Kapitoly/Nová.md'
-        page.screenshot(path=str(ROOT/'docs'/'batch05-smoke.png'))
         assert not errors, errors
         print('PASS: create folder, create note, open in editor, save to original mock file, no JS errors')
         browser.close()
