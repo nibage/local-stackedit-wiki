@@ -333,10 +333,15 @@
         readImage:options.readImage,readNote:options.readNote,camera
       });
       activeViewer=viewer;
-      viewer.querySelector('.canvas-summary').textContent =
-        'JSON Canvas editor · ' + data.nodes.length + ' cards · ' + data.edges.length + ' connections';
-      const hint=viewer.querySelector('.canvas-hint');
-      if (hint) hint.textContent='Drag cards to move · corner to resize · Ctrl+wheel to zoom';
+      // Put all explanatory text alongside "Attachments/example.canvas", not
+      // in extra rows above the viewport.
+      summary.textContent='JSON Canvas editor · '+data.nodes.length+' cards · '+
+        data.edges.length+' connections';
+      hint.textContent='Drag cards to move · corner to resize · Ctrl+wheel to zoom';
+      viewer.querySelector('.canvas-summary')?.remove();
+      const zoomBar=viewer.querySelector('.canvas-controls');
+      zoomBar.querySelector('.canvas-hint')?.remove();
+      zoomControls.replaceChildren(zoomBar);
       const rendered=global.LocalWikiCanvas.cleanGraph(data).nodes;
       viewer.querySelectorAll('.canvas-node').forEach((card,index)=>{
         const node=rendered[index]; if (!node) return;
@@ -345,15 +350,28 @@
         card.style.pointerEvents='auto';
         card.style.cursor='move';
         card.classList.toggle('canvas-node-selected',selected===node.id);
+        let suppressClick=false;
+        const updateSelected=()=>{
+          viewer.querySelectorAll('.canvas-node').forEach(el=>
+            el.classList.toggle('canvas-node-selected',el.dataset.nodeId===selected));
+          renderInspector();
+        };
         card.addEventListener('click',event=>{
           event.stopPropagation();
+          if(event.target.closest('.canvas-editor-resize'))return;
+          // Pointer selection happens on release. Do not toggle it a second
+          // time in the click synthesized after pointerup/pointer capture.
+          if(suppressClick){suppressClick=false;return;}
           if (connectFrom) {
             const from=connectFrom;connectFrom=null;
             if (from!==node.id) change(doc=>{
               doc.edges.push({id:randomId('edge',doc.edges),fromNode:from,toNode:node.id,fromSide:'right',toSide:'left',toEnd:'arrow'});
             });
             else status('Choose a different target card.');
-          } else {selected=node.id; renderInspector(); viewer.querySelectorAll('.canvas-node').forEach(el=>el.classList.toggle('canvas-node-selected',el.dataset.nodeId===selected));}
+          } else {
+            selected=selected===node.id?null:node.id;
+            updateSelected();
+          }
         });
         card.addEventListener('keydown',event=>{
           if (event.key==='Enter' || event.key===' ') {event.preventDefault();card.click();}
@@ -364,12 +382,13 @@
         const begin=(event,kind)=>{
           if (event.button!==0 || saving) return;
           event.preventDefault();event.stopPropagation();
+          const initiallySelected=selected===node.id;
+          suppressClick=false;
           selected=node.id;
-          viewer.querySelectorAll('.canvas-node').forEach(el=>
-            el.classList.toggle('canvas-node-selected',el.dataset.nodeId===selected));
-          renderInspector();
+          updateSelected();
           const current=data.nodes.find(n=>n.id===node.id);
           drag={pointer:event.pointerId,element:event.currentTarget,kind,id:node.id,
+            initiallySelected,
             startX:event.clientX,startY:event.clientY,x:current.x,y:current.y,
             width:current.width,height:current.height,scale:transformScale(viewer)};
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -404,7 +423,18 @@
           }
           const dx=Math.round((event.clientX-last.startX)/last.scale);
           const dy=Math.round((event.clientY-last.startY)/last.scale);
-          if (!dx && !dy) {renderInspector();return;}
+          if (!dx && !dy) {
+            // Clicking the currently selected card unselects it; pointer
+            // selection on another card still works and a grip click never
+            // changes selection. Keyboard Enter/Space follow the click path.
+            if(last.kind==='move' && !connectFrom) {
+              selected=last.initiallySelected?null:last.id;
+              suppressClick=true;
+            }
+            updateSelected();
+            return;
+          }
+          suppressClick=true;
           change(doc=>{
             const n=doc.nodes.find(n=>n.id===last.id);
             if (last.kind==='move') {
@@ -424,6 +454,13 @@
         resize.addEventListener('pointercancel',finish);
       });
       board.replaceChildren(viewer);
+      const viewport=viewer.querySelector('.canvas-viewport');
+      viewport.addEventListener('click',event=>{
+        if(event.target.closest('.canvas-node'))return;
+        if(!connectFrom&&selected){selected=null;renderInspector();
+          viewer.querySelectorAll('.canvas-node').forEach(card=>
+            card.classList.remove('canvas-node-selected'));}
+      });
       renderInspector();
       refreshButtons();
     }
