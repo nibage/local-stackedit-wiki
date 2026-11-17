@@ -16,7 +16,7 @@
   let expanded = new Set(['']), renderTimer = null, renderSequence = 0;
   let inlineDraft = null, imageDialogURL = null, attachmentDialogURL = null, pendingMovePath = null;
   let selectedFolder = '', treeClickTimer = null;
-  let moveEnabled = false, deleteEnabled = false, draggedPath = null;
+  let moveEnabled = false, deleteEnabled = false, draggedPath = null, draggedKind = null;
   let noticeTimer = null, autosaveBlocked = null;
   const navigationHistory = [];
   let backlinkRequest = 0, backlinksForPath = null;
@@ -101,7 +101,7 @@
     toggle.setAttribute('aria-pressed', String(moveEnabled));
     toggle.setAttribute('aria-label', moveEnabled ? 'Disable drag and drop mode' : 'Enable drag and drop mode');
     toggle.title = moveEnabled
-      ? 'Drag and drop a note or attachment onto a folder to move immediately. Existing destinations and unsaved edits are protected. Press M on a focused note to enter a destination path manually.'
+      ? 'Drag and drop a note, attachment or folder onto another folder. Folder moves require confirmation. Press M on a focused note for a manual path.'
       : 'Enable drag and drop file moves';
     ui.tree.classList.toggle('move-mode-enabled', moveEnabled);
   }
@@ -735,18 +735,21 @@
       if (bridge.hasAsset(node.path)) row.classList.add('tree-attachment');
       // Native HTML5 DnD is enabled only in explicit move mode. The source
       // comes from this tree, never from untrusted external drops.
-      if ((node.kind === 'file' || bridge.hasAsset(node.path)) && moveEnabled && bridge.getMode() === 'readwrite') {
+      if ((node.kind === 'file' || bridge.hasAsset(node.path) ||
+           (node.kind === 'directory' && node.path)) &&
+          moveEnabled && bridge.getMode() === 'readwrite') {
         row.draggable = true;
         row.classList.add('tree-draggable');
         row.title = 'Drag to a folder to move immediately' + (node.kind === 'file' ? ', or press M for a manual move' : '');
         row.addEventListener('dragstart', event => {
           if (!moveEnabled || operations.isBusy()) { event.preventDefault(); return; }
           draggedPath = node.path;
+          draggedKind = node.kind;
           event.dataTransfer.effectAllowed = 'move';
           event.dataTransfer.setData('text/plain', node.path);
           row.classList.add('tree-drag-source');
         });
-        row.addEventListener('dragend', () => { draggedPath = null; clearDragHighlights(); });
+        row.addEventListener('dragend', () => { draggedPath = null; draggedKind = null; clearDragHighlights(); });
         row.addEventListener('keydown', event => {
           if (event.key.toLowerCase() === 'm' && !event.altKey && !event.ctrlKey && !event.metaKey) {
             event.preventDefault(); showMoveDialog(node.path);
@@ -755,21 +758,28 @@
       }
       if (node.kind === 'directory') {
         row.addEventListener('dragover', event => {
-          if (!moveEnabled || !draggedPath || !(bridge.hasFile(draggedPath) || bridge.hasAsset(draggedPath)) || operations.isBusy()) return;
+          if (!moveEnabled || !draggedPath ||
+              !(bridge.hasFile(draggedPath) || bridge.hasAsset(draggedPath) || draggedKind === 'directory') ||
+              operations.isBusy() || node.path === draggedPath ||
+              node.path.startsWith(draggedPath+'/')) return;
           event.preventDefault(); event.stopPropagation();
           event.dataTransfer.dropEffect = 'move';
           clearDragHighlights(); row.classList.add('tree-drop-target');
         });
         row.addEventListener('dragleave', () => row.classList.remove('tree-drop-target'));
         row.addEventListener('drop', event => {
-          if (!moveEnabled || !draggedPath || !(bridge.hasFile(draggedPath) || bridge.hasAsset(draggedPath)) || operations.isBusy()) return;
+          if (!moveEnabled || !draggedPath ||
+              !(bridge.hasFile(draggedPath) || bridge.hasAsset(draggedPath) || draggedKind === 'directory') ||
+              operations.isBusy() || node.path === draggedPath ||
+              node.path.startsWith(draggedPath+'/')) return;
           event.preventDefault(); event.stopPropagation();
-          const source = draggedPath;
-          draggedPath = null;
+          const source = draggedPath, sourceKind = draggedKind;
+          draggedPath = null; draggedKind = null;
           clearDragHighlights();
           // Explicit move mode and a deliberate drop authorize the move.
           // Keep collision/external-change checks, but no confirm/modal for a drop.
-          void renamePath(source, combinePath(node.path, basename(source)), { directDrop: true });
+          void renamePath(source, combinePath(node.path, basename(source)),
+            { directDrop: true, sourceKind });
         });
       }
       // One shared trash action stays pinned to the visible tree viewport.
@@ -839,7 +849,8 @@
     ui.readonlyToggle.checked = result.mode === 'readonly';
     $('new-file').disabled = result.mode !== 'readwrite';
     $('new-folder').disabled = result.mode !== 'readwrite';
-    draggedPath = null; moveEnabled = false; deleteEnabled = false; updateMoveModeUI(); updateDeleteModeUI();
+    draggedPath = null; draggedKind = null; moveEnabled = false; deleteEnabled = false;
+    updateMoveModeUI(); updateDeleteModeUI();
     wikiIndex.invalidate(); indexPromise = null;
     $('fulltext-results').replaceChildren(); $('backlinks-results').replaceChildren();
     backlinksForPath = null;
@@ -936,14 +947,18 @@
     updateMoveModeUI();
     let moved = null, summaryNotice = '';
     try {
-      const movingImage = bridge.hasAsset(oldPath);
-      const newPath = movingImage ? bridge.normalizeAssetDestination(requested) : bridge.normalizeDestination(requested);
+      const movingFolder = options.sourceKind === 'directory';
+      const movingImage = !movingFolder && bridge.hasAsset(oldPath);
+      const newPath = movingFolder ? bridge.normalizeDirectoryDestination(requested) :
+        movingImage ? bridge.normalizeAssetDestination(requested) : bridge.normalizeDestination(requested);
       if (newPath === oldPath) return;
       notice('Checking links across the wiki…');
       const snapshots = await window.LocalWikiMigration.snapshotAll(bridge);
-      const plan = movingImage
-        ? window.LocalWikiMigration.planAsset(snapshots, oldPath, newPath, bridge.getAssetPaths())
-        : window.LocalWikiMigration.plan(snapshots, oldPath, newPath);
+      const plan = movingFolder
+        ? window.LocalWikiMigration.planDirectory(snapshots, oldPath, newPath, bridge.getAssetPaths())
+        : movingImage
+          ? window.LocalWikiMigration.planAsset(snapshots, oldPath, newPath, bridge.getAssetPaths())
+          : window.LocalWikiMigration.plan(snapshots, oldPath, newPath);
       // A transaction spanning multiple disk files is not available in the
       // browser; request explicit user confirmation with the computed scope.
       const examples = plan.changes.slice(0, 6).map(x => `• ${x.path} (${x.links})`).join('\n');
@@ -954,13 +969,24 @@
         '\n\nOnly unambiguous Markdown and [[wiki]] links will be updated. ' +
         'Unsupported syntax is left unchanged. Multi-file operations are not atomic. ' +
         'Keep a backup of your wiki. Continue?';
-      if (!options.directDrop && plan.totalLinks > 0 && !window.confirm(summary)) { notice('Move cancelled.'); return; }
-      const result = movingImage
-        ? await window.LocalWikiMigration.executeAsset(bridge, plan, snapshots, await bridge.assetFingerprint(oldPath))
-        : await window.LocalWikiMigration.execute(bridge, plan, snapshots);
+      // Folder moves affect entire subtrees and arbitrary binary files.
+      // Always confirm, even on direct drag and drop.
+      if ((movingFolder || (!options.directDrop && plan.totalLinks > 0)) &&
+          !window.confirm(summary)) { notice('Move cancelled.'); return; }
+      const result = movingFolder
+        ? await window.LocalWikiMigration.executeDirectory(bridge, plan, snapshots)
+        : movingImage
+          ? await window.LocalWikiMigration.executeAsset(bridge, plan, snapshots, await bridge.assetFingerprint(oldPath))
+          : await window.LocalWikiMigration.execute(bridge, plan, snapshots);
       invalidateWikiIndex();
       for (const prefix of newPath.split('/').slice(0, -1).map((_, i, all) => all.slice(0, i + 1).join('/'))) expanded.add(prefix);
       moved = result.moved;
+      if (movingFolder) {
+        expanded = new Set(Array.from(expanded, p => p===oldPath||p.startsWith(oldPath+'/')
+          ? newPath+p.slice(oldPath.length) : p));
+        if (selectedFolder===oldPath||selectedFolder.startsWith(oldPath+'/'))
+          selectedFolder=newPath+selectedFolder.slice(oldPath.length);
+      }
       summaryNotice = `Moved: ${oldPath} → ${newPath}. Updated ${result.links} links in ${result.updated} documents.`;
     } catch (err) {
       notice(`Move failed: ${err.message}`, 'error');
@@ -977,7 +1003,8 @@
     if (moved) {
       // Re-read the active document even if another note was renamed: the link
       // migration may have changed its bytes, invalidating the fingerprint.
-      const next = activePath === oldPath ? moved : activePath;
+      const next = options.sourceKind === 'directory' && activePath?.startsWith(oldPath+'/')
+        ? moved+activePath.slice(oldPath.length) : activePath === oldPath ? moved : activePath;
       clearEditor();
       if (next && bridge.hasFile(next)) await selectFile(next);
       notice(summaryNotice, 'success');

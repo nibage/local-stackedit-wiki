@@ -624,6 +624,7 @@
       openWritable, openExisting, openReadOnly, read, readRaw, write, readAsset, refresh, createFile, createDirectory, missingParents, renameFile, moveAsset, moveDirectory, assetFingerprint, deletionSnapshot, deleteEntry,
       normalizeDestination: raw => creationSegments(raw, 'file').join('/'),
       normalizeAssetDestination: raw => creationSegments(raw, 'asset').join('/'),
+      normalizeDirectoryDestination: raw => creationSegments(raw, 'directory').join('/'),
       getTree: () => tree, getMode: () => mode, getRootHandle: () => rootHandle,
       hasFile: path => fileHandles.has(path), hasAsset: path => assetHandles.has(path),
       getFilePaths: () => Array.from(fileHandles.keys()), getAssetPaths: () => Array.from(assetHandles.keys())
