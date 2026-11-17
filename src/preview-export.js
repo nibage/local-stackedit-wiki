@@ -203,7 +203,7 @@
     const budget={bytes:0},cache=new Map();
     for(let i=0;i<originals.length;i++){
       const original=originals[i],copy=copies[i];
-      if (!(original instanceof Element) || !(copy instanceof Element)) continue;
+      if (!original || !copy || original.nodeType!==1 || copy.nodeType!==1) continue;
       cleanUrls(copy);
       // Do not clone an untrusted stylesheet into a standalone HTML document.
       if (copy.localName!=='style') copyStyle(original,copy);
