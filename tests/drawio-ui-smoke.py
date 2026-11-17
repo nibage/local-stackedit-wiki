@@ -45,7 +45,7 @@ with sync_playwright() as pw:
     html = (ROOT / 'index.html').read_text(encoding='utf-8').replace(
         '<head>', '<head><base href="https://wiki-drawio.test/">', 1)
     page.set_content(html, wait_until='load')
-    page.evaluate("""([diagram, bad]) => {
+    page.evaluate(r"""([diagram, bad]) => {
       function file(name, body, mime='application/xml') {
         return {kind:'file',name,body,mime,lastModified:123,
           async getFile(){return new File([this.body],name,{type:this.mime,lastModified:this.lastModified})},
@@ -75,7 +75,7 @@ with sync_playwright() as pw:
     page.wait_for_function("document.querySelector('#attachment-dialog-viewer .drawio-shape ellipse')!==null")
     assert page.locator('.drawio-tabs button').count()==2
     assert page.locator('.drawio-tab').first.get_attribute('aria-pressed')=='true'
-    assert 'Start' in page.locator('.drawio-graph').inner_text()
+    assert 'Start' in page.locator('.drawio-graph').text_content()
     assert page.locator('.drawio-graph .drawio-edges path').count()==2
     assert page.locator('.drawio-graph polygon').count()==1
     assert not page.locator('.drawio-graph script, .drawio-graph foreignObject, .drawio-graph img').count()
