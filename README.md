@@ -1,128 +1,94 @@
 # Local StackEdit Wiki
 
-**A self-contained offline Markdown wiki editor for Chrome and Edge.** Open `index.html` directly from disk; no server, cloud account or installation is required.
+**Your notes. Your files. Your computer.**
 
-## Quick start
+A fully offline, portable Markdown knowledge base for Chrome and Edge. Write in a familiar editor, browse your own folder tree, and preview diagrams, math, media and connected notes — **without creating an account or uploading your wiki**.
 
-1. Unzip the **complete offline distribution** into its own folder.
-2. Double-click `index.html` in Chrome or Edge.
-3. Optionally check **Open read-only**, then click **Open folder** and select the root of a test wiki (for example the included `demo-wiki`).
-4. Navigate the file tree, edit `.md` notes, and click **Save**. Changes are written directly to the chosen files. Keep a backup of important notes before your first write.
+[**Get the latest tested offline ZIP**](https://github.com/nibage/local-stackedit-wiki/actions/workflows/offline-release.yml) · [**Source code**](https://github.com/nibage/local-stackedit-wiki) · [**Roadmap**](TODO.md)
 
-Chrome/Edge may ask to grant access to a folder when reopening it. Local storage and IndexedDB are scoped to the full `index.html` installation path so separate installs keep independent settings.
+> **Offline first:** Unzip the completed GitHub Actions artifact, open `index.html` in Chrome/Edge, then use **Open folder** to choose the wiki directory. No server, cloud storage or external runtime dependencies.
 
-## Editing and navigation
+## The experience
 
-- **Files / Full-text / Links:** browse notes and Obsidian-compatible attachments, search note contents, view a document outline and backlinks.
-- **+ Note / + Folder:** enter the new name inline in the tree; Enter confirms, Escape cancels. Double-click a note in the tree to rename it.
-- **Move:** toggle drag-and-drop mode (green outline when enabled). Drag a Markdown note **or supported attachment** onto an existing folder to move it immediately, without a confirmation. Matching Markdown and Obsidian references are updated where unambiguous; if a conflict is detected, the operation is blocked. Use **M** on a focused Markdown note to enter a destination manually. Keep a backup: updating multiple linked notes is not atomic.
-- **Refresh:** rebuilds the folder tree and reloads the current note (asks before discarding unsaved edits).
-- **Editor / Side by side / Preview:** choose how to view Markdown.
-- **Theme:** System, Light or Dark; changes are remembered for this installation.
-- **Open read-only:** open notes without write access. Moving, creating, editing and deleting are disabled.
-- **Delete:** a confirmation is required. Deleting a nonempty folder may require two confirmations and is **permanent**; this is not a recycle bin. Always keep a backup.
+![Local StackEdit Wiki editor and Markdown preview](docs/editor-smoke.png)
 
-## Offline rendering
+*Real browser screenshot from the project's visual regression tests. Current buttons and colors may vary slightly.*
 
-The complete offline distribution bundles **marked, CodeMirror, MathJax, Mermaid, ABCjs and Prism**. Markdown, mathematics, diagrams, musical notation and syntax highlighting work without internet access. Images, audio, video, PDFs, JSON Canvas and Bases files inside the selected wiki are visible in the tree. Open a file to preview it and insert a relative link into a Markdown note. Obsidian-style embeds such as `![[audio.mp3]]`, `![[movie.mp4]]` and `![[manual.pdf]]` use local browser viewers. SVG images are displayed using `<img>`, never injected as executable SVG markup. See [`docs/OBSIDIAN_ATTACHMENTS.md`](docs/OBSIDIAN_ATTACHMENTS.md).
+| Write in Markdown | Connect your ideas | Explore visually |
+|---|---|---|
+| Syntax highlighting, formatting toolbar, live preview and safe autosave | Full-text search, in-links, out-links, Back and separate heading outline | Local Canvas graphs, read-only Bases tables, draw.io diagrams, Mermaid and MathJax |
 
-Developer/source checkouts can contain placeholder renderer files instead of bundled Mermaid and ABCjs distributions. Use `.github/workflows/offline-release.yml` to build an audited complete offline ZIP. Details: [`docs/RENDERERS.md`](docs/RENDERERS.md). Do not confuse a development checkout with the complete offline ZIP.
+<details>
+<summary>More screenshots</summary>
 
-## Safety and limitations
+| Wiki layout | Interface smoke test |
+|---|---|
+| ![Wiki browser and editor](docs/ui-smoke.png) | ![Older application screenshot](docs/batch11-smoke.png) |
 
-- File moves update unambiguous Markdown and Obsidian wiki links. Multi-file operations cannot be truly atomic through the browser File System Access API; keep a backup.
-- **Move mode supports Markdown notes and all listed Obsidian attachments**, including SVG, audio, video, PDF, Canvas and Bases. Folder rows (including the wiki root) are drop targets. The destination folder must already exist. Extension changes and destination collisions are blocked. Only unambiguous Markdown references are updated; references inside Canvas/Bases are not rewritten. The operation is not atomic.
-- The source notes are never sent to a server. The application is designed to run over `file://` on supported Chrome/Edge installations.
-- Browser support for directory writing varies. Check `tools/test-file-access.html` if opening a folder fails.
-- The editor uses CodeMirror rather than the original StackEdit `cledit` editor.
+These are real development screenshots, not mockups. They document representative layouts; the latest UI may differ.
 
-## Development and validation
+</details>
+
+### Designed for your files
+
+- **Markdown-first.** Open existing `.md` and `.markdown` files. No proprietary cloud database or content import step.
+- **One local wiki folder.** Browse nested directories, filter filenames, create notes and folders, and use guarded drag-and-drop moves. Folder moves verify copied bytes and require confirmation.
+- **Linked notes.** Out-links and in-links navigate to individual link occurrences; Contents provides a separate clickable heading outline with source cursor positioning.
+- **Rich previews.** MathML text is selectable; MathJax retains its context menu. Mermaid and ABCjs can export SVG. Attachments include images, audio/video, PDFs, JSON Canvas, Obsidian Bases and `.drawio` diagrams.
+- **Safety by default.** Read-only mode is available, deletion requires opting into **- Delete** and a confirmation prompt, and structured previews do not execute embedded code.
+
+## Getting started
+
+1. Open [GitHub Actions — Build complete offline wiki ZIP](https://github.com/nibage/local-stackedit-wiki/actions/workflows/offline-release.yml), choose the latest **successful** run and download the `local-stackedit-wiki-offline` artifact. GitHub may require sign-in to access workflow artifacts.
+2. Extract the ZIP to a permanent application folder. The ZIP contains the offline runtime and essential documentation, not the development tests.
+3. Open **`index.html`** directly in a current version of Chrome or Edge (preferably on desktop).
+4. Select **Open folder** and grant the browser access to a folder you own. Keep a backup of your original data before writing or moving files.
+5. Choose **Side by side**, **Editor** or **Preview**. Edits autosave after approximately five seconds when permitted; **Ctrl+S** saves immediately.
+
+**Tip:** The source repository includes `demo-wiki/` for experiments, but the lean user ZIP intentionally does not bundle the large testing vault. Clone the source repository to explore the demo.
+
+### Navigation and file safety
+
+**Files** is the folder tree. **Search** finds words in note contents. **Links** lists Out-links and In-links with source positions. **Contents** navigates headings. **← Back** returns to the previous note.
+
+**→ Move** enables dragging notes, attachments and folders to an existing directory. Folder moves copy and verify the complete subtree, require confirmation, and conservatively migrate local Markdown/wikilinks and common attachment references. The browser filesystem does not offer atomic multi-file transactions, so maintain backups. **- Delete** starts **off**: turn it on to reveal trash icons on hover or focus; permanent removal still requires confirmation.
+
+**Refresh** rescans disk contents and keeps expanded branches. **Status** displays the bundled renderer status and diagnostic tools. On a complete release, all four renderer dependencies should report ready; developer checkouts may need separate installation.
+
+## Technical guide
+
+### Requirements and architecture
+
+| Component | Implementation |
+|---|---|
+| Runtime | Static HTML, CSS and plain JavaScript; direct `file://` use |
+| File access | Chromium File System Access API, with read-only fallback where available |
+| Markdown editing | CodeMirror, marked, Prism; offline sanitization |
+| Mathematics and notation | MathJax MathML, Mermaid and ABCjs (pinned, verified offline bundles) |
+| Structured files | JSON Canvas read-only graph with local note excerpts; Bases read-only table with limited YAML/filter syntax; draw.io read-only basic SVG viewer |
+| Storage | Your chosen wiki folder; preferences scoped to this `index.html` installation |
+| Distribution | GitHub Actions verified offline ZIP; no tests, build tools or demo vault in the download |
+
+### Known limitations
+
+- Only supported Chrome/Edge environments offer writable directory access. A source checkout may have placeholder renderer assets; use the verified ZIP for offline use.
+- Canvas and Bases viewers do not provide full Obsidian editor compatibility. Canvas file cards can display bounded local Markdown excerpts; external links and arbitrary HTML remain inert. Bases intentionally supports only a safe subset of view/filter expressions.
+- The `.drawio` viewer approximates complex/custom shapes; use [diagrams.net](https://www.diagrams.net/) for full-fidelity editing. Audio/video playback and PDFs depend on browser codecs and support.
+- Rewriting references inside structured Canvas and Bases files is not yet automatic when moving referenced attachments. For advanced features see [TODO.md](TODO.md).
+- Deleting a folder is permanent, and no browser API can make a multi-file move fully atomic. Back up important information.
+
+### Development and verification
 
 ```sh
 node --test tests/*.test.cjs
+python tools/release-audit.py
 python tests/offline-release-build.test.py
-python tests/rc5-ui-smoke.py
-python tests/real-renderers-release-smoke.py --zip local-stackedit-wiki-offline.zip
 ```
 
-Playwright and a Chromium binary are required for browser smoke tests, not for ordinary use. The GitHub Actions release workflow performs the complete offline build and its mandatory renderer, layout and interaction tests.
+GitHub Actions also runs Playwright/Chromium smoke tests with the **actual verified release ZIP**. To build a release from source, run `python tools/build-offline-release.py --output local-stackedit-wiki-offline.zip` (downloads only pinned npm archives during packaging), or provide the documented offline npm cache. Runtime usage never downloads libraries.
 
-Historical development notes in Czech are preserved in [`docs/CHANGELOG_LEGACY_CS.md`](docs/CHANGELOG_LEGACY_CS.md).
+For details, see [attachment compatibility](docs/OBSIDIAN_ATTACHMENTS.md), [renderer details](docs/RENDERERS.md), [publishing](GITHUB_PUBLISH.md), and [the full roadmap](TODO.md). Historical implementation notes remain in `docs/` for reference rather than being part of the user ZIP.
 
-## RC5.1: Using a Git checkout offline
+---
 
-The pull request that adds RC5.1 also includes a dedicated GitHub Actions workflow
-(`vendor-offline-renderers.yml`) which fetches the **exact pinned** Mermaid 8.9.2
-and ABCjs 6.4.4 bundles, validates npm SHA-512 and the pinned Mermaid SHA-512,
-then commits the real assets to the pull request branch. Do not merge the PR
-until this workflow completes and the files in `vendor/` have realistic sizes
-(around 848 KB for Mermaid and 483 KB for ABCjs, rather than ~210-byte stubs).
-
-Locally, `python tools/vendor-renderers-for-repo.py --check` verifies these
-assets without network access. The download/install mode is intended for
-maintainers, not ordinary users. Subsequent `git clone` and `git pull` can
-load renderers without a build step or Internet access.
-
-Drag and drop while **Move** mode is enabled now moves immediately, without
-an application modal or a browser `confirm`. Existing-file collisions,
-external changes, active unsaved edits and migration failures still block
-unsafe moves; move-and-backlink updates are not atomic. Keep a Git backup.
-Manual path entry (keyboard **M**) still uses its dialog.
-
-## RC5.2: Image moves and media support
-
-Image files can now be dragged to folders in Move mode. Binary bytes are verified before deletion of the source; relative Markdown image links, normal links to an image, and Obsidian image embeds are updated conservatively. Unsupported HTML `src` strings, ambiguous references and references inside code blocks are not rewritten. Keep a Git backup when moving shared assets.
-
-Since RC6, local audio/video/PDF embeds, SVG images and read-only JSON Canvas/Bases previews are supported. Full Canvas editing, Bases queries and cross-file reference rewriting in Canvas/Bases are not supported. Available playback codecs still depend on Chrome/Edge and the operating system. See the attachment guide.
-
-## RC6: Obsidian attachments in the file tree
-
-The following file extensions now appear alongside notes: images (`avif bmp gif jpeg jpg png svg webp`), audio (`flac m4a mp3 ogg wav 3gp`), video (`mkv mov mp4 ogv webm`), PDF (`pdf`), JSON Canvas (`canvas`) and Bases (`base`). Audio-only WebM files are previewed with an audio player when their MIME type identifies them as audio. Double-clicking or selecting an asset opens a local preview dialog. The **Insert into note** button adds a relative Markdown/Obsidian embed or link; new content never leaves the chosen folder.
-
-**Limitations:** The Canvas viewer is a read-only node summary and Bases is a read-only YAML preview (not the full Obsidian editing engine). Audio/video playback depends on installed browser codecs. PDF preview depends on browser PDF support. Moving files updates Markdown links where unambiguous, not cross-references stored inside Canvas/Bases. See [`docs/OBSIDIAN_ATTACHMENTS.md`](docs/OBSIDIAN_ATTACHMENTS.md).
-
-## Tree navigation and automatic saving
-
-Use **Expand all** or **Collapse all** at the bottom of the Files panel to open or close every folder in the navigation tree. Filtering by name temporarily expands matching branches. Folder arrows and note dots are emphasized in both themes.
-
-Markdown edits are saved automatically to the original file every **5 seconds**, provided the wiki is open in read/write mode and a note has changed. You can still press **Ctrl+S** or click **Save**. Autosave uses the same fingerprint/conflict protection as manual saving, never overwrites detected external changes, and does not run while another file operation is in progress. A failed automatic save remains unsaved and is not retried until the text changes or Save is clicked. Read-only mode never autosaves.
-
-Routine "Opened note" banners have been removed; warnings and file-operation messages appear temporarily **beside the Local StackEdit Wiki logo**, never over file controls. Long messages are ellipsized in narrow windows; hover the message to read the full text.
-
-## Large trees and sidebar width (RC6.1)
-
-The Files navigation pane can be resized by dragging its separator, or by focusing the separator and pressing **Home** (minimum), **End** (maximum), or the left/right arrow keys. Double-click resets it to 255 px. Its maximum width is approximately **70% of the workspace**, while leaving at least **390 px** to the editor/preview where the viewport allows. The requested width is remembered when the window is resized.
-
-Long filenames and deeply nested paths stay on a single line. The tree scrolls **vertically and horizontally**, without resizing the editor or the bottom Expand/Collapse controls. Test in `demo-wiki/Tree-Test`. The Move button's green outline no longer changes the button border thickness or displaces other controls.
-
-## SVG scores, copyable mathematics, and opening Markdown from the OS
-
-The **Save SVG** button below Mermaid diagrams and ABCjs notation exports a standalone SVG with explicit dimensions where the original renderer used responsive sizing. Both downloads are checked in Chromium against actual offline-bundled renderer output. Downloads are not written to the wiki automatically.
-
-MathJax uses the browser's built-in **MathML** renderer for genuinely selectable formula text in modern Chrome/Edge. Drag across rendered mathematics to select text, or right-click and choose **Show Math As → TeX Commands** for the original source. This is entirely offline; it does not change the existing **Save SVG** buttons for Mermaid and ABCjs. Native MathML can differ visually from the former SVG output, especially for complex notation.
-
-An ordinary `file://` `index.html` cannot register itself as the operating system's handler for `.md`. A future optional installable PWA (secure origin) or a lightweight native desktop wrapper could do that, while retaining offline document storage. See TODO; no new installation or file-handler permissions are introduced in this update.
-
-## Visual read-only JSON Canvas viewer
-
-Open `demo-wiki/Attachments/example.canvas` from the file tree to explore a safe, entirely offline graph viewer. It supports sanitized Markdown in text cards, file/link/group cards, colored connections, edge labels and arrows, Fit/100%/zoom buttons, pointer panning and Ctrl+wheel zoom. Markdown links within Canvas cards are shown but intentionally not navigable. Local image file nodes may show isolated thumbnails, but external links are rendered as inert text. Editing Canvas is not enabled and viewing never writes back to a file. Graph preview is capped at 400 nodes / 1000 edges and 2 MB per Canvas file.
-
-## Obsidian Bases: read-only tables
-
-Open `demo-wiki/Attachments/example.base` to browse local Markdown notes as table rows, with columns selected by the Bases `views[].order`. Supported are a **restricted offline YAML subset**, scalar note frontmatter, file metadata, common comparison filters, `file.inFolder` and `file.hasTag`, multiple table views and row limits. Click a note name to navigate to it. Complex filters and formulas are **not evaluated**: unsupported filters show a warning and withhold results rather than silently displaying an incorrect table. The first 500 Markdown notes are scanned (up to 300 rows per view). Viewing never modifies the `.base` file or note properties.
-
-The Links panel now loads backlinks automatically, shows a **Back** button beside Table of contents after following an internal link, and uses the top status notice for empty backlink results. **Refresh** remains distinct from F5: it rescans the selected folder for external disk changes, preserving expanded branches, current note and filename filter. The former file-access diagnostic footer is accessible under **Renderers** instead.
-
-## Offline diagrams.net / draw.io diagrams (read-only)
-
-Open `demo-wiki/Attachments/example.drawio` from the file tree, or follow a Markdown link to it. The viewer supports standalone `.drawio` XML, uncompressed `mxGraphModel`, multi-page `mxfile`, and pages encoded using Base64 + raw DEFLATE + URI encoding. The sample contains two pages: **Pracovní postup** (uncompressed) and **Architektura** (compressed). Switch pages using the tabs, pan on the empty viewport, zoom with controls / Ctrl+wheel and use **Fit**.
-
-This is deliberately a **safe first-stage viewer, not the full diagrams.net editor/renderer**: it draws basic shapes, labels and connections with locally generated SVG, and approximates custom stencils, complex connectors, layout, fonts and images. The preview never writes to a diagram, loads remote resources, executes embedded HTML/JavaScript, or follows external URLs. The browser must support `DecompressionStream('deflate-raw')` for compressed diagrams (modern Chrome/Edge). At most 2 MB of source XML, 32 pages, 1200 elements/page and 4 MB decompressed XML/page are accepted. Existing `.drawio.svg` and `.drawio.png` exports continue to open as ordinary images.
-
-Full-fidelity third-party viewer integration would require a separate security and licensing review and bundling assets safely offline; it remains a separate task in TODO. **No in-app draw.io editing is planned.**
-
-## Sidebar Links and table of contents
-
-The **Links** tab lists **Out-links** (links from the active note to other Markdown notes) and **In-links** (each source occurrence in another note). Clicking an Out-link positions the cursor on the link in the active Markdown source and highlights its rendered anchor; clicking an In-link opens the originating note at that specific source line/column, with matching highlight in the preview. Internal links only are indexed; code fences, inline code, media attachments and external URLs do not appear as navigable note links. **Contents** is a separate tab for headings. Back is available in both tabs after navigation.
-
-The Files tree uses a single viewport-pinned trash icon on hover or keyboard focus: it stays next to the right-hand scrollbar even for long file paths, and still requires confirmation before permanent deletion. Markdown notes have a distinctive **★** glyph. Sidebar headings, search results and link lists use the same neutral text color as file names; the selected tab has a subtle gray fill in light mode and keeps its green outline.
+**Local StackEdit Wiki is an independent offline Markdown application.** It is not affiliated with Obsidian, StackEdit or diagrams.net. Third-party rendering libraries retain their own upstream licenses.

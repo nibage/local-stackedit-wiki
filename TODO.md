@@ -68,3 +68,15 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 - [x] Separate **Contents** from **Links**; show **Out-links** and **In-links** with individual source positions and contextual Back navigation.
 - [x] Use consistent neutral sidebar text colors, gray light-mode active tabs, a distinctive note star, and a simple ASCII arrow on Move.
 - [ ] Extend link-position matching to nonstandard Markdown constructs (nested links, complex HTML) and build an optional dedicated external-URLs list.
+
+## Release and usability cleanup (November 2026)
+
+- [x] Lean GitHub Actions release ZIP: app runtime, renderer licenses, README and selected real screenshots only; no tests, dev tooling, demo vault or historic reports.
+- [x] README marketing overview with authentic project screenshots, followed by install/technical documentation.
+- [x] Renderer status/diagnostics are concise when all dependencies are already bundled.
+- [x] Contents jumps to the editor cursor even from Preview-only, without relying on the previous clicked heading.
+- [x] Opt-in hover trash via **- Delete**; green highlight and existing confirmations retained.
+- [x] Guarded folder drag/drop moves with byte verification and conservative note-link migration.
+- [x] Canvas local Markdown file cards display bounded, sanitized note excerpts.
+- [ ] Full Canvas editor: separate design, save conflicts, undo/redo and change tracking.
+- [ ] Full Bases editor: safe property updates across Markdown frontmatter with explicit conflict handling.
