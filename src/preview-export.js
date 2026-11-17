@@ -282,7 +282,7 @@
       /* StackEdit-like printed article: centred ~470pt reading column,
          12pt body text and generous headings. Inline snapshots use fixed
          computed values, so printed typography must override them. */
-      '@media print{@page{size:A4;margin:17mm;}'+
+      '@media print{@page{size:A4;margin:12mm 17mm 17mm;}'+
       'html,body{background:#fff!important;color:#333!important;'+
       'font-family:Arial,"Helvetica Neue",sans-serif!important;'+
       '-webkit-print-color-adjust:exact;print-color-adjust:exact;}'+
@@ -306,6 +306,8 @@
       'border-bottom:1px solid #d9d9d9!important;break-after:avoid;}'+
       '.wiki-export-preview h1{font-size:30px!important;}'+
       '.wiki-export-preview h2{font-size:25px!important;}'+
+      '.wiki-export-preview>h1:first-child,.wiki-export-preview>h2:first-child{margin-top:0!important;}'+
+      '.wiki-export-preview h1,.wiki-export-preview h2{margin-bottom:1.25em!important;}'+
       '.wiki-export-preview h3{font-size:21px!important;}'+
       '.wiki-export-preview h4,.wiki-export-preview h5{font-size:18px!important;}'+
       '.wiki-export-preview a[href]{color:#247fb9!important;text-decoration:underline!important;}'+
