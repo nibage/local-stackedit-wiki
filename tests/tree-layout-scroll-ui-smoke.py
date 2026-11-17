@@ -80,10 +80,16 @@ with sync_playwright() as pw:
     # One trash control must stay a few pixels from the same scrollbar, even
     # when long/nested rows extend far beyond the horizontal viewport.
     assert page.locator('#tree-delete-overlay svg').count()==1
+    page.evaluate("document.querySelector('#tree').scrollTop=90")
     anchored=page.evaluate("""() => {
       const tree=document.querySelector('#tree');
+      const viewport=tree.getBoundingClientRect();
       const candidates=[...tree.querySelectorAll('.tree-row[data-delete-path]')]
-        .filter(row=>row.dataset.deletePath);
+        .filter(row=>{
+          const rect=row.getBoundingClientRect();
+          return row.dataset.deletePath &&
+            rect.bottom>viewport.top+2 && rect.top<viewport.bottom-2;
+        });
       const choose=kind=>candidates.find(row=>row.dataset.deleteKind===kind);
       const button=document.querySelector('#tree-delete-overlay');
       function show(row) {
