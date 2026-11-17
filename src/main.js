@@ -1406,13 +1406,13 @@
     await exporter.waitForReady(ui.preview,()=>$('render-status').textContent.includes('Rendering:'));
     if (!activePath || activePath!==path)
       throw new Error('The selected note changed during export. Please retry.');
-    const html=await exporter.build(ui.preview,{title:basename(path)});
+    const html=await exporter.build(ui.preview,{title:basename(path),theme:kind==='pdf'?'light':'current'});
     if (kind==='html') {
       exporter.downloadHtml(html,exporter.fileName(path,'html'));
       notice('Standalone HTML downloaded with inline styles and local preview assets.','success');
     } else {
       await exporter.printHtml(html,popup);
-      notice('In the print dialog, choose Save as PDF. The document uses the current preview theme.','success');
+      notice('In the print dialog, choose Save as PDF. PDF always uses the light theme; the app theme stays unchanged.','success');
     }
   }
   function startPreviewExport(kind) {
@@ -1434,7 +1434,7 @@
   $('preview-export-pdf').addEventListener('click',()=>startPreviewExport('pdf'));
   function setView(mode) {
     selectedMode = mode; ui.grid.dataset.layout = mode;
-    for (const button of document.querySelectorAll('.view-switch button')) {
+    for (const button of document.querySelectorAll('.view-switch button[data-view]')) {
       const active=button.dataset.view===mode;
       button.classList.toggle('active',active);
       button.setAttribute('aria-pressed',String(active));
@@ -1713,7 +1713,7 @@
   ui.search.addEventListener('input', renderTree);
   $('expand-all').addEventListener('click', () => setExpandedAll(true));
   $('collapse-all').addEventListener('click', () => setExpandedAll(false));
-  document.querySelectorAll('.view-switch button').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+  document.querySelectorAll('.view-switch button[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
   async function saveCurrent(automatic = false, force = false) {
     if (!activePath || !isDirty()) return true;
     if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return false;

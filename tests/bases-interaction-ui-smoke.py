@@ -47,7 +47,21 @@ with sync_playwright() as pw:
     page.locator('.tree-row[aria-label="example.base"]').click()
     page.wait_for_function("document.querySelector('#attachment-dialog .bases-table tbody tr')!==null")
     assert page.locator('#attachment-dialog .bases-table tbody tr').count()==3
+    # View tabs and temporary filter tools share a horizontal header, with
+    # the controls on the right side of a visual divider.
+    tabs=page.locator('#attachment-dialog .bases-controls-row .bases-tabs').bounding_box()
+    tools=page.locator('#attachment-dialog .bases-controls-row .bases-toolbar').bounding_box()
+    assert abs(tabs['y']-tools['y'])<10,(tabs,tools)
+    assert tools['x']>=tabs['x']+tabs['width']-1,(tabs,tools)
+    assert page.locator('#attachment-dialog .bases-controls-row .bases-toolbar').evaluate(
+      '(el)=>getComputedStyle(el).borderLeftWidth')=='1px'
     page.locator('#attachment-dialog .bases-filter-toggle').click()
+    negate=page.locator('#attachment-dialog .bases-filter-negate')
+    checkbox=negate.locator('input[type="checkbox"]')
+    label=negate.locator('span')
+    assert abs(checkbox.bounding_box()['y']-label.bounding_box()['y'])<8
+    assert checkbox.bounding_box()['x'] < label.bounding_box()['x']
+    assert checkbox.bounding_box()['width']<=20
     page.locator('#attachment-dialog .bases-add-filter').click()
     page.locator('#attachment-dialog .bases-filter-key').select_option('status')
     page.locator('#attachment-dialog .bases-filter-value').fill('done')

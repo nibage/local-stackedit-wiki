@@ -310,8 +310,8 @@
     viewport.setAttribute('aria-label','Read-only draw.io page; drag empty space to pan');
     viewport.tabIndex=0;
     const board=html('div','drawio-board');
-    viewport.append(board);
-    root.append(summary,tabs,warning,controls,viewport);
+    viewport.append(board,warning);
+    root.append(summary,tabs,controls,viewport);
     const buttons=[],state={scale:1,x:0,y:0,width:600,height:400};
     let disposed=false,sequence=0,drag=null;
     function apply() {

@@ -68,9 +68,79 @@
       reader.readAsDataURL(blob);
     });
   }
+  async function lightThemeSnapshot(preview) {
+    // Create an off-screen same-origin document with the actual light-theme
+    // stylesheets. Never change the application's selected theme or print dark
+    // inline CSS values. No scripts are copied, no external hosts are allowed.
+    const frame=document.createElement('iframe');
+    frame.setAttribute('aria-hidden','true');
+    frame.tabIndex=-1;
+    frame.style.cssText='position:fixed;left:-200vw;top:0;opacity:0;'+
+      'pointer-events:none;border:0;height:30px;width:'+
+      Math.max(320,preview.clientWidth||780)+'px;';
+    document.body.append(frame);
+    try {
+      const doc=frame.contentDocument;
+      doc.documentElement.dataset.theme='light';
+      const pending=[];
+      for(const original of document.querySelectorAll('link[rel="stylesheet"],style')) {
+        if (original.localName==='link') {
+          // Mirror existing loaded CSSOM rules first. This is synchronous and
+          // also works when the app is opened via file:// or setContent().
+          try {
+            const rules=Array.from(original.sheet?.cssRules||[]);
+            if (rules.length) {
+              const inline=doc.createElement('style');
+              inline.textContent=rules.map(rule=>rule.cssText).join('\n');
+              doc.head.append(inline);
+              continue;
+            }
+          } catch (_) { /* Fall back to the original bundle-relative CSS link. */ }
+          const relative=original.getAttribute('href')||'';
+          // Only bundle-local relative stylesheets: never follow external URLs.
+          if (!relative || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(relative))continue;
+          let uri,base;
+          try {base=new URL(document.baseURI);uri=new URL(relative,base);}catch(_){continue;}
+          const allowed=uri.protocol==='file:'&&base.protocol==='file:'||
+            uri.origin===base.origin&&/^https?:$/.test(uri.protocol);
+          if(!allowed)continue;
+          const sheet=doc.createElement('link');
+          sheet.rel='stylesheet';sheet.href=uri.href;
+          pending.push(new Promise(resolve=>{
+            sheet.addEventListener('load',resolve,{once:true});
+            sheet.addEventListener('error',resolve,{once:true});
+          }));
+          doc.head.append(sheet);
+        } else {
+          const style=doc.createElement('style');
+          style.textContent=original.textContent;
+          doc.head.append(style);
+        }
+      }
+      // The print copy must be light even if a stylesheet cannot be cloned.
+      // Force only the main preview palette, leaving light-theme typography,
+      // diagrams and syntax styles inherited from the copied offline CSS.
+      const lightPalette=doc.createElement('style');
+      lightPalette.textContent=':root[data-theme="light"]{color-scheme:light;'+
+        '--panel:#fff;--panel-alt:#f7f8fa;--text:#252c34;--muted:#677182;--line:#d9dde2;}'+
+        '[data-theme="light"] .markdown-preview{background:#fff!important;'+
+        'color:#252c34!important;}';
+      doc.head.append(lightPalette);
+      const wrapper=doc.createElement('section');
+      wrapper.className='pane preview-pane';
+      const light=doc.importNode(preview,true);
+      wrapper.append(light);doc.body.append(wrapper);
+      // CSS is loaded from the same offline bundle, not the network.
+      await Promise.race([Promise.all(pending),new Promise(resolve=>setTimeout(resolve,2500))]);
+      return {node:light,frame};
+    } catch(error) {
+      frame.remove();
+      throw error;
+    }
+  }
   function copyStyle(source,target) {
-    if (!(source instanceof Element) || !(target instanceof Element)) return;
-    const css=getComputedStyle(source);
+    if (!source || !target || source.nodeType!==1 || target.nodeType!==1) return;
+    const css=source.ownerDocument.defaultView.getComputedStyle(source);
     for(const name of STYLES) {
       const value=css.getPropertyValue(name);
       if (!value || value==='initial' || value==='normal' && name==='background-image') continue;
@@ -122,19 +192,28 @@
       copy.removeAttribute('preload');
     }
   }
-  async function build(preview,{title='Wiki preview'}={}) {
+  async function build(preview,{title='Wiki preview',theme='current'}={}) {
     if (!preview || !preview.isConnected) throw new Error('No rendered preview is available.');
-    const cloned=preview.cloneNode(true);
-    const originals=[preview,...preview.querySelectorAll('*')];
+    const light=theme==='light'?await lightThemeSnapshot(preview):null;
+    const source=light?.node||preview;
+    try {
+    const cloned=source.cloneNode(true);
+    const originals=[source,...source.querySelectorAll('*')];
     const copies=[cloned,...cloned.querySelectorAll('*')];
     const budget={bytes:0},cache=new Map();
     for(let i=0;i<originals.length;i++){
       const original=originals[i],copy=copies[i];
-      if (!(original instanceof Element) || !(copy instanceof Element)) continue;
+      if (!original || !copy || original.nodeType!==1 || copy.nodeType!==1) continue;
       cleanUrls(copy);
       // Do not clone an untrusted stylesheet into a standalone HTML document.
       if (copy.localName!=='style') copyStyle(original,copy);
       await inlineMedia(original,copy,budget,cache);
+    }
+    if (theme==='light') {
+      // Explicit final guarantee for the native PDF document, independent of
+      // the source theme or any user-configured stylesheet load delays.
+      cloned.style.setProperty('background-color','#fff','important');
+      cloned.style.setProperty('color','#252c34','important');
     }
     cloned.querySelectorAll(REMOVE).forEach(node=>node.remove());
     // Reject remaining references that would require an external resource, while
@@ -149,8 +228,9 @@
           element.removeAttribute(attribute.name);
       });
     }
-    const color=getComputedStyle(preview).color || '#222';
-    const background=getComputedStyle(preview).backgroundColor || '#fff';
+    const renderedStyle=source.ownerDocument.defaultView.getComputedStyle(source);
+    const color=renderedStyle.color || '#222';
+    const background=renderedStyle.backgroundColor || '#fff';
     const width=Math.max(320,Math.round(preview.clientWidth || preview.getBoundingClientRect().width || 780));
     const name=validTitle(title);
     // Inline style snapshot is self-contained; no libraries, fonts, network or
@@ -178,6 +258,7 @@
       '<main class="wiki-export-preview markdown-preview" style="'+escapeHtml(cloned.style.cssText)+'">'+cloned.innerHTML+
       '</main>\n</body></html>';
     return html;
+    } finally {if (light) light.frame.remove();}
   }
   function waitForReady(preview,isPending=()=>false) {
     return new Promise((resolve,reject)=>{

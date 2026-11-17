@@ -62,12 +62,21 @@ with sync_playwright() as pw:
         assert active==1
         border=page.locator(selector).evaluate("(el)=>getComputedStyle(el).borderTopColor")
         assert border=='rgb(88, 163, 106)',(value,border)
-    # Export button appears in the right preview header.
+    # Export is a split arrow directly beside Preview, not in the pane title.
+    assert page.locator('#view-preview + .preview-export-menu #preview-export-toggle').count()==1
+    assert page.locator('.preview-pane .preview-export-toggle').count()==0
+    assert page.locator('.view-switch .preview-view-action').count()==1
+    page.locator('#theme-select').select_option('dark')
+    assert page.locator('html').get_attribute('data-theme')=='dark'
+    # Export popup opening/closing may not change the preview pane height.
+    pane_height_before=page.locator('.preview-pane .pane-title').bounding_box()['height']
+    # Export arrow is in the view switch, not the right preview header.
     page.locator('#preview-export-toggle').click()
     assert page.locator('#preview-export-options').is_visible()
     assert page.locator('#preview-export-toggle').get_attribute('aria-expanded')=='true'
     page.locator('#preview-export-html').press('Escape')
     assert not page.locator('#preview-export-options').is_visible()
+    assert page.locator('.preview-pane .pane-title').bounding_box()['height']==pane_height_before
 
     page.locator('#preview-export-toggle').click()
     with page.expect_download() as capture:
@@ -91,6 +100,8 @@ with sync_playwright() as pw:
     assert offline.locator('h1').first.inner_text()=='Preview export heading'
     assert offline.locator('img').first.evaluate("(el)=>el.complete && el.naturalWidth>0")
     assert offline.locator('table td').count()==2
+    html_theme=offline.locator('main').evaluate('(el)=>getComputedStyle(el).backgroundColor')
+    assert html_theme!='rgb(255, 255, 255)',html_theme
     assert not standalone_requests,standalone_requests
     offline.close()
 
@@ -101,6 +112,12 @@ with sync_playwright() as pw:
     printable.wait_for_load_state('domcontentloaded')
     printable.wait_for_function("document.querySelector('h1')?.textContent==='Preview export heading'")
     printable.wait_for_function("window.__wikiPrintInvoked===true")
+    pdf_background=printable.locator('main').evaluate('(el)=>getComputedStyle(el).backgroundColor')
+    assert pdf_background=='rgb(255, 255, 255)',(pdf_background,printable.locator('main').get_attribute('style'))
+    assert 'background-color' in printable.locator('main').get_attribute('style')
+    assert printable.locator('main').evaluate('(el)=>getComputedStyle(el).visibility')=='visible'
+    assert printable.locator('h1').first.evaluate('(el)=>el.getAttribute("style")?.includes("color")')
+    assert page.locator('html').get_attribute('data-theme')=='dark'
     assert printable.locator('img').count()==1
     assert printable.locator('img').first.get_attribute('src').startswith('data:image/png;base64,')
     # Chromium's print backend generates a real PDF from the same document.

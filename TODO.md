@@ -138,3 +138,13 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] PDF print-preview route based on that same HTML, with background-color preservation and browser Save as PDF (no extra PDF library or cloud dependency).
 - [x] Chromium regression for layout selection, HTML file content, offline reopening and PDF print document.
 - [ ] Further fidelity audit for very complex MathJax/Canvas/Bases structures and optional print pagination controls; browser-native PDF/embedded media plugins can vary.
+
+## Editor usability follow-up (November 2026)
+
+- [x] Relocate preview export dropdown into a narrow arrow immediately beside the Preview layout button, without adding a row to the preview header.
+- [x] Export PDF using an isolated, locally styled light-theme snapshot while HTML keeps the selected app theme.
+- [x] Bases: horizontal view tabs / tools, inline NOT checkbox, fix 1px sticky column header glyph bleed.
+- [x] Canvas: no jump when dragging, live connector lines/labels during node movement and resizing, preserve camera after release, and keep resize grips scoped to their card.
+- [x] Draw.io: approximation warning shown as a stable overlay without changing the dialog height.
+- [ ] Consider React Flow / Svelte Flow (xyflow, MIT license) as future canvas interaction engines. They require a React/Svelte build and extra dependencies unlike this current vanilla JS, offline `file://` app; evaluate bundled size, accessibility, JSON Canvas 1.0 import/export, security and maintenance before any adoption.
+- [ ] Compare alternate lightweight SVG/DOM canvas engines and evaluate Obsidian Canvas parity for multi-select, keyboard move, edge routing, group interactions and editing shortcuts.

@@ -235,7 +235,9 @@
     const status=text('p','bases-status');
     const warnings=text('div','bases-warnings');
     const area=text('div','bases-table-scroll');
-    root.append(tabs,toolbar,filterPanel,status,warnings,area);
+    const header=text('div','bases-controls-row');
+    header.append(tabs,toolbar);
+    root.append(header,filterPanel,status,warnings,area);
     const sourceRows=files.slice(0,MAX_FILES);
     const totalFiles=Math.max(options.totalFiles||files.length,files.length);
     const viewButtons=[],viewStates=views.map(()=>({

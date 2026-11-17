@@ -80,6 +80,9 @@ with sync_playwright() as pw:
     assert page.locator('.drawio-graph polygon').count()==1
     assert not page.locator('.drawio-graph script, .drawio-graph foreignObject, .drawio-graph img').count()
 
+    # The approximation warning must not change vertical layout or dialog size.
+    graph_height=page.locator('#attachment-dialog .wiki-drawio-viewer').bounding_box()['height']
+    dialog_height=page.locator('#attachment-dialog').bounding_box()['height']
     # User interaction must show the second page, encoded as raw-deflated base64.
     page.locator('.drawio-tab').nth(1).click()
     page.wait_for_function("""() => {
@@ -88,6 +91,9 @@ with sync_playwright() as pw:
     }""")
     assert page.locator('.drawio-tab').nth(1).get_attribute('aria-pressed')=='true'
     assert 'complex / custom shapes' in page.locator('.drawio-warning').inner_text()
+    assert abs(page.locator('#attachment-dialog .wiki-drawio-viewer').bounding_box()['height']-graph_height)<2
+    assert abs(page.locator('#attachment-dialog').bounding_box()['height']-dialog_height)<2
+    assert page.locator('.drawio-warning').evaluate('(el)=>getComputedStyle(el).position')=='absolute'
     scale_before = page.locator('.drawio-zoom').inner_text()
     page.locator('.drawio-control', has_text='+').click()
     scale_after = page.locator('.drawio-zoom').inner_text()
