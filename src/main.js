@@ -1406,13 +1406,13 @@
     await exporter.waitForReady(ui.preview,()=>$('render-status').textContent.includes('Rendering:'));
     if (!activePath || activePath!==path)
       throw new Error('The selected note changed during export. Please retry.');
-    const html=await exporter.build(ui.preview,{title:basename(path)});
+    const html=await exporter.build(ui.preview,{title:basename(path),theme:kind==='pdf'?'light':'current'});
     if (kind==='html') {
       exporter.downloadHtml(html,exporter.fileName(path,'html'));
       notice('Standalone HTML downloaded with inline styles and local preview assets.','success');
     } else {
       await exporter.printHtml(html,popup);
-      notice('In the print dialog, choose Save as PDF. The document uses the current preview theme.','success');
+      notice('In the print dialog, choose Save as PDF. PDF always uses the light theme; the app theme stays unchanged.','success');
     }
   }
   function startPreviewExport(kind) {
