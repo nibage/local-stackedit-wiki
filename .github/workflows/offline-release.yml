@@ -60,6 +60,8 @@ jobs:
         run: python tests/bases-interaction-ui-smoke.py
       - name: Verify guarded Base YAML editor and conflict handling
         run: python tests/bases-editor-ui-smoke.py
+      - name: Verify compact header, centered themes, statistics and bidirectional scroll sync
+        run: python tests/compact-workspace-ui-smoke.py
       - name: Verify StackEdit reading theme and expanded Markdown/media toolbar
         run: python tests/stackedit-theme-toolbar-ui-smoke.py
       - name: Verify green layout choice and self-contained HTML/PDF preview export
