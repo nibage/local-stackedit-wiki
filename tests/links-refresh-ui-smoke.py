@@ -53,9 +53,21 @@ with sync_playwright() as pw:
     page.wait_for_function("document.querySelector('#filename').textContent==='Home.md'")
     page.locator('[data-side="links"]').click()
     page.wait_for_function("document.querySelector('#backlinks-results .result-item')!==null")
+    assert page.locator('#outlinks-results .result-item').count()==1
+    page.locator('#outlinks-results .result-item').click()
+    assert page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line")==2
+    assert page.locator('#preview a.wiki-link-location').count()==1
+    page.locator('[data-side="toc"]').click()
+    assert page.locator('#toc .toc-item').count()==1
+    assert page.locator('#side-toc h3').inner_text()=='Table of contents'
+    page.locator('#toc .toc-item').first.click()
+    assert page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line")==0
+    page.locator('[data-side="links"]').click()
     assert 'Other.md' in page.locator('#backlinks-results').inner_text()
     page.locator('#backlinks-results .result-item').first.click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Docs/Other.md'")
+    assert page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line")==2
+    assert page.locator('#preview a.wiki-link-location').count()==1
     assert page.locator('#nav-back').is_visible()
     page.locator('#nav-back').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Home.md'")
@@ -66,6 +78,11 @@ with sync_playwright() as pw:
     page.locator('[data-side="links"]').click()
     page.wait_for_function("document.querySelector('#notice').textContent.includes('No other notes link')")
     assert page.locator('#backlinks-results').inner_text().strip()==''
+    page.locator('[data-side="search"]').click()
+    page.locator('#fulltext-query').fill('obviously-nonexistent-phrase-123')
+    page.locator('#fulltext-run').click()
+    page.wait_for_function("document.querySelector('#fulltext-status').textContent.includes('0 matches')")
+    assert not page.locator('#fulltext-results').inner_text().strip()
 
     page.locator('[data-side="files"]').click()
     page.locator('.tree-row[aria-label="Docs"]').click()

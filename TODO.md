@@ -61,3 +61,10 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 
 - [x] Make MathJax mathematics selectable directly using the browser's native MathML text renderer; retain MathJax context menu. [ ] Review differences in fonts/complex formulas and optional fallback on older browsers.
 - [ ] Evaluate optional `.md` OS associations via an installable offline PWA (HTTPS origin and File Handling API) or small signed native wrapper for Windows/Linux. Retain support for plain portable `file://` and don't seize default associations without an explicit user choice.
+
+## Sidebar navigation refinements (November 2026)
+
+- [x] Make delete a single right-pinned, accessible trash icon in the tree viewport, independent of long filenames and nesting depth.
+- [x] Separate **Contents** from **Links**; show **Out-links** and **In-links** with individual source positions and contextual Back navigation.
+- [x] Use consistent neutral sidebar text colors, gray light-mode active tabs, a distinctive note star, and a simple ASCII arrow on Move.
+- [ ] Extend link-position matching to nonstandard Markdown constructs (nested links, complex HTML) and build an optional dedicated external-URLs list.

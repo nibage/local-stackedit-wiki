@@ -38,3 +38,29 @@ test('nevyhledává odkazy uvnitř bloků kódu', () => {
   const arr=links('```md\n[[neexistuje]]\n```\n[[Python]]\n[Odkaz](index.md)');
   assert.deepEqual(Array.from(arr),['wiki:Python','index.md']);
 });
+
+test('outgoing and incoming link occurrences include exact line, column and duplicate links', async () => {
+  const local = new Map([
+    ['Home.md', '# Home\\n\\n[Other](Docs/Other.md) and [[Other|Other again]]\\n' +
+      '\\x60[not a link](Docs/Other.md)\\x60\\n' +
+      '\\x60\\x60\\x60md\\n[[Other]]\\n\\x60\\x60\\x60\\n' +
+      'Again [go](Docs/Other.md)\\n'],
+    ['Docs/Other.md', '# Other\\n\\n[[Home]]\\n']
+  ]);
+  const localBridge = {getFilePaths:()=>[...local.keys()],read:async p=>({text:local.get(p)})};
+  const index=createIndex(localBridge);
+  await index.rebuild();
+  const out=index.outgoing('Home.md');
+  assert.equal(out.length,3);
+  assert.deepEqual(out.map(x=>x.line),[3,3,8]);
+  assert.deepEqual(out.map(x=>x.ordinal),[0,1,2]);
+  assert.equal(out[0].column,0);
+  assert.equal(out[1].column,27);
+  const incoming=index.incoming('Docs/Other.md');
+  assert.equal(incoming.length,3);
+  assert.equal(incoming[2].path,'Home.md');
+  assert.equal(incoming[2].line,8);
+  assert.equal(index.incoming('Home.md')[0].line,3);
+  assert.deepEqual(index.backlinks('Docs/Other.md'),['Home.md']);
+  assert.equal(index.outgoing('Home.md','[updated](Docs/Other.md)').length,1);
+});
