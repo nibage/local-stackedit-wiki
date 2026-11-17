@@ -74,21 +74,54 @@
     const root = make('section','canvas-editor');
     root.tabIndex = -1;
     const toolbar = make('div','canvas-editor-toolbar');
+    const actions = make('div','canvas-editor-actions');
+    const zoomControls = make('div','canvas-editor-zoom');
     const board = make('div','canvas-editor-board');
     const inspector = make('div','canvas-editor-inspector');
-    const message = make('p','canvas-editor-message');
+    const meta = make('div','canvas-editor-meta');
+    const message = make('span','canvas-editor-message');
+    const summary = make('span','canvas-editor-info-summary');
+    const hint = make('span','canvas-editor-info-hint');
     message.setAttribute('role','status');
+    meta.append(message,summary,hint);
     const warning = make('div','canvas-editor-confirm');
     warning.hidden = true;
-    root.append(toolbar, message, warning, board, inspector);
+    toolbar.append(actions,zoomControls,warning);
+    root.append(toolbar,board,inspector);
 
     function status(text) { message.textContent = text; }
     function button(label, callback) {
       const b = make('button','canvas-control',label);
       b.type = 'button';
       b.addEventListener('click',callback);
-      toolbar.append(b);
+      actions.append(b);
       return b;
+    }
+    function iconButton(label,name,callback) {
+      const control=button(label,callback);
+      control.classList.add('canvas-icon-button');
+      const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('viewBox','0 0 24 24');
+      svg.setAttribute('aria-hidden','true');
+      svg.setAttribute('fill','none');
+      svg.setAttribute('stroke','currentColor');
+      svg.setAttribute('stroke-width','2');
+      svg.setAttribute('stroke-linecap','round');
+      svg.setAttribute('stroke-linejoin','round');
+      const paths={
+        undo:['M3 7v6h6','M3 13a9 9 0 1 0 2.6-6.4L3 9'],
+        redo:['M21 7v6h-6','M21 13a9 9 0 1 1-2.6-6.4L21 9'],
+        save:['M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z',
+          'M17 21v-8H7v8','M7 3v5h8'],
+        back:['M12 19l-7-7 7-7','M5 12h14']
+      };
+      for (const d of paths[name]||[]) {
+        const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d',d);
+        svg.append(path);
+      }
+      control.prepend(svg);
+      return control;
     }
     function randomId(prefix, array) {
       let value;
@@ -106,7 +139,11 @@
       } catch (error) { status(error.message); }
     }
     function question(messageText, action) {
-      warning.replaceChildren(make('span','',messageText));
+      // Inline confirmation replaces the zoom controls; do not add a new
+      // message row or move the centered dialog while a draft is unsaved.
+      warning.replaceChildren();
+      warning.setAttribute('role','group');
+      warning.setAttribute('aria-label',messageText);
       const confirm = make('button','canvas-control','Discard changes');
       const cancel = make('button','canvas-control','Keep editing');
       confirm.type = cancel.type = 'button';
@@ -137,9 +174,9 @@
       connectFrom = selected;
       status('Click the target card to create a connection.');
     });
-    const undo = button('Undo',() => { if (draft.undo()) render(); });
-    const redo = button('Redo',() => { if (draft.redo()) render(); });
-    const save = button('Save canvas',async () => {
+    const undo = iconButton('Undo','undo',() => { if (draft.undo()) render(); });
+    const redo = iconButton('Redo','redo',() => { if (draft.redo()) render(); });
+    const save = iconButton('Save canvas','save',async () => {
       if (saving || !draft.dirty) return;
       saving = true; save.disabled = true;
       status('Checking source file and saving…');
@@ -155,7 +192,7 @@
           'External modification detected. Reload the file before retrying. ' : 'Save failed: ') + error.message);
       } finally { saving = false; refreshButtons(); }
     });
-    button('Preview',leave);
+    iconButton('Preview','back',leave);
 
     function refreshButtons() {
       undo.disabled = !draft.canUndo || saving;
@@ -364,6 +401,7 @@
     render();
     return {
       root,
+      meta,
       get isDirty() {return draft.dirty;},
       requestClose:askClose,
       dispose(){disposed=true;activeViewer?.dispose?.();}
