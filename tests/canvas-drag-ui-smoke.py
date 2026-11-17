@@ -60,6 +60,7 @@ with sync_playwright() as pw:
     # The default graph does not let unselected handles float over nodes.
     assert second.locator('.canvas-editor-resize').evaluate(
         '(el)=>getComputedStyle(el).opacity')=='0'
+    scale=board.locator('.canvas-board').evaluate('(el)=>Number(/scale\\(([^)]+)\\)/.exec(el.style.transform)[1])')
     before=first.bounding_box(); x,y=before['x']+35,before['y']+35
     original_d=path.get_attribute('d')
     page.mouse.move(x,y)
@@ -82,7 +83,7 @@ with sync_playwright() as pw:
     page.wait_for_function("document.querySelector('.canvas-editor')?.dataset.dirty==='false'")
     data=page.evaluate("JSON.parse(window.mockWiki.entries.get('graph.canvas').body)")
     node=next(node for node in data['nodes'] if node['id']=='a')
-    assert abs(node['x']-65)<=4 and abs(node['y']-42)<=4,node
+    assert abs(node['x']-65/scale)<=2 and abs(node['y']-42/scale)<=2,(node,scale)
     # On resize, the outgoing arrow must recalculate without waiting for up.
     first=board.locator('.canvas-node[data-node-id="a"]')
     handle=first.locator('.canvas-editor-resize')
