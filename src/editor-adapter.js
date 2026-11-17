@@ -70,6 +70,9 @@
       else if (type === 'quote') prefixLine('> ');
       else if (type === 'code-block') insertBlock('```text\n'+(cm.getSelection()||'code')+'\n```');
       else if (type === 'table') insertBlock('| Column 1 | Column 2 |\n| --- | --- |\n| Value 1 | Value 2 |');
+      else if (type === 'math') wrap('$', '$', 'E=mc^2');
+      else if (type === 'mermaid') insertBlock('```mermaid\ngraph TD\n  A --> B\n```');
+      else if (type === 'abc') insertBlock('```abc\nX:1\nT:New tune\nM:4/4\nK:C\nC D E F | G A B c |\n```');
       else if (type === 'undo') cm.undo();
       else if (type === 'redo') cm.redo();
     }
