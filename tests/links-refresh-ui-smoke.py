@@ -60,8 +60,10 @@ with sync_playwright() as pw:
     page.locator('#nav-back').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Home.md'")
     assert not page.locator('#nav-back').is_visible()
+    page.locator('[data-side="files"]').click()
     page.locator('.tree-row[aria-label="Orphan.md"]').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Orphan.md'")
+    page.locator('[data-side="links"]').click()
     page.wait_for_function("document.querySelector('#notice').textContent.includes('No other notes link')")
     assert page.locator('#backlinks-results').inner_text().strip()==''
 
