@@ -92,7 +92,7 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 - [x] Add an original, local SVG favicon matching the Wiki app branding.
 - [x] Preserve preview scroll during live Markdown rendering, following the ending paragraphs when the cursor is near the end, and respect manual preview scrolling.
 - [x] After **Expand all**, scroll the tree to the currently selected note or folder.
-- [ ] Bases: adjustable column widths, client-side filter builder, then guarded YAML/view editing and frontmatter updates.
+- [x] Bases interactive table stage: adjustable widths, temporary AND/OR/NOT filter builder, and header sorting. [ ] Guarded YAML/view editing and frontmatter updates.
 
 The future Canvas/Bases editing design and the draw.io non-goal are explained in [docs/EDITING_ROADMAP.md](docs/EDITING_ROADMAP.md).
 
@@ -120,3 +120,11 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Add unit tests and Chromium regression coverage for editor state and guarded writes.
 - [ ] Next Canvas refinement: coordinate-preserving zoom during edits, touch/keyboard navigation, richer connector routing and alignment/grid tools.
 - [ ] Bases editor remains the next independent stage; draw.io authoring stays external.
+
+## Bases table interaction stage (November 2026)
+
+- [x] Drag and keyboard-resize headers; double-click grips to auto-fit, with per-view temporary widths.
+- [x] Temporary property/operator/value filters combined by AND/OR/NOT; Reset filters and sort.
+- [x] Sort by clicking table headers without modifying source .base YAML or Markdown notes.
+- [x] Chromium smoke and unit tests for filtering, resizing and source immutability.
+- [ ] Next: source-preserving `.base` YAML edit mode with explicit Save/Discard and fingerprint checks, then per-note frontmatter editing. No automatic bulk rewriting.
