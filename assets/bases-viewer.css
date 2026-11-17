@@ -39,3 +39,19 @@
   color:var(--muted); }
 .bases-column-grip:hover,.bases-column-grip:focus-visible { color:var(--text); background:var(--panel); }
 .bases-heading-label { display:inline-block; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+
+/* Writable Base YAML source mode; never enabled in inline Markdown embeds. */
+.bases-source-editor { display:flex; flex-direction:column; min-width:0; gap:8px; }
+.bases-edit-note { color:var(--muted); font-size:12px; margin:0; }
+.bases-edit-toolbar { display:flex; flex-wrap:wrap; gap:6px; }
+.bases-edit-toolbar button:disabled { opacity:.5; cursor:not-allowed; }
+.bases-edit-text { width:100%; min-height:420px; max-height:65vh; box-sizing:border-box;
+  resize:vertical; tab-size:2; white-space:pre; overflow:auto;
+  border:1px solid var(--line); border-radius:7px; padding:12px;
+  color:var(--text); background:var(--panel-alt);
+  font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; }
+.bases-edit-message { font-size:12px; color:var(--muted); margin:0; }
+.bases-edit-confirm { border:1px solid var(--line); background:var(--panel-alt); padding:9px;
+  border-radius:7px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:12px; }
+.bases-edit-confirm[hidden] { display:none; }
+.bases-edit-confirm button { font-size:12px; }

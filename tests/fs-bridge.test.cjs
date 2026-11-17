@@ -78,3 +78,21 @@ test('read-only Canvas snapshot cannot be committed',async()=>{
   await assert.rejects(()=>api.writeAsset('draft.canvas','not allowed',snap.fingerprint),/read-only/);
   assert.equal(canvas.contents,text);
 });
+
+test('Base YAML asset snapshots protect writes, disallow draw.io and read-only writes',async()=>{
+  const yaml='views:\n  - type: table\n    name: Notes\n';
+  const base=new MockFile('views.base',yaml);
+  const api=setup(new MockDir('Wiki',[base]));
+  await api.openWritable();
+  const snapshot=await api.readAssetSnapshot('views.base');
+  assert.equal(snapshot.text,yaml);
+  await api.writeAsset('views.base',yaml.replace('Notes','All notes'),snapshot.fingerprint);
+  assert.match(base.contents,/All notes/);
+  await assert.rejects(()=>api.writeAsset('views.base','corrupt',snapshot.fingerprint),e=>e.code==='EXTERNAL_CHANGE');
+  assert.match(base.contents,/All notes/);
+  await assert.rejects(()=>api.writeAsset('diagram.drawio','x','missing'),/only writes/);
+  const ro=setup(new MockDir('Wiki',[base]));
+  await ro.openExisting(new MockDir('Wiki',[base]),()=>{},true);
+  const after=await ro.readAssetSnapshot('views.base');
+  await assert.rejects(()=>ro.writeAsset('views.base','x',after.fingerprint),/read-only/);
+});

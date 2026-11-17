@@ -16,6 +16,7 @@
   let expanded = new Set(['']), renderTimer = null, renderSequence = 0;
   let inlineDraft = null, imageDialogURL = null, attachmentDialogURL = null, pendingMovePath = null;
   let activeCanvasEditor = null;
+  let activeBaseEditor = null;
   let selectedFolder = '', treeClickTimer = null, lastTreeSelection = null;
   let moveEnabled = false, deleteEnabled = false, draggedPath = null, draggedKind = null;
   let noticeTimer = null, autosaveBlocked = null;
@@ -711,6 +712,8 @@
     if (types.isImage(path)) { showImage(path); return; }
     activeCanvasEditor?.dispose?.();
     activeCanvasEditor = null;
+    activeBaseEditor?.dispose?.();
+    activeBaseEditor = null;
     const dialog = $('attachment-dialog');
     const viewer = $('attachment-dialog-viewer');
     viewer.querySelector('.wiki-canvas-viewer')?.dispose?.();
@@ -772,6 +775,46 @@
         viewer.textContent='Cannot edit Canvas: '+error.message+' The file has not been changed.';
       } finally { editCanvas.disabled=false; }
     };
+    const editBase = $('attachment-edit-base');
+    editBase.hidden = types.kind(path) !== 'base' || bridge.getMode() !== 'readwrite';
+    editBase.disabled = operations.isBusy();
+    editBase.onclick = async () => {
+      if (activeBaseEditor || bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
+      editBase.disabled = true;
+      try {
+        const snapshot = await bridge.readAssetSnapshot(path);
+        if (!dialog.open || $('attachment-dialog-path').textContent !== path) return;
+        const source = snapshot.text.replace(/^\uFEFF/,'');
+        const lineEnding = /\r\n/.test(source) ? '\r\n' : '\n';
+        const editor = window.LocalWikiBasesEditor.mount(source.replace(/\r\n?/g,'\n'), {
+          fingerprint:snapshot.fingerprint,
+          onSave:async (content,expected) => {
+            if (operations.isBusy()) throw new Error('Finish the current wiki operation before saving Bases.');
+            const bytes=(snapshot.hasBOM ? '\uFEFF' : '')+content.replace(/\n/g,lineEnding);
+            return bridge.writeAsset(path,bytes,expected);
+          },
+          onPreview:async () => {
+            activeBaseEditor?.dispose?.();
+            activeBaseEditor=null;
+            const file=await bridge.readAsset(path);
+            const display=await attachmentTextPreview(file,path);
+            if (dialog.open && $('attachment-dialog-path').textContent===path) {
+              viewer.replaceChildren(display);
+              editBase.hidden=false;
+              $('attachment-insert').disabled=bridge.getMode()!=='readwrite' || !activePath || operations.isBusy();
+            } else display.querySelector('.wiki-bases-viewer')?.dispose?.();
+          },
+          onClose:()=>dialog.close()
+        });
+        viewer.querySelector('.wiki-bases-viewer')?.dispose?.();
+        activeBaseEditor=editor;
+        viewer.replaceChildren(editor.root);
+        editBase.hidden=true;
+        $('attachment-insert').disabled=true;
+      } catch(error) {
+        viewer.textContent='Cannot edit Base YAML: '+error.message+' The source file was not modified.';
+      } finally { editBase.disabled=false; }
+    };
     dialog.showModal();
     try {
       const file = await bridge.readAsset(path);
@@ -798,14 +841,19 @@
   }
   $('attachment-close').addEventListener('click', () => {
     if (activeCanvasEditor && !activeCanvasEditor.requestClose()) return;
+    if (activeBaseEditor && !activeBaseEditor.requestClose()) return;
     $('attachment-dialog').close();
   });
   $('attachment-dialog').addEventListener('cancel', event => {
     if (activeCanvasEditor && !activeCanvasEditor.requestClose()) event.preventDefault();
+    if (activeBaseEditor && !activeBaseEditor.requestClose()) event.preventDefault();
   });
   $('attachment-dialog').addEventListener('close', () => {
     activeCanvasEditor?.dispose?.();
     activeCanvasEditor = null;
+    activeBaseEditor?.dispose?.();
+    activeBaseEditor = null;
+    $('attachment-edit-base').hidden = true;
     $('attachment-edit-canvas').hidden = true;
     $('attachment-dialog-viewer').querySelector('.wiki-canvas-viewer')?.dispose?.();
     $('attachment-dialog-viewer').querySelector('.wiki-bases-viewer')?.dispose?.();

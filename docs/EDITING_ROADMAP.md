@@ -36,6 +36,8 @@ Remember: `.base` describes **views**, while the **rows are Markdown notes with 
 
 **Stage 2b: write support in Open larger**
 
+**Partial stage 2b implemented in `feature/bases-guarded-yaml-edit`:** the large dialog includes a raw YAML text editor with Save/Discard, safe subset validation, source preservation and on-disk fingerprint conflict checks. It does not yet include a visual saved-filter/view editor or direct Markdown property cell editing.
+
 1. Add **Edit Base** for table view configurations, with Save/Discard and conflict detection on the `.base` fingerprint. Preserve comments, quoting, unknown fields and unsupported YAML when making changes: use a reviewed local YAML concrete-syntax-tree parser or narrow source-preserving edits. The existing safe subset parser is a **reader**, not a round-trip YAML serializer.
 2. Support adding/editing/removing global and per-view filters, displayed columns, view names and sort rules, while retaining unfamiliar sections untouched.
 3. For property cell edits, load the source Markdown note, preserve its frontmatter and body, require expected-fingerprint write, and reject conflicts. Don't rewrite unrelated notes or properties.

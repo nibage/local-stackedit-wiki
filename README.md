@@ -46,6 +46,8 @@ A fully offline, portable Markdown knowledge base for Chrome and Edge. Write in 
 
 **Bases table controls:** Open a `.base` file or embed. Click **Filter (temporary)** to add up to eight conditions, combine them using AND/OR/NOT, or reset them. Click a column header to cycle ascending/descending/original order. Drag the grip at a column's right edge (or use Left/Right arrows while focused) to resize, and double-click the grip to auto-fit. These controls affect the current viewer only; they do not save YAML or edit Markdown frontmatter.
 
+**Editing a `.base` file:** In a writable wiki, open the `.base` in **Open larger** and click **Edit Base YAML**. The editor preserves the text you do not change, including comments and unfamiliar fields. It validates the supported safe YAML subset before **Save Base**, verifies the on-disk fingerprint, and asks before discarding unsaved changes. This is a source YAML editor; it does **not** persist the temporary graphical filters or change property cells in Markdown notes. In read-only mode the editing button is hidden.
+
 **Refresh** rescans disk contents and keeps expanded branches. **Status** displays the bundled renderer status and diagnostic tools. On a complete release, all four renderer dependencies should report ready; developer checkouts may need separate installation.
 
 ## Technical guide
@@ -65,7 +67,7 @@ A fully offline, portable Markdown knowledge base for Chrome and Edge. Write in 
 ### Known limitations
 
 - Only supported Chrome/Edge environments offer writable directory access. A source checkout may have placeholder renderer assets; use the verified ZIP for offline use.
-- Canvas editing is a first-stage implementation, not full Obsidian parity. In **Open larger**, writable folders offer **Edit canvas** with move/resize, node property edits, adding cards and connections, Undo/Redo and guarded Save/Discard. Inline embeds remain read-only, and unsupported JSON Canvas constructs must not be silently rewritten. Canvas file cards can display bounded local Markdown excerpts; external links and arbitrary HTML remain inert. Bases currently supports read-only tables with temporary Filter/AND/OR/NOT, sortable headers and adjustable column widths, but only a safe subset of saved view/filter expressions.
+- Canvas editing is a first-stage implementation, not full Obsidian parity. In **Open larger**, writable folders offer **Edit canvas** with move/resize, node property edits, adding cards and connections, Undo/Redo and guarded Save/Discard. Inline embeds remain read-only, and unsupported JSON Canvas constructs must not be silently rewritten. Canvas file cards can display bounded local Markdown excerpts; external links and arbitrary HTML remain inert. Bases supports temporary filters and sortable/resizable table columns, plus a guarded YAML source editor in the large dialog. It does not yet support GUI persistence of filters or Markdown frontmatter cell editing. The editable YAML must use the supported safe subset.
 - The `.drawio` viewer approximates complex/custom shapes; use [diagrams.net](https://www.diagrams.net/) for full-fidelity editing. Audio/video playback and PDFs depend on browser codecs and support.
 - Rewriting references inside structured Canvas and Bases files is not yet automatic when moving referenced attachments. For advanced features see [TODO.md](TODO.md).
 - Deleting a folder is permanent, and no browser API can make a multi-file move fully atomic. Back up important information.

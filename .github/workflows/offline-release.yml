@@ -56,6 +56,8 @@ jobs:
         run: python tests/canvas-editor-ui-smoke.py
       - name: Verify temporary Bases filters, sorting and column resizing
         run: python tests/bases-interaction-ui-smoke.py
+      - name: Verify guarded Base YAML editor and conflict handling
+        run: python tests/bases-editor-ui-smoke.py
       - name: Upload verified ZIP
         uses: actions/upload-artifact@v4
         with:
