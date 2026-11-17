@@ -203,6 +203,15 @@
     root.append(edges,shapes);
     const uidPrefix='drawio-'+(++uid)+'-';
     function center(p){return{x:p.ax+dx+p.width/2,y:p.ay+dy+p.height/2};}
+    function boundary(cell, toward) {
+      const midpoint=center(cell), vx=toward.x-midpoint.x, vy=toward.y-midpoint.y;
+      if (!vx && !vy) return midpoint;
+      const halfWidth=Math.max(1,cell.width/2), halfHeight=Math.max(1,cell.height/2);
+      let ratio=1/Math.max(Math.abs(vx)/halfWidth,Math.abs(vy)/halfHeight);
+      if(['ellipse','cloud','actor'].includes(cell.style.shape))
+        ratio=1/Math.sqrt((vx/halfWidth)**2+(vy/halfHeight)**2);
+      return {x:midpoint.x+vx*ratio,y:midpoint.y+vy*ratio};
+    }
     function edgePoint(e,key) {
       if (!e.geo) return null;
       const point=Array.from(e.geo.children).find(p=>p.localName==='mxPoint'&&p.getAttribute('as')===key);
@@ -210,11 +219,26 @@
     }
     model.edges.forEach((e,i)=>{
       const source=model.positions.get(e.source),target=model.positions.get(e.target);
-      const a=source?.vertex?center(source):edgePoint(e,'sourcePoint');
-      const b=target?.vertex?center(target):edgePoint(e,'targetPoint');
+      const points=Array.from(e.geo?.children||[])
+        .filter(n=>n.localName==='Array'&&n.getAttribute('as')==='points')
+        .flatMap(n=>Array.from(n.children))
+        .filter(n=>n.localName==='mxPoint').slice(0,40)
+        .map(n=>({x:number(n.getAttribute('x'))+dx,y:number(n.getAttribute('y'))+dy}));
+      const fromFallback=edgePoint(e,'sourcePoint');
+      const toFallback=edgePoint(e,'targetPoint');
+      const first=points[0]||(target?.vertex?center(target):toFallback);
+      const last=points.at(-1)||(source?.vertex?center(source):fromFallback);
+      const a=source?.vertex && first?boundary(source,first):fromFallback;
+      const b=target?.vertex && last?boundary(target,last):toFallback;
       if(!a||!b)return;
+      let segments=[a,...points,b];
+      if(!points.length && e.style.edgeStyle && /orthogonal|elbow/i.test(e.style.edgeStyle)) {
+        const mid=(a.x+b.x)/2;
+        segments=[a,{x:mid,y:a.y},{x:mid,y:b.y},b];
+      }
+      const d='M '+segments.map(p=>p.x+' '+p.y).join(' L ');
       const stroke=color(e.style.strokeColor,'#64748b');
-      const path=node('path',{d:'M '+a.x+' '+a.y+' L '+b.x+' '+b.y,
+      const path=node('path',{d,
         stroke,'stroke-width':number(e.style.strokeWidth,2,.5,12),
         'stroke-dasharray':e.style.dashed==='1'?'7 5':undefined,fill:'none'});
       if(e.style.endArrow!=='none'){
