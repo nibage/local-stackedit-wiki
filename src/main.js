@@ -469,7 +469,7 @@
     }
   }
   function renderPreview(fromEditor = false) {
-    clearTimeout(renderTimer);
+    clearTimeout(renderTimer); renderTimer = null;
     const oldTop = ui.preview.scrollTop;
     const cursorLine = editor.cm.getCursor().line;
     const lastLine = editor.cm.lastLine();
@@ -536,7 +536,7 @@
       $('render-status').textContent = 'Preview error';
     }
   }
-  function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(() => renderPreview(true), PREVIEW_DEBOUNCE_MS); }
+  function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(() => { renderTimer = null; renderPreview(true); }, PREVIEW_DEBOUNCE_MS); }
   async function selectFile(path, options = {}) {
     if (path === activePath && !options.force) return true;
     if (operations.isBusy()) { notice('A file operation is in progress; switching notes is temporarily disabled.', 'error'); return false; }
