@@ -94,18 +94,31 @@
   box-sizing:border-box;max-width:960px;margin-left:auto;margin-right:auto;
   padding:13px 28px 48px;
 }
+/* Measurements from the user's archived StackEdit.html (not guessed):
+   editor/preview panel font 18px; the native editor and preview both have
+   386px side padding inside a 1762px-wide panel, giving a 990px article.
+   StackEdit uses Lato at line-height 1.67, with Helvetica fallback. */
 :root[data-theme="stackedit"] #preview.markdown-preview {
-  font-family:Arial,"Segoe UI",sans-serif;
-  font-size:18px;line-height:1.68;
-  padding-top:28px;padding-bottom:56px;
-  padding-left:max(27px,calc((100% - 900px)/2));
-  padding-right:max(27px,calc((100% - 900px)/2));
+  font-family:Lato,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-variant-ligatures:common-ligatures;
+  font-size:18px;line-height:1.67;
+  padding-top:10px;padding-bottom:56px;
+  padding-left:max(20px,calc((100% - 990px)/2));
+  padding-right:max(20px,calc((100% - 990px)/2));
 }
 :root[data-theme="stackedit"] .pane .CodeMirror {
-  font-family:Arial,"Segoe UI",sans-serif;font-size:18px;line-height:1.62;
+  font-family:Lato,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-variant-ligatures:no-common-ligatures;
+  font-size:18px;line-height:1.67;
 }
 :root[data-theme="stackedit"] .pane .CodeMirror-lines {
-  max-width:900px;margin:0 auto;padding:27px 34px 60px;
+  max-width:990px;margin:0 auto;padding:10px 20px 60px;
+}
+:root[data-theme="stackedit"] .markdown-preview h1,
+:root[data-theme="stackedit"] .markdown-preview h2,
+:root[data-theme="stackedit"] .markdown-preview h3 {
+  line-height:1.33;
+  margin-top:1.8em;
 }
 :root[data-theme="stackedit"] .pane .CodeMirror-gutters {
   background:#fafafa!important;border-right:1px solid #ddd!important;
