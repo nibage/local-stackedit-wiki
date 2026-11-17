@@ -18,6 +18,8 @@
   let selectedFolder = '', treeClickTimer = null;
   let moveEnabled = false, draggedPath = null;
   let noticeTimer = null, autosaveBlocked = null;
+  const navigationHistory = [];
+  let backlinkRequest = 0, backlinksForPath = null;
   const AUTOSAVE_INTERVAL_MS = 5000;
   let blobURLs = [], selectedMode = 'split';
   const SIDEBAR_MIN = 190, SIDEBAR_DEFAULT = 255;
@@ -163,7 +165,29 @@
     ui.preview.replaceChildren();
     releaseImages(); redrawDirty();
     $('toc').replaceChildren(); $('backlinks-results').replaceChildren();
+    backlinksForPath = null;
   }
+  function updateBackButton() {
+    $('nav-back').hidden = !navigationHistory.length;
+    $('nav-back').disabled = !navigationHistory.length;
+  }
+  async function navigateTo(path, options = {}) {
+    const previous = activePath;
+    const opened = await selectFile(path);
+    if (opened && previous && previous !== path && !options.history) {
+      navigationHistory.push(previous);
+      if (navigationHistory.length > 60) navigationHistory.shift();
+      updateBackButton();
+    }
+    return opened;
+  }
+  $('nav-back').addEventListener('click', async () => {
+    const target = navigationHistory.at(-1);
+    if (!target) return;
+    if (await navigateTo(target, { history: true })) {
+      navigationHistory.pop(); updateBackButton();
+    }
+  });
   function resolvePathFrom(source, path) {
     try { path = decodeURIComponent(path); } catch (_) { /* Preserve unescaped path. */ }
     return window.LocalWikiFS.relativePath(source, path);
@@ -325,8 +349,10 @@
       editor.setReadOnly(bridge.getMode() !== 'readwrite');
       ui.filename.textContent = path;
       updateMoveModeUI();
-      $('backlinks-results').textContent = 'Click Find incoming links.'; 
+      $('backlinks-results').replaceChildren();
+      backlinksForPath = null;
       redrawDirty(); renderTree(); renderPreview();
+      if (!$('side-links').hidden) void doBacklinks();
       ui.preview.scrollTop = 0;
       return true;
     } catch (err) {
@@ -688,10 +714,15 @@
     notice(`Scanning folders… ${progress.directories} folders, ${progress.files} notes` +
       (progress.skipped ? ` · inaccessible folders: ${progress.skipped}` : '') + ' (please wait)');
   }
-  function applyOpen(result) {
+  function applyOpen(result, options = {}) {
     operations.invalidateReads();
     if ($('image-dialog').open) $('image-dialog').close();
-    clearEditor(); inlineDraft = null; selectedFolder = ''; expanded = new Set(['']); ui.search.value = '';
+    const savedExpanded = options.preserveTree ? new Set(expanded) : new Set(['']);
+    const savedFolder = options.preserveTree ? selectedFolder : '';
+    const savedFilter = options.preserveTree ? ui.search.value : '';
+    clearEditor(); inlineDraft = null;
+    selectedFolder = savedFolder; expanded = savedExpanded; ui.search.value = savedFilter;
+    if (!options.preserveTree) { navigationHistory.length = 0; updateBackButton(); }
     ui.mode.textContent = result.mode === 'readwrite' ? 'Read/write' : 'Read-only';
     ui.refresh.disabled = !bridge.getRootHandle();
     $('expand-all').disabled = false;
@@ -702,6 +733,7 @@
     draggedPath = null; moveEnabled = false; updateMoveModeUI();
     wikiIndex.invalidate(); indexPromise = null;
     $('fulltext-results').replaceChildren(); $('backlinks-results').replaceChildren();
+    backlinksForPath = null;
     $('fulltext-status').textContent = 'The search index will be built on first use. No content leaves your computer.';
     renderTree();
     const skipped = result.scanInfo?.skipped || 0;
@@ -859,7 +891,7 @@
   function setSideTab(tab) {
     for (const b of document.querySelectorAll('[data-side]')) b.classList.toggle('active', b.dataset.side === tab);
     for (const id of ['files', 'search', 'links']) $(`side-${id}`).hidden = id !== tab;
-    if (tab === 'links') buildToc();
+    if (tab === 'links') { buildToc(); void doBacklinks(); }
   }
   function addResult(parent, path, detail, click) {
     const row = document.createElement('button'); row.type = 'button'; row.className = 'result-item';
@@ -928,7 +960,7 @@
     return false;
   }
   async function openResult(path, line, query = '') {
-    const opened = await selectFile(path);
+    const opened = await navigateTo(path);
     if (!opened || activePath !== path) return;
     if (selectedMode === 'preview') {
       if (!highlightPreviewQuery(query)) {
@@ -958,23 +990,22 @@
     } finally { $('fulltext-run').disabled = false; }
   }
   async function doBacklinks() {
-    if (!activePath) { $('backlinks-results').textContent = 'Open a note first.'; return; }
-    const path = activePath;
-    $('backlinks-run').disabled = true;
-    $('backlinks-results').textContent = 'Loading links…';
+    const path = activePath, request = ++backlinkRequest;
+    const area = $('backlinks-results'); area.replaceChildren();
+    if (!path || backlinksForPath === path) return;
+    backlinksForPath = path;
     try {
-      if (!await ensureIndex()) return;
-      if (path !== activePath) return;
+      if (!await ensureIndex() || path !== activePath || request !== backlinkRequest) return;
       const refs = wikiIndex.backlinks(path);
-      const area = $('backlinks-results'); area.replaceChildren();
-      if (!refs.length) area.textContent = 'No other notes link to this document.';
-      else refs.forEach(from => addResult(area, from, 'Odkazuje na tento file', () => void openResult(from)));
-    } finally { $('backlinks-run').disabled = false; }
+      if (!refs.length) notice('No other notes link to this document.');
+      else refs.forEach(from => addResult(area, from, 'Links to this note', () => void openResult(from)));
+    } catch (error) {
+      if (request === backlinkRequest) notice('Backlink lookup failed: '+error.message,'error');
+    }
   }
   document.querySelectorAll('[data-side]').forEach(b => b.addEventListener('click', () => setSideTab(b.dataset.side)));
   $('fulltext-run').addEventListener('click', () => void doFulltext());
   $('fulltext-query').addEventListener('keydown', e => { if (e.key === 'Enter') void doFulltext(); });
-  $('backlinks-run').addEventListener('click', () => void doBacklinks());
   // Remember the last folder automatically, but never prompt for permission
   // during page load. Chrome remains in full control of the permission grant.
   const recent = window.LocalWikiRecent;
@@ -1022,7 +1053,7 @@
     if (!confirmDiscard() || !beginOperation('refresh')) return;
     const old = activePath;
     let refreshed = false;
-    try { applyOpen(await bridge.refresh(showScanProgress)); refreshed = true; }
+    try { applyOpen(await bridge.refresh(showScanProgress), { preserveTree: true }); refreshed = true; }
     catch (err) { notice(`Refresh failed: ${err.message}`, 'error'); }
     finally { endOperation('refresh'); }
     if (refreshed && old && bridge.hasFile(old)) await selectFile(old);
@@ -1084,7 +1115,7 @@
     if (doc) {
       evt.preventDefault();
       // Do not scroll if switching documents was cancelled due to unsaved text.
-      void selectFile(doc).then(opened => { if (opened) jumpToHeading(parsed.anchor); });
+      void navigateTo(doc).then(opened => { if (opened) jumpToHeading(parsed.anchor); });
       return;
     }
     if (attachment) { evt.preventDefault(); void showAttachment(attachment); return; }
@@ -1105,9 +1136,7 @@
   $('diag-api').textContent = `${location.protocol} · ${typeof window.showDirectoryPicker === 'function' ? 'File System API ✓' : 'File System API unavailable'}`;
   setView(selectedMode);
 
-  // A complete offline release already has both libraries; no installer button is needed.
-  const bundledRenderers = window.LocalWikiDiagrams.capabilities();
-  if (bundledRenderers.mermaid && bundledRenderers.abc) $('renderer-check').hidden = true;
+  // Renderer diagnostics stay accessible even in the complete offline release.
 
   // Diagnostics reflect actual loaded UMD objects, not the existence of placeholder files.
   $('renderer-check').addEventListener('click', () => {

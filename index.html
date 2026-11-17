@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="assets/rc4.css">
   <link rel="stylesheet" href="assets/rc5.css">
   <link rel="stylesheet" href="assets/canvas-viewer.css">
+  <link rel="stylesheet" href="assets/bases-viewer.css">
   <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css">
   <link rel="stylesheet" href="vendor/codemirror/addon/dialog/dialog.css">
   <script>
@@ -59,13 +60,11 @@
         <div id="fulltext-results" class="panel-results" role="region" aria-label="Search results"></div>
       </section>
       <section id="side-links" class="sidebar-panel" hidden>
-        <h3>Table of contents</h3>
+        <div class="toc-title-row"><h3>Table of contents</h3><button id="nav-back" class="toc-back" type="button" title="Back to previous note" aria-label="Back to previous note" hidden>← Back</button></div>
         <div id="toc" class="panel-results"><p class="empty">Open a note.</p></div>
         <h3>Backlinks</h3>
-        <button id="backlinks-run" type="button" class="panel-action">Find incoming links</button>
-        <div id="backlinks-results" class="panel-results"><p class="empty">Not loaded yet.</p></div>
+        <div id="backlinks-results" class="panel-results"></div>
       </section>
-      <div class="sidebar-bottom" id="diagnostics">file:// · <span id="diag-api">Checking API…</span></div>
     </aside>
     <div class="sidebar-resizer" id="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" tabindex="0" aria-valuemin="190" aria-valuemax="520" aria-valuenow="255" title="Drag to resize; double-click to reset"></div>
     <main class="main-area">
@@ -125,7 +124,7 @@
 </dialog>
 <dialog id="renderer-dialog" aria-labelledby="renderer-dialog-title" class="renderer-dialog">
   <h2 id="renderer-dialog-title">Offline renderers</h2>
-  <div id="renderer-details" aria-live="polite"></div><p class="panel-note">The test renders built-in sample diagrams and notation, not your wiki files.</p><div id="renderer-smoke-result" class="renderer-smoke-result" role="status" aria-live="polite"></div>
+  <div id="renderer-details" aria-live="polite"></div><p id="diag-api" class="panel-note" aria-label="Local file access diagnostics"></p><p class="panel-note">The test renders built-in sample diagrams and notation, not your wiki files.</p><div id="renderer-smoke-result" class="renderer-smoke-result" role="status" aria-live="polite"></div>
   <p>MathJax is bundled. Mermaid and ABCjs can be installed once via HTTPS into the application folder. After reloading, all libraries are loaded locally. If automatic downloads fail, choose official downloaded .js files below, or use the installer script <code>tools/download-renderers.ps1</code>.</p><p><strong>Installation:</strong> connect to the internet once, click below and choose <strong>the application folder containing index.html</strong>, not your wiki. Only the following files will be written: <code>vendor/mermaid/mermaid.min.js</code> and <code>vendor/abcjs/abcjs-basic-min.js</code>.</p><p id="renderer-install-status" class="panel-note" role="status" aria-live="polite"></p>
   <p class="panel-note"><a href="tools/test-file-access.html" target="_blank" rel="noopener noreferrer">Test local folder access with file://</a> — use only a test folder, never your original wiki.</p>
   <p class="panel-note">Diagnostics do not contain wiki content, file names, or paths. They are saved only to your computer.</p>
@@ -160,6 +159,7 @@
 <script src="src/file-system.js"></script>
 <script src="src/renderer.js"></script>
 <script src="src/canvas-viewer.js"></script>
+<script src="src/bases-viewer.js"></script>
 <script src="src/link-migration.js"></script>
 <script src="src/instance-scope.js"></script>
 <script src="src/recent-wiki.js"></script>
