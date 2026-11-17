@@ -238,5 +238,5 @@
     }
     return { imageNodes: Array.from(container.querySelectorAll('img[data-local-source]')), attachmentNodes, headings: idx, expressions: expressions.length, callouts, properties, diagrams };
   }
-  global.LocalWikiRender = { render, prepareSource, convertWikiLinks, convertEmbeds, extractFrontmatter };
+  global.LocalWikiRender = { render, sanitize, prepareSource, convertWikiLinks, convertEmbeds, extractFrontmatter };
 })(window);

@@ -9,15 +9,16 @@
   <link rel="stylesheet" href="assets/rc2.css">
   <link rel="stylesheet" href="assets/rc4.css">
   <link rel="stylesheet" href="assets/rc5.css">
+  <link rel="stylesheet" href="assets/canvas-viewer.css">
   <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css">
   <link rel="stylesheet" href="vendor/codemirror/addon/dialog/dialog.css">
   <script>
     window.MathJax = {
-      jax: ['input/TeX', 'output/SVG'],
-      extensions: ['tex2jax.js'],
+      jax: ['input/TeX', 'output/NativeMML'],
+      extensions: ['tex2jax.js', 'MathMenu.js'],
       tex2jax: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]'], ['$$','$$']], processEscapes: true, ignoreClass: 'no-mathjax' },
       TeX: { extensions: ['AMSmath.js', 'AMSsymbols.js'] },
-      SVG: { font: 'STIX-Web' },
+      NativeMML: { scale: 100 },
       showMathMenu: true,
       messageStyle: 'none',
       skipStartupTypeset: true
@@ -158,6 +159,7 @@
 <script src="src/attachment-types.js"></script>
 <script src="src/file-system.js"></script>
 <script src="src/renderer.js"></script>
+<script src="src/canvas-viewer.js"></script>
 <script src="src/link-migration.js"></script>
 <script src="src/instance-scope.js"></script>
 <script src="src/recent-wiki.js"></script>

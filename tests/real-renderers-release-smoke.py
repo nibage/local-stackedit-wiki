@@ -8,6 +8,7 @@ intercepted and served from the extracted archive; external network is rejected.
 import argparse
 import json
 import mimetypes
+import unicodedata
 import xml.etree.ElementTree as ET
 from pathlib import Path
 import tempfile
@@ -79,7 +80,7 @@ def run(root, browser_path=None):
 
         # Exercise the real preview pipeline and adapter, not just the libraries.
         markdown = ('# Ověření\n\n```mermaid\ngraph TD\n  A[První] --> B[Druhý]\n```\n\n'
-                    '```abc\nX:1\nT:Ověření\nM:4/4\nL:1/4\nK:C\nC D E F | G4 |\n```\n')
+                    '```abc\nX:1\nT:Ověření\nM:4/4\nL:1/4\nK:C\nC D E F | G4 |\n```\n\nSelect this formula: $E=mc^2$\n')
         page.evaluate('''(md) => {
             const area = document.createElement('div');
             area.id = 'release-preview';
@@ -92,6 +93,38 @@ def run(root, browser_path=None):
                 preview.querySelectorAll('.visualization-abc svg').length === 1;
         }''', timeout=15000)
         assert not page.locator('#release-preview .visualization svg script').count(), 'SVG obsahuje script'
+        # Unlike the old SVG output, native MathML contains actual selectable text.
+        page.wait_for_function("""() =>
+            document.querySelector('#release-preview .MathJax_MathML math mi') !== null
+        """,timeout=20000)
+        selection = page.evaluate("""() => {
+            const math = document.querySelector('#release-preview .MathJax_MathML math');
+            const range = document.createRange();
+            range.selectNodeContents(math);
+            const selection = window.getSelection();
+            selection.removeAllRanges(); selection.addRange(range);
+            const text = selection.toString();
+            selection.removeAllRanges();
+            return text;
+        }""")
+        normalized = unicodedata.normalize('NFKC', selection)
+        assert 'E' in normalized and 'm' in normalized and 'c' in normalized, normalized
+        # Real mouse drag over the formula must also select visible mathematical glyphs.
+        formula = page.locator('#release-preview .MathJax_MathML math').first
+        box = formula.bounding_box()
+        assert box and box['width'] > 15, box
+        y = box['y'] + box['height'] / 2
+        page.mouse.move(box['x'] + 2, y)
+        page.mouse.down()
+        page.mouse.move(box['x'] + box['width'] - 2, y, steps=24)
+        page.mouse.up()
+        mouse_selection = unicodedata.normalize('NFKC',
+            page.evaluate("window.getSelection().toString()"))
+        assert mouse_selection.strip(), 'MathML formula cannot be selected by mouse'
+
+        # MathJax's contextual math menu must remain registered.
+        assert page.evaluate("Boolean(window.MathJax && MathJax.Extension.MathMenu)"), 'MathMenu unavailable'
+
         for kind in ('mermaid', 'abc'):
             with page.expect_download(timeout=10000) as pending:
                 page.locator(f'#release-preview .visualization-{kind} .diagram-export').click()
@@ -105,6 +138,13 @@ def run(root, browser_path=None):
             if kind == 'abc':
                 assert root_svg.get('width') and root_svg.get('height'), 'ABC SVG musí mít samostatné rozměry'
                 assert any(element.tag.endswith('path') for element in root_svg.iter()), 'ABC SVG neobsahuje notové glyfy'
+        # The MathJax right-click source menu must actually open, not just load.
+        page.evaluate("window.getSelection().removeAllRanges()")
+        page.locator('#release-preview .MathJax_MathML').first.click(button='right')
+        page.wait_for_function("""() => {
+            const menu=document.querySelector('.MathJax_ContextMenu');
+            return menu && getComputedStyle(menu).display !== 'none';
+        }""",timeout=5000)
         assert not failures, json.dumps(failures, ensure_ascii=False)
         browser.close()
     return result

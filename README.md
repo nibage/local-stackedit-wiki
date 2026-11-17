@@ -99,6 +99,10 @@ Long filenames and deeply nested paths stay on a single line. The tree scrolls *
 
 The **Save SVG** button below Mermaid diagrams and ABCjs notation exports a standalone SVG with explicit dimensions where the original renderer used responsive sizing. Both downloads are checked in Chromium against actual offline-bundled renderer output. Downloads are not written to the wiki automatically.
 
-MathJax currently uses the **SVG** output renderer: the visible glyphs are vector paths, so browser drag-selection of the rendered letters is not supported. You can right-click a rendered formula and use **Show Math As → TeX Commands** in MathJax's context menu to access and copy its source. Switching to selectable CommonHTML requires bundling and verifying the correct offline fonts (tracked in TODO); it is not yet enabled.
+MathJax uses the browser's built-in **MathML** renderer for genuinely selectable formula text in modern Chrome/Edge. Drag across rendered mathematics to select text, or right-click and choose **Show Math As → TeX Commands** for the original source. This is entirely offline; it does not change the existing **Save SVG** buttons for Mermaid and ABCjs. Native MathML can differ visually from the former SVG output, especially for complex notation.
 
 An ordinary `file://` `index.html` cannot register itself as the operating system's handler for `.md`. A future optional installable PWA (secure origin) or a lightweight native desktop wrapper could do that, while retaining offline document storage. See TODO; no new installation or file-handler permissions are introduced in this update.
+
+## Visual read-only JSON Canvas viewer
+
+Open `demo-wiki/Attachments/example.canvas` from the file tree to explore a safe, entirely offline graph viewer. It supports sanitized Markdown in text cards, file/link/group cards, colored connections, edge labels and arrows, Fit/100%/zoom buttons, pointer panning and Ctrl+wheel zoom. Markdown links within Canvas cards are shown but intentionally not navigable. Local image file nodes may show isolated thumbnails, but external links are rendered as inert text. Editing Canvas is not enabled and viewing never writes back to a file. Graph preview is capped at 400 nodes / 1000 edges and 2 MB per Canvas file.
