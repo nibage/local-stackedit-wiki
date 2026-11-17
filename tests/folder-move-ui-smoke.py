@@ -21,7 +21,7 @@ with sync_playwright() as pw:
     browser=pw.chromium.launch(headless=True,executable_path=args.chromium,args=['--no-sandbox'])
     page=browser.new_page(viewport={'width':1500,'height':950})
     page.set_default_timeout(15000)
-    errors=[], dialogs=[]
+    errors=[]; dialogs=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
     def confirm(d):
         dialogs.append(d.message)
