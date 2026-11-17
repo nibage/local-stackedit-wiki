@@ -76,7 +76,7 @@ with sync_playwright() as pw:
     page.wait_for_function("document.querySelector('#preview .wiki-structured-embed .bases-table tbody tr')!==null")
     assert page.locator('#preview .wiki-structured-embed').count()==2
     assert page.locator('#preview .wiki-structured-embed .structured-embed-open').count()==2
-    assert page.locator('#preview .canvas-inert-link').count()==2
+    assert page.locator('#preview .canvas-node[data-kind="text"] .canvas-inert-link').count()==2
     assert not page.locator('#preview .canvas-node[data-kind="text"] a, #preview .canvas-node[data-kind="text"] img').count()
     page.locator('#preview .wiki-structured-embed .structured-embed-open').first.click()
     page.wait_for_function("document.querySelector('#attachment-dialog').open")
