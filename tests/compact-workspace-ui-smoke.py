@@ -124,8 +124,8 @@ with sync_playwright() as pw:
     assert page.locator('#save-status').count()==1
     assert page.locator('#render-status').count()==1
     # Selection/caret activity drives Ln, Col without editing the source.
-    page.evaluate("""() => window.LocalWikiDebug.editor.cm.setCursor({line:5,ch:3})""")
-    page.wait_for_function("document.querySelector('#stats').textContent.includes('Ln 6, Col 3')")
+    page.evaluate("""() => window.LocalWikiDebug.editor.cm.setCursor({line:4,ch:3})""")
+    page.wait_for_function("document.querySelector('#stats').textContent.includes('Ln 5, Col 3')")
     page.wait_for_function("document.querySelector('#preview').scrollHeight > document.querySelector('#preview').clientHeight")
     assert page.evaluate("""() => {
       const a=window.LocalWikiDebug.editor.cm.getScrollInfo();
