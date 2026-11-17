@@ -156,16 +156,21 @@
     connections.setAttribute('viewBox','0 0 '+width+' '+height);
     const defs = svgElement('defs');connections.append(defs);
     const prefix = 'wiki-canvas-'+(++instanceId)+'-';
+    const edgeBindings = [], cardLookup = new Map();
+    function geometry(edge) {
+      const a=lookup.get(edge.from.id),b=lookup.get(edge.to.id);
+      const from=connector(a,edge.fromSide||sideFor(a,b));
+      const to=connector(b,edge.toSide||sideFor(b,a));
+      const distance=Math.hypot(from.x-to.x,from.y-to.y);
+      const bend=Math.max(35,Math.min(180,distance*.38));
+      const d='M '+from.x+' '+from.y+' C '+(from.x+from.dx*bend)+' '+(from.y+from.dy*bend)+
+        ' '+(to.x+to.dx*bend)+' '+(to.y+to.dy*bend)+' '+to.x+' '+to.y;
+      return {d,from,to};
+    }
     model.edges.forEach((edge,i)=>{
-      const a = lookup.get(edge.from.id), b = lookup.get(edge.to.id);
-      const aSide = edge.fromSide || sideFor(a,b);
-      const bSide = edge.toSide || sideFor(b,a);
-      const from = connector(a,aSide), to = connector(b,bSide);
-      const distance = Math.hypot(from.x-to.x,from.y-to.y);
-      const bend = Math.max(35,Math.min(180,distance*.38));
+      const {d,from,to}=geometry(edge);
       const path = svgElement('path',{
-        d:'M '+from.x+' '+from.y+' C '+(from.x+from.dx*bend)+' '+(from.y+from.dy*bend)+
-          ' '+(to.x+to.dx*bend)+' '+(to.y+to.dy*bend)+' '+to.x+' '+to.y,
+        d,
         fill:'none',stroke:edge.color,'stroke-width':2.5,'stroke-linecap':'round'
       });
       if (edge.toArrow || edge.fromArrow) {
@@ -178,14 +183,16 @@
         if (edge.fromArrow) path.setAttribute('marker-start','url(#'+id+')');
       }
       connections.append(path);
+      let label=null;
       if (edge.label) {
-        const label = svgElement('text',{
+        label = svgElement('text',{
           x:(from.x+to.x)/2,y:(from.y+to.y)/2-9,'text-anchor':'middle',
           class:'canvas-edge-label'
         });
         label.textContent = edge.label;
         connections.append(label);
       }
+      edgeBindings.push({edge,path,label});
     });
     const urls = [];
     let disposed = false;
@@ -241,7 +248,32 @@
         }
       }
       layers.append(card);
+      cardLookup.set(node.id,card);
     });
+    // The editor uses this lightweight geometry update on every pointermove:
+    // DOM card position and all connected SVG arrows/labels update in the same
+    // frame without re-rendering the entire canvas or altering draft history.
+    root.updateNodeGeometry=(id,geometryChange)=>{
+      if(disposed || !lookup.has(id))return;
+      const node=lookup.get(id),card=cardLookup.get(id);
+      for (const key of ['x','y','width','height']) {
+        if(Number.isFinite(geometryChange[key]))node[key]=geometryChange[key]+
+          (key==='x'?dx:key==='y'?dy:0);
+      }
+      if(card){
+        card.style.left=node.x+'px';card.style.top=node.y+'px';
+        card.style.width=node.width+'px';card.style.height=node.height+'px';
+      }
+      edgeBindings.forEach(binding=>{
+        if(binding.edge.from.id!==id && binding.edge.to.id!==id)return;
+        const next=geometry(binding.edge);
+        binding.path.setAttribute('d',next.d);
+        if(binding.label){
+          binding.label.setAttribute('x',(next.from.x+next.to.x)/2);
+          binding.label.setAttribute('y',(next.from.y+next.to.y)/2-9);
+        }
+      });
+    };
     const state = {scale:1, x:0, y:0};
     function apply() {
       board.style.transform='translate('+state.x+'px,'+state.y+'px) scale('+state.scale+')';
@@ -299,8 +331,17 @@
       else if (e.key==='-') {e.preventDefault();zoom(1/1.25);}
       else if (e.key==='0' || e.key.toLowerCase()==='f') {e.preventDefault();fit();}
     });
+    root.getCamera=()=>({...state,offsetX:dx,offsetY:dy});
+    if (options.camera && Number.isFinite(options.camera.scale) && options.camera.scale>0) {
+      // Preserve visual pan/zoom and the original graph anchor even when the
+      // normalized bounding box changes after moving/resizing a card.
+      state.scale=options.camera.scale;
+      state.x=options.camera.x+state.scale*(options.camera.offsetX-dx);
+      state.y=options.camera.y+state.scale*(options.camera.offsetY-dy);
+      apply();
+    }
     root.dispose=()=>{disposed=true;urls.forEach(url=>URL.revokeObjectURL(url));urls.length=0;};
-    requestAnimationFrame(()=>{if (!disposed && root.isConnected) fit();});
+    if (!options.camera) requestAnimationFrame(()=>{if (!disposed && root.isConnected) fit();});
     return root;
   }
   global.LocalWikiCanvas={render,cleanGraph,canonicalPath,safeColor};
