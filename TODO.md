@@ -95,3 +95,11 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 - [ ] Bases: adjustable column widths, client-side filter builder, then guarded YAML/view editing and frontmatter updates.
 
 The future Canvas/Bases editing design and the draw.io non-goal are explained in [docs/EDITING_ROADMAP.md](docs/EDITING_ROADMAP.md).
+
+## Editing stability and deletion UX (November 2026)
+
+- [x] Preview renders three seconds after the last editor change; do not rebuild media while the user is continuously typing.
+- [x] Cache local image blob URLs and image geometry while the note is open, and follow the editor caret paragraph when rendering.
+- [x] Switching between Markdown notes saves dirty text first and blocks on write errors or external changes, without a discard confirm dialog.
+- [x] Delete confirms through a centered color-themed dialog, with explicit extra acknowledgement for nonempty folders, no browser confirm.
+- [x] Remove residual green focus/box-shadow styling when Delete mode is toggled off with a pointer.

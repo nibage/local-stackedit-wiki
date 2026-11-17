@@ -43,7 +43,7 @@ These are real development screenshots, not mockups. They document representativ
 2. Extract the ZIP to a permanent application folder. The ZIP contains the offline runtime and essential documentation, not the development tests.
 3. Open **`index.html`** directly in a current version of Chrome or Edge (preferably on desktop).
 4. Select **Open folder** and grant the browser access to a folder you own. Keep a backup of your original data before writing or moving files.
-5. Choose **Side by side**, **Editor** or **Preview**. Edits autosave after approximately five seconds when permitted; **Ctrl+S** saves immediately.
+5. Choose **Side by side**, **Editor** or **Preview**. Edits autosave after approximately five seconds when permitted; **Ctrl+S** saves immediately. The Markdown preview refreshes after three seconds without further typing, to avoid images flashing during rapid edits.
 
 **Tip:** The source repository includes `demo-wiki/` for experiments, but the lean user ZIP intentionally does not bundle the large testing vault. Clone the source repository to explore the demo.
 
@@ -94,3 +94,9 @@ For details, see [attachment compatibility](docs/OBSIDIAN_ATTACHMENTS.md), [rend
 **Local StackEdit Wiki is an independent offline Markdown application.** It is not affiliated with Obsidian, StackEdit or diagrams.net. Third-party rendering libraries retain their own upstream licenses.
 
 The application includes a local SVG favicon matching its amber **W** identity, without external image requests.
+
+### Editing and deletion behavior
+
+While editing, the preview remains stable until you stop typing for **three seconds**. When it updates, it follows the paragraph at the editor caret (or the bottom when editing the final lines). Local image URLs and their displayed dimensions are reused between redraws; deliberate scrolling in the preview still takes priority. Switching from one Markdown note to another **saves the current note first**. If the save fails or the file changed outside the app, the switch is blocked and the unsaved editor content is kept.
+
+The opt-in trash button opens a centered, themed confirmation dialog rather than a native browser confirm. Nonempty folders require an additional in-dialog acknowledgement, and cancelling leaves the data untouched.
