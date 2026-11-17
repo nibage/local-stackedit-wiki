@@ -113,6 +113,11 @@ with sync_playwright() as pw:
     # Markdown links and embeds should lead to the same read-only viewer.
     page.locator('.tree-row[aria-label="Notes.md"]').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Notes.md'")
+    page.wait_for_function("document.querySelector('#preview .wiki-structured-embed .drawio-graph')!==null")
+    assert page.locator('#preview .wiki-structured-embed .drawio-tab').count()==2
+    page.locator('#preview .wiki-structured-embed .drawio-tab').nth(1).click()
+    page.wait_for_function("document.querySelector('#preview .drawio-graph')?.textContent.includes('Databáze')")
+    # The ordinary Markdown hyperlink still opens the larger read-only dialog.
     page.locator('#preview a', has_text='Open graph').click()
     page.wait_for_function("document.querySelector('#attachment-dialog .drawio-tab')!==null")
     page.locator('#attachment-close').click()

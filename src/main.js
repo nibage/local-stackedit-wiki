@@ -172,7 +172,15 @@
     $('save-status').textContent = dirty ? (bridge.getMode() === 'readwrite' ? 'Unsaved changes · autosave every 5s' : 'Unsaved changes') : activePath ? 'No unsaved changes' : 'No file';
     $('stats').textContent = `${editor.getValue().length} characters · ${editor.getValue() ? editor.getValue().split('\n').length : 0} lines`;
   }
-  function releaseImages() { blobURLs.forEach(url => URL.revokeObjectURL(url)); blobURLs = []; }
+  function disposeStructured(root) {
+    root.querySelectorAll('.wiki-canvas-viewer,.wiki-bases-viewer,.wiki-drawio-viewer')
+      .forEach(node => node.dispose?.());
+  }
+  function releaseImages() {
+    // Replacing a note also terminates outstanding graph/table preview work.
+    disposeStructured(ui.preview);
+    blobURLs.forEach(url => URL.revokeObjectURL(url)); blobURLs = [];
+  }
   function clearEditor() {
     renderSequence++; clearTimeout(renderTimer); // Cancel delayed render/image updates.
     activePath = null; originalText = ''; fingerprint = null; hasBOM = false;
@@ -296,7 +304,11 @@
     }
   }
   async function loadAttachments(nodes, sourcePath, sequence) {
+    // Avoid accidentally spawning hundreds of viewers or repeated Bases scans.
+    const MAX_INLINE_STRUCTURED = 6;
+    let structuredCount = 0;
     for (const placeholder of nodes || []) {
+      if (sequence !== renderSequence) return;
       let path;
       try { path = resolveAttachment(placeholder.dataset.localAttachment || '', sourcePath, true); }
       catch (_) { path = null; }
@@ -304,20 +316,47 @@
         placeholder.textContent = '[attachment missing or ambiguous]'; continue;
       }
       try {
+        const kind = types.kind(path);
+        if (['canvas','base','drawio'].includes(kind)) {
+          if (++structuredCount > MAX_INLINE_STRUCTURED) {
+            placeholder.textContent = 'Too many structured embeds (maximum six per note).';
+            continue;
+          }
+          const header = document.createElement('div');
+          header.className = 'structured-embed-header';
+          const label = document.createElement('strong');
+          label.className = 'attachment-label'; label.textContent = path;
+          const open = document.createElement('button'); open.type = 'button';
+          open.className = 'structured-embed-open'; open.textContent = 'Open larger ↗';
+          open.setAttribute('aria-label', 'Open '+path+' in a larger preview');
+          open.addEventListener('click', () => void showAttachment(path));
+          header.append(label,open);
+          const body = document.createElement('div');
+          body.className = 'structured-embed-body';
+          body.textContent = 'Loading local '+kind+' preview…';
+          placeholder.classList.add('wiki-structured-embed');
+          placeholder.replaceChildren(header,body);
+          const file = await bridge.readAsset(path);
+          if (sequence !== renderSequence || !placeholder.isConnected) return;
+          const content = await attachmentTextPreview(file, path);
+          if (sequence !== renderSequence || !placeholder.isConnected) {
+            disposeStructured(content); return;
+          }
+          body.replaceChildren(content);
+          continue;
+        }
         const file = await bridge.readAsset(path);
         if (sequence !== renderSequence) return;
         const label = document.createElement('span'); label.className = 'attachment-label'; label.textContent = path;
-        if (['canvas','base','drawio'].includes(types.kind(path))) {
-          const link = document.createElement('button'); link.type = 'button'; link.textContent = 'Open structured file preview';
-          link.addEventListener('click', () => void showAttachment(path));
-          placeholder.replaceChildren(label, link);
-          continue;
-        }
         const url = URL.createObjectURL(file); blobURLs.push(url);
         const media = attachmentMedia(path, file, url);
         if (media) placeholder.replaceChildren(label, media);
         else placeholder.textContent = '[unsupported attachment]';
-      } catch (_) { if (sequence === renderSequence) placeholder.textContent = '[attachment failed to load]'; }
+      } catch (error) {
+        if (sequence === renderSequence && placeholder.isConnected) {
+          placeholder.textContent = '[attachment failed to load: '+(error?.message||'unknown error')+']';
+        }
+      }
     }
   }
   function renderPreview() {

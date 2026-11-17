@@ -23,7 +23,7 @@
   function kind(path) { return known.get(extension(path)) || null; }
   function isAttachment(path) { return kind(path) !== null; }
   function isImage(path) { return kind(path) === 'image'; }
-  function isEmbeddable(path) { return ['image', 'audio', 'video', 'pdf'].includes(kind(path)); }
+  function isEmbeddable(path) { return ['image', 'audio', 'video', 'pdf', 'canvas', 'base', 'drawio'].includes(kind(path)); }
   function mediaKind(path, fileType) {
     if (extension(path) === 'webm' && /^audio\//i.test(fileType || '')) return 'audio';
     return kind(path);

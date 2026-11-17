@@ -148,12 +148,12 @@
 .file-actions #delete-toggle { flex:1 1 0; min-width:0; }
 .file-actions #rename-file { flex:1 1 0; min-width:0; }
 .file-actions {
-  display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:4px; min-width:0; align-items:stretch;
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:2px; min-width:0; align-items:stretch;
 }
 .file-actions button {
   width:100%; min-width:0; min-height:30px;
-  font-size:11px; padding:5px 2px; white-space:nowrap;
+  font-size:10px; padding:5px 0; white-space:nowrap; letter-spacing:-.1px;
 }
 .file-actions #new-file {flex-grow:initial;}
 [data-theme] .file-actions #delete-toggle.move-enabled,
@@ -162,4 +162,26 @@
   box-shadow:inset 0 0 0 1px #54b273,0 0 0 1px #54b273 !important;
   background:color-mix(in srgb,#54b273 13%,var(--panel)) !important;
   color:var(--text) !important;
+}
+
+/* All four actions stay on one row even when the sidebar is resized. */
+#side-files { container-type:inline-size; }
+@container (max-width:235px) {
+  .file-actions { gap:1px; margin-inline:5px; }
+  .file-actions button { font-size:9px; letter-spacing:-.25px; padding-inline:0; }
+}
+.wiki-structured-embed { display:block; margin:16px 0; padding:9px; min-width:0; }
+.structured-embed-header {display:flex;gap:9px;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;margin-bottom:10px;font-size:12px;color:var(--text);}
+.structured-embed-header .attachment-label {overflow-wrap:anywhere;min-width:0;flex:1;}
+.structured-embed-open {flex:0 0 auto; padding:5px 10px;font-size:11px;
+  border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:6px;}
+.structured-embed-body {width:100%;min-width:0;overflow:hidden;}
+.wiki-structured-embed .canvas-viewport,
+.wiki-structured-embed .drawio-viewport {height:clamp(285px,43vh,475px);min-height:285px;}
+.wiki-structured-embed .bases-table-scroll {max-height:350px;overflow:auto;}
+.wiki-structured-embed .bases-table {display:table;}
+@media(max-width:620px) {
+  .wiki-structured-embed .canvas-viewport,
+  .wiki-structured-embed .drawio-viewport {min-height:260px;height:320px;}
 }

@@ -37,3 +37,20 @@ Inline kód `![[schema.png]]` ani blok kódu:
 ```
 
 Vložený obsah jiné poznámky, například `![[Python.md]]`, zatím není implementován jako transkluze. Také se zatím nevykreslují SVG obrázky — záměrně kvůli bezpečnosti.
+
+## Interaktivní náhledy strukturovaných souborů
+
+Samostatný odkaz `[[Attachments/example.canvas]]` otevře soubor po kliknutí.
+Přidej vykřičník `![[...]]` pro vložení bezpečného náhledu přímo do poznámky.
+
+### Obsidian Bases — tabulka
+
+![[Attachments/example.base]]
+
+### JSON Canvas — graf
+
+![[Attachments/example.canvas]]
+
+### diagrams.net — diagram a stránky
+
+![[Attachments/example.drawio]]

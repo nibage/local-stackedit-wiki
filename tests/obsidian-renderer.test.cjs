@@ -32,3 +32,13 @@ test('Obsidian embed ani callout v inline či fenced code se nepřepíše', () =
   assert.match(result.prepared, /```md\n!\[\[schema.png\]\]\n> \[!note\] test\n```/);
   assert.match(result.prepared, /obsidian-asset:schema.png/);
 });
+
+test('all structured Obsidian embeds use local attachment placeholders, not inline HTML', () => {
+  for(const extension of ['canvas','base','drawio']) {
+    assert.match(convertEmbeds('![[Attachments/example.'+extension+']]'),
+      /obsidian-attachment:Attachments%2Fexample/);
+    assert.match(prepareSource('![[Attachments/example.'+extension+']]').prepared,
+      /obsidian-attachment:/);
+  }
+  assert.equal(convertEmbeds('![[untrusted.md]]'),'![[untrusted.md]]');
+});

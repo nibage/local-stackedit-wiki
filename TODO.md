@@ -80,3 +80,9 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 - [x] Canvas local Markdown file cards display bounded, sanitized note excerpts.
 - [ ] Full Canvas editor: separate design, save conflicts, undo/redo and change tracking.
 - [ ] Full Bases editor: safe property updates across Markdown frontmatter with explicit conflict handling.
+
+## Embedded previews and sidebar actions (November 2026)
+
+- [x] All four file action buttons share a single row, including narrow sidebar layouts.
+- [x] Safe inline read-only Canvas, Bases and draw.io previews use Obsidian embed syntax `![[path]]` with a larger viewer action; ordinary links still open the dialog.
+- [x] Include all three embeddable formats in demo-wiki and Insert into note.
