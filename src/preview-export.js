@@ -192,12 +192,45 @@
       copy.removeAttribute('preload');
     }
   }
+  // Exported copies have no wiki app to navigate links. Preserve safe
+  // external URLs, and translate within-note heading links to PDF/HTML #ids.
+  function normalizeDocumentLinks(root,title) {
+    const headings=Array.from(root.querySelectorAll('h1,h2,h3,h4,h5,h6'));
+    function normalized(value) {
+      try {value=decodeURIComponent(value);}catch(_){}
+      return String(value).replace(/^#+/,'').normalize('NFC').trim().toLocaleLowerCase()
+        .replace(/[\s_-]+/g,' ');
+    }
+    function toHeading(fragment) {
+      const wanted=normalized(fragment);
+      return headings.find(node=>normalized(node.id)===wanted ||
+        normalized(node.textContent)===wanted)?.id || null;
+    }
+    for(const anchor of root.querySelectorAll('a[href]')) {
+      const raw=anchor.getAttribute('href')||'';
+      let target=null;
+      if (raw.startsWith('#')) target=toHeading(raw.slice(1));
+      if (/^wiki:/i.test(raw)) {
+        let spec=raw.slice(5);
+        try {spec=decodeURIComponent(spec);}catch(_){}
+        const split=spec.indexOf('#');
+        const file=split>=0?spec.slice(0,split):spec;
+        const section=split>=0?spec.slice(split+1):'';
+        const page=String(title).replace(/\.(?:md|markdown)$/i,'');
+        if (section && (!file || normalized(file.replace(/\.(?:md|markdown)$/i,''))===normalized(page)))
+          target=toHeading(section);
+      }
+      if (target) anchor.setAttribute('href','#'+target);
+      else if (raw.startsWith('#') || /^wiki:/i.test(raw)) anchor.removeAttribute('href');
+    }
+  }
   async function build(preview,{title='Wiki preview',theme='current'}={}) {
     if (!preview || !preview.isConnected) throw new Error('No rendered preview is available.');
     const light=theme==='light'?await lightThemeSnapshot(preview):null;
     const source=light?.node||preview;
     try {
     const cloned=source.cloneNode(true);
+    normalizeDocumentLinks(cloned,title);
     const originals=[source,...source.querySelectorAll('*')];
     const copies=[cloned,...cloned.querySelectorAll('*')];
     const budget={bytes:0},cache=new Map();
@@ -246,14 +279,52 @@
       'height:auto!important;min-height:0!important;overflow:visible!important;flex:none!important;}'+
       '.wiki-export-preview .visualization{overflow:visible!important;}'+
       'img,svg{max-width:100%;}'+
-      '@media print{@page{size:auto;margin:12mm;}'+
-      'html,body{background:'+background+'!important;'+
+      /* StackEdit-like printed article: centred ~470pt reading column,
+         12pt body text and generous headings. Inline snapshots use fixed
+         computed values, so printed typography must override them. */
+      '@media print{@page{size:A4;margin:17mm;}'+
+      'html,body{background:#fff!important;color:#333!important;'+
+      'font-family:Arial,"Helvetica Neue",sans-serif!important;'+
       '-webkit-print-color-adjust:exact;print-color-adjust:exact;}'+
-      '.wiki-export-preview{width:100%!important;max-width:100%!important;'+
-      'padding:0!important;overflow:visible!important;}'+
-      '.wiki-export-preview pre,.wiki-export-preview table{overflow:visible!important;}'+
-      '.wiki-export-preview .visualization{break-inside:avoid;page-break-inside:avoid;}'+
-      '.wiki-export-preview img,.wiki-export-preview svg{max-width:100%!important;}}'+
+      '.wiki-export-preview{box-sizing:border-box!important;display:block!important;'+
+      'width:100%!important;max-width:470pt!important;margin:0 auto!important;'+
+      'padding:0!important;height:auto!important;min-height:0!important;'+
+      'overflow:visible!important;flex:none!important;'+
+      'background:#fff!important;color:#333!important;'+
+      'font-family:Arial,"Helvetica Neue",sans-serif!important;'+
+      'font-size:16px!important;line-height:1.72!important;}'+
+      '.wiki-export-preview p,.wiki-export-preview li,.wiki-export-preview blockquote{'+
+      'font-size:16px!important;line-height:1.72!important;letter-spacing:normal!important;}'+
+      '.wiki-export-preview p{margin:0 0 1.25em!important;}'+
+      '.wiki-export-preview ul,.wiki-export-preview ol{margin:0 0 1.35em!important;'+
+      'padding-left:1.8em!important;}'+
+      '.wiki-export-preview h1,.wiki-export-preview h2,.wiki-export-preview h3,'+
+      '.wiki-export-preview h4,.wiki-export-preview h5,.wiki-export-preview h6{'+
+      'font-family:Arial,"Helvetica Neue",sans-serif!important;color:#333!important;'+
+      'font-weight:700!important;line-height:1.25!important;'+
+      'margin:1.85em 0 .76em!important;padding-bottom:.27em!important;'+
+      'border-bottom:1px solid #d9d9d9!important;break-after:avoid;}'+
+      '.wiki-export-preview h1{font-size:30px!important;}'+
+      '.wiki-export-preview h2{font-size:25px!important;}'+
+      '.wiki-export-preview h3{font-size:21px!important;}'+
+      '.wiki-export-preview h4,.wiki-export-preview h5{font-size:18px!important;}'+
+      '.wiki-export-preview a[href]{color:#247fb9!important;text-decoration:underline!important;}'+
+      '.wiki-export-preview blockquote{background:transparent!important;'+
+      'border-left:4px solid #dedede!important;color:#666!important;'+
+      'padding:.15em 1.1em!important;}'+
+      '.wiki-export-preview pre{font-size:13px!important;line-height:1.5!important;'+
+      'white-space:pre-wrap!important;overflow:visible!important;'+
+      'background:#f6f6f6!important;border-color:#ddd!important;}'+
+      '.wiki-export-preview table{display:table!important;max-width:100%!important;'+
+      'width:auto!important;overflow:visible!important;break-inside:auto;}'+
+      '.wiki-export-preview tr{break-inside:avoid;}'+
+      '.wiki-export-preview th{background:#f4f4f4!important;color:#333!important;}'+
+      '.wiki-export-preview .visualization{overflow:visible!important;'+
+      'break-inside:avoid;page-break-inside:avoid;}'+
+      '.wiki-export-preview img,.wiki-export-preview svg{max-width:100%!important;'+
+      'height:auto;break-inside:avoid;page-break-inside:avoid;}'+
+      '.wiki-export-preview .MathJax_MathML{max-width:100%!important;}'+
+      '}'+
       '</style></head><body>\n'+
       '<main class="wiki-export-preview markdown-preview" style="'+escapeHtml(cloned.style.cssText)+'">'+cloned.innerHTML+
       '</main>\n</body></html>';
