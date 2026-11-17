@@ -53,11 +53,21 @@
     const blocks = Array.from(ui.preview.querySelectorAll(
       'h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,td,th'
     ));
+    const fraction = position.line / Math.max(1,position.lastLine);
+    let fallback = null;
     for (const query of position.fragments) {
-      const found = blocks.find(el => el.textContent.includes(query));
-      if (found) return found;
+      const matches = blocks.map((el,i)=>({el,i})).filter(item=>
+        item.el.textContent.includes(query));
+      if (matches.length === 1) return matches[0].el;
+      if (matches.length && !fallback) {
+        // Repeated headings/paragraphs must not always jump to the first
+        // occurrence. Prefer the match nearest the caret's source fraction.
+        fallback = matches.reduce((best,item) =>
+          Math.abs(item.i / Math.max(1,blocks.length-1)-fraction) <
+          Math.abs(best.i / Math.max(1,blocks.length-1)-fraction) ? item:best).el;
+      }
     }
-    return null;
+    return fallback;
   }
   function restorePreviewPosition() {
     const position = previewPosition;
