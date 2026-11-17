@@ -81,6 +81,9 @@ with sync_playwright() as pw:
     assert gutter.evaluate('(el)=>getComputedStyle(el).visibility')=='visible'
     assert gutter.evaluate('(el)=>getComputedStyle(el).color')=='rgb(105, 105, 105)'
     assert gutter.bounding_box()['width']>=12,gutter.bounding_box()
+    assert gutter.inner_text().strip().isdigit(),'Line numbers are not rendered as text'
+    number_box=gutter.bounding_box()
+    assert number_box['x']>=0 and number_box['x']+number_box['width']<1880,number_box
     page.locator('#view-preview').click()
     article=page.locator('#preview').evaluate("""el=>({
       width:el.clientWidth,
