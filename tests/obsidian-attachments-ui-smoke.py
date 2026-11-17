@@ -40,7 +40,7 @@ with sync_playwright() as pw:
       }}
       const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><script>window.svgExecuted=1</script><circle r="4" cx="6" cy="6"/></svg>';
       window.mockWiki=dir('Wiki',[
-        file('Main.md','## Media\\n\\n![[voice.mp3]]\\n\\n![[movie.mp4]]\\n\\n![[paper.pdf]]\\n\\n![[drawing.svg]]\\n\\n[Open canvas](board.canvas)\\n\\n![[board.canvas]]\\n\\n![[query.base]]\\n\\n[Open PDF](paper.pdf)'),
+        file('Main.md','## Media\\n\\n![[voice.mp3]]\\n\\n![[movie.mp4]]\\n\\n![[paper.pdf]]\\n\\n![[drawing.svg]]\\n\\n[Open canvas](board.canvas)\\n\\n![[board.canvas]]\\n\\n![[query.base]]\\n\\n[[query.base]]\\n\\n[Open PDF](paper.pdf)'),
         file('drawing.svg',svg,'image/svg+xml'),
         file('voice.mp3',new Uint8Array([1,3,2,4,255]),'audio/mpeg'),
         file('movie.mp4',new Uint8Array([0,0,0,20,102,116,121,112]),'video/mp4'),
@@ -78,6 +78,10 @@ with sync_playwright() as pw:
     assert page.locator('#preview .wiki-structured-embed .structured-embed-open').count()==2
     assert page.locator('#preview .canvas-node[data-kind="text"] .canvas-inert-link').count()==2
     assert not page.locator('#preview .canvas-node[data-kind="text"] a, #preview .canvas-node[data-kind="text"] img').count()
+    # Ordinary [[file.base]] links should continue opening the full dialog.
+    page.locator('#preview a[href^="wiki:"]',has_text='query.base').click()
+    page.wait_for_function("document.querySelector('#attachment-dialog-viewer .bases-table tbody tr')!==null")
+    page.locator('#attachment-close').click()
     page.locator('#preview .wiki-structured-embed .structured-embed-open').first.click()
     page.wait_for_function("document.querySelector('#attachment-dialog').open")
     page.wait_for_function("document.querySelector('#attachment-dialog-viewer .canvas-node')!==null")
