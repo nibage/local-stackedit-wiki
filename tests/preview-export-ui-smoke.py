@@ -34,7 +34,7 @@ with sync_playwright() as pw:
         async getFile(){return new File([this.data],name,{type:this.mime,lastModified:this.lastModified})},
         async createWritable(){throw Error('No writes expected')}
       }}
-      const text='# Preview export heading\\n\\nHello **world** with a local image.\\n\\n![[photo.png]]\\n\\n| Name | Value |\\n| --- | --- |\\n| Alpha | 42 |\\n\\n> A quoted sentence.';
+      const text='# Preview export heading\\n\\nHello **world** with a local image.\\n\\n![[photo.png]]\\n\\n| Name | Value |\\n| --- | --- |\\n| Alpha | 42 |\\n\\n> A quoted sentence.\\n\\n[Read external docs](https://example.org/article)\\n\\n[Jump to details](#Details)\\n\\n## Details\\n\\nThis is the target section.';
       const entries=new Map([
         file('Preview.md',text,'text/markdown'),
         file('photo.png',Uint8Array.from(atob(png),x=>x.charCodeAt(0)),'image/png')
@@ -92,6 +92,8 @@ with sync_playwright() as pw:
     assert '<script' not in exported.lower()
     assert 'src="https:' not in exported
     assert 'http-equiv="refresh"' not in exported
+    assert 'href="#wiki-heading-1"' in exported
+    assert 'href="https://example.org/article"' in exported
     # Generated HTML can be opened as a completely standalone document.
     offline=context.new_page()
     standalone_requests=[]
@@ -100,6 +102,9 @@ with sync_playwright() as pw:
     assert offline.locator('h1').first.inner_text()=='Preview export heading'
     assert offline.locator('img').first.evaluate("(el)=>el.complete && el.naturalWidth>0")
     assert offline.locator('table td').count()==2
+    assert offline.locator('a',has_text='Jump to details').get_attribute('href')=='#wiki-heading-1'
+    assert offline.locator('a',has_text='Read external docs').get_attribute('href')=='https://example.org/article'
+    assert offline.locator('#wiki-heading-1').inner_text()=='Details'
     html_theme=offline.locator('main').evaluate('(el)=>getComputedStyle(el).backgroundColor')
     assert html_theme!='rgb(255, 255, 255)',html_theme
     assert not standalone_requests,standalone_requests
@@ -120,6 +125,19 @@ with sync_playwright() as pw:
     assert page.locator('html').get_attribute('data-theme')=='dark'
     assert printable.locator('img').count()==1
     assert printable.locator('img').first.get_attribute('src').startswith('data:image/png;base64,')
+    printable.emulate_media(media='print')
+    layout=printable.locator('main').evaluate("""el => ({
+      rect:el.getBoundingClientRect().toJSON(),
+      viewport:window.innerWidth,
+      bodyFont:getComputedStyle(el.querySelector('p')).fontSize,
+      headingFont:getComputedStyle(el.querySelector('h1')).fontSize,
+      anchor:el.querySelector('a[href="#wiki-heading-1"]')?.getAttribute('href')
+    })""")
+    assert 615<=layout['rect']['width']<=640,layout
+    assert abs(layout['rect']['x']-(layout['viewport']-layout['rect']['width'])/2)<2,layout
+    assert layout['bodyFont']=='16px',layout
+    assert layout['headingFont']=='30px',layout
+    assert layout['anchor']=='#wiki-heading-1',layout
     # Chromium's print backend generates a real PDF from the same document.
     pdf=printable.pdf(print_background=True,format='A4')
     assert pdf.startswith(b'%PDF') and len(pdf)>3500,len(pdf)
