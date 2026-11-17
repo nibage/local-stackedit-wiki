@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Local StackEdit Wiki">
+  <defs>
+    <linearGradient id="gold" x1="0" x2="1" y1="0" y2="1">
+      <stop stop-color="#ffd166"/>
+      <stop offset="1" stop-color="#ee9b11"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#gold)"/>
+  <path d="m11 19 7 26h9l5-14 5 14h9l7-26h-9l-4 17-5-14h-6l-5 14-4-17Z"
+    fill="#1d2029"/>
+</svg>

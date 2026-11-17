@@ -86,3 +86,10 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 - [x] All four file action buttons share a single row, including narrow sidebar layouts.
 - [x] Safe inline read-only Canvas, Bases and draw.io previews use Obsidian embed syntax `![[path]]` with a larger viewer action; ordinary links still open the dialog.
 - [x] Include all three embeddable formats in demo-wiki and Insert into note.
+
+## Small usability fixes (November 2026)
+
+- [x] Add an original, local SVG favicon matching the Wiki app branding.
+- [x] Preserve preview scroll during live Markdown rendering, following the ending paragraphs when the cursor is near the end, and respect manual preview scrolling.
+- [x] After **Expand all**, scroll the tree to the currently selected note or folder.
+- [ ] Bases: adjustable column widths, client-side filter builder, then guarded YAML/view editing and frontmatter updates.

@@ -22,6 +22,42 @@
   let backlinkRequest = 0, backlinksForPath = null;
   const AUTOSAVE_INTERVAL_MS = 5000;
   let blobURLs = [], selectedMode = 'split';
+  // Preserve the preview viewport when marked.js replaces its DOM on each
+  // keystroke; follow the bottom only while the editor caret is near the end.
+  let previewPosition = null, previewPositionObserver = null;
+  let previewPositionScheduled = false;
+  function stopPreviewPositionTracking() {
+    previewPositionObserver?.disconnect();
+    previewPositionObserver = null;
+    previewPosition = null;
+    previewPositionScheduled = false;
+  }
+  function restorePreviewPosition() {
+    const position = previewPosition;
+    if (!position || position.sequence !== renderSequence || position.userMoved) return;
+    if (position.lastApplied !== null &&
+        Math.abs(ui.preview.scrollTop - position.lastApplied) > 12) {
+      // A manual scroll takes precedence over automatic synchronization.
+      position.userMoved = true;
+      return;
+    }
+    const maxTop = Math.max(0, ui.preview.scrollHeight - ui.preview.clientHeight);
+    ui.preview.scrollTop = position.followBottom ? maxTop : Math.min(maxTop, position.top);
+    position.lastApplied = ui.preview.scrollTop;
+  }
+  function queuePreviewPositionRestore() {
+    if (previewPositionScheduled) return;
+    previewPositionScheduled = true;
+    requestAnimationFrame(() => {
+      previewPositionScheduled = false;
+      restorePreviewPosition();
+    });
+  }
+  for (const event of ['wheel', 'touchstart', 'pointerdown']) {
+    ui.preview.addEventListener(event, () => {
+      if (previewPosition) previewPosition.userMoved = true;
+    }, {passive:true});
+  }
   const SIDEBAR_MIN = 190, SIDEBAR_DEFAULT = 255;
   const SIDEBAR_MAX_SHARE = 0.70, MAIN_MIN_WIDTH = 390;
   const types = window.LocalWikiAttachmentTypes;
@@ -182,6 +218,7 @@
     blobURLs.forEach(url => URL.revokeObjectURL(url)); blobURLs = [];
   }
   function clearEditor() {
+    stopPreviewPositionTracking();
     renderSequence++; clearTimeout(renderTimer); // Cancel delayed render/image updates.
     activePath = null; originalText = ''; fingerprint = null; hasBOM = false;
     editor.setValue(''); editor.setReadOnly(true);
@@ -359,12 +396,23 @@
       }
     }
   }
-  function renderPreview() {
+  function renderPreview(fromEditor = false) {
     clearTimeout(renderTimer);
+    const oldTop = ui.preview.scrollTop;
+    const cursorLine = editor.cm.getCursor().line;
+    const lastLine = editor.cm.lastLine();
+    // A writer working on the last few lines should always see the latest
+    // paragraph; otherwise preserve the reader's previous scroll position.
+    const followBottom = fromEditor && cursorLine >= Math.max(0,lastLine-2);
+    stopPreviewPositionTracking();
     renderSequence++;
     const sequence = renderSequence;
     releaseImages();
     if (!activePath) return;
+    if (fromEditor) {
+      previewPosition = {sequence, top:oldTop, followBottom,
+        lastApplied:null, userMoved:false};
+    }
     try {
       let baseStatus = 'Offline Markdown';
       const report = stats => {
@@ -376,6 +424,16 @@
         $('render-status').textContent = [baseStatus, ...parts].filter(Boolean).join(' · ');
       };
       const result = window.LocalWikiRender.render(editor.getValue(), ui.preview, { onDiagramUpdate: report });
+      if (previewPosition) {
+        // MathJax, Mermaid, Canvas and local assets may change the DOM after
+        // initial rendering. Coalesce these changes into one animation frame.
+        previewPositionObserver = new MutationObserver(queuePreviewPositionRestore);
+        previewPositionObserver.observe(ui.preview, {
+          childList:true, subtree:true, attributes:true,
+          attributeFilter:['src','style','height','width']
+        });
+        restorePreviewPosition();
+      }
       baseStatus = [result.expressions ? `Math: ${result.expressions}` : '',
         result.callouts ? `Callouts: ${result.callouts}` : ''].filter(Boolean).join(' · ') || 'Offline Markdown';
       report(result.diagrams);
@@ -389,7 +447,7 @@
       $('render-status').textContent = 'Preview error';
     }
   }
-  function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(renderPreview, 170); }
+  function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(() => renderPreview(true), 170); }
   async function selectFile(path, options = {}) {
     if (path === activePath && !options.force) return true;
     if (operations.isBusy()) { notice('A file operation is in progress; switching notes is temporarily disabled.', 'error'); return false; }
@@ -867,6 +925,19 @@
     }
     expanded = directories;
     renderTree();
+    if (expand) {
+      // Locate the selected file (or explicitly selected folder) inside the
+      // expanded tree without changing the active document or editor focus.
+      const selectedPath = activePath || selectedFolder;
+      requestAnimationFrame(() => {
+        if (!selectedPath) return;
+        const selected = Array.from(ui.tree.querySelectorAll('.tree-row'))
+          .find(row => row.getAttribute('aria-label') === selectedPath);
+        if (selected) selected.scrollIntoView({
+          behavior:'instant', block:'center', inline:'nearest'
+        });
+      });
+    }
   }
   function showScanProgress(progress) {
     notice(`Scanning folders… ${progress.directories} folders, ${progress.files} notes` +
