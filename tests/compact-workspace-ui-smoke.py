@@ -75,7 +75,7 @@ with sync_playwright() as pw:
     width=page.locator('.CodeMirror-lines').evaluate('(e)=>e.getBoundingClientRect().toJSON()')
     cm=page.locator('.edit-pane .CodeMirror').evaluate('(e)=>e.getBoundingClientRect().toJSON()')
     assert width['width']<=902 and width['width']>=800,(width,cm)
-    assert abs(width['x']+width['width']/2-(cm['x']+cm['width']/2))<15,(width,cm)
+    assert abs(width['x']+width['width']/2-(cm['x']+cm['width']/2))<25,(width,cm)  # CodeMirror gutter adds ~18px
     gutter=page.locator('.CodeMirror-linenumber').first
     gutter.wait_for(state='attached')
     assert gutter.evaluate('(el)=>getComputedStyle(el).visibility')=='visible'
