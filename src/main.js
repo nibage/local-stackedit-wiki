@@ -131,7 +131,7 @@
   const themeSelect = $('theme-select');
   const mediaDark = window.matchMedia('(prefers-color-scheme: dark)');
   const initialTheme = safeStored('local-wiki-theme', 'system');
-  themeSelect.value = ['light', 'dark', 'system'].includes(initialTheme) ? initialTheme : 'system';
+  themeSelect.value = ['light', 'dark', 'system', 'stackedit'].includes(initialTheme) ? initialTheme : 'system';
   function applyTheme() {
     document.documentElement.dataset.theme = themeSelect.value === 'system'
       ? (mediaDark.matches ? 'dark' : 'light') : themeSelect.value;
@@ -266,6 +266,8 @@
     const dirty = isDirty();
     ui.dirty.textContent = dirty ? '● Unsaved' : '';
     ui.save.disabled = operations.isBusy() || bridge.getMode() !== 'readwrite' || !dirty;
+    const toolsEnabled=Boolean(activePath) && bridge.getMode()==='readwrite' && !operations.isBusy();
+    document.querySelectorAll('.format-toolbar button').forEach(button=>{button.disabled=!toolsEnabled;});
     $('save-status').textContent = dirty ? (bridge.getMode() === 'readwrite' ? 'Unsaved changes · autosave every 5s' : 'Unsaved changes') : activePath ? 'No unsaved changes' : 'No file';
     $('stats').textContent = `${editor.getValue().length} characters · ${editor.getValue() ? editor.getValue().split('\n').length : 0} lines`;
   }
@@ -1710,6 +1712,57 @@
   $('new-folder').addEventListener('click', () => startDraft('directory'));
   editor.onChange(() => { redrawDirty(); scheduleRender(); });
   document.querySelectorAll('[data-format]').forEach(button => button.addEventListener('click', () => editor.format(button.dataset.format)));
+  // Local vault chooser for image, media, PDF, Canvas, Base and draw.io
+  // toolbar buttons. Paths originate only from the scanned local file tree.
+  const assetDialog=$('toolbar-asset-dialog');
+  const assetSearch=$('toolbar-asset-search');
+  const assetResults=$('toolbar-asset-results');
+  let assetKind=null;
+  const assetLabels={image:'images',video:'videos',audio:'audio files',
+    pdf:'PDF documents',canvas:'JSON Canvas boards',base:'Obsidian Bases',drawio:'draw.io diagrams'};
+  function renderAssetChoices() {
+    const query=assetSearch.value.trim().toLocaleLowerCase();
+    assetResults.replaceChildren();
+    if (!assetKind) return;
+    const all=bridge.getAssetPaths().filter(path=>types.kind(path)===assetKind);
+    const matches=all.filter(path=>path.toLocaleLowerCase().includes(query)).sort((a,b)=>a.localeCompare(b));
+    for (const path of matches.slice(0,160)) {
+      const button=document.createElement('button');
+      button.type='button';button.setAttribute('role','option');
+      button.textContent=path;button.title='Insert '+path+' into the current Markdown note';
+      button.addEventListener('click',()=>{
+        if(insertAttachment(path)) assetDialog.close();
+      });
+      assetResults.append(button);
+    }
+    if (!matches.length) {
+      const p=document.createElement('p');
+      p.className='toolbar-asset-empty';
+      p.textContent=all.length
+        ? 'No matching '+assetLabels[assetKind]+'. Try another name or path.'
+        : 'No '+assetLabels[assetKind]+' found in this wiki. Add a supported file to your local folder first.';
+      assetResults.append(p);
+    } else if (matches.length>160) {
+      const p=document.createElement('p');
+      p.className='toolbar-asset-empty';
+      p.textContent='Showing the first 160 files. Narrow the search to find more.';
+      assetResults.append(p);
+    }
+  }
+  document.querySelectorAll('.format-toolbar [data-asset-kind]').forEach(button=>{
+    button.addEventListener('click',()=>{
+      if (!activePath || bridge.getMode()!=='readwrite' || operations.isBusy()) return;
+      assetKind=button.dataset.assetKind;
+      assetSearch.value='';
+      $('toolbar-asset-title').textContent='Insert '+(assetLabels[assetKind]||'attachment');
+      renderAssetChoices();
+      assetDialog.showModal();
+      assetSearch.focus();
+    });
+  });
+  assetSearch.addEventListener('input',renderAssetChoices);
+  $('toolbar-asset-close').addEventListener('click',()=>assetDialog.close());
+  assetDialog.addEventListener('close',()=>{assetKind=null;});
   ui.search.addEventListener('input', renderTree);
   $('expand-all').addEventListener('click', () => setExpandedAll(true));
   $('collapse-all').addEventListener('click', () => setExpandedAll(false));

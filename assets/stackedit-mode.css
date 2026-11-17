@@ -1,0 +1,164 @@
+/* StackEdit-inspired reading mode, entirely offline, independent of light/dark. */
+:root[data-theme="stackedit"] {
+  color-scheme:light;
+  --accent:#397ba6;--accent-strong:#255c80;
+  --line:#dedede;--surface:#fff;--canvas:#f4f4f4;
+  --panel:#fff;--panel-alt:#f8f8f8;--text:#343434;--muted:#797979;
+  color:#333;background:var(--canvas);
+}
+[data-theme="stackedit"] .topbar {
+  background:#2c2c2c;color:#f5f5f5;border-bottom:1px solid #505050;
+}
+[data-theme="stackedit"] .topbar .brand-icon {background:#eee;color:#333;}
+[data-theme="stackedit"] .topbar .brand small,
+[data-theme="stackedit"] .topbar .theme-label {color:#dedede;}
+[data-theme="stackedit"] .topbar .theme-label select {
+  color:#f1f1f1;background:#3a3a3a;border-color:#676767;
+}
+[data-theme="stackedit"] .sidebar {background:#ececec;color:#444;border-color:#d5d5d5;}
+[data-theme="stackedit"] .sidebar-head,
+[data-theme="stackedit"] .sidebar-panel,
+[data-theme="stackedit"] .sidebar-bottom {background:#ececec;}
+[data-theme="stackedit"] .sidebar-tabs button.active {
+  background:#fff!important;color:#343434!important;border-color:#58a36a!important;
+}
+[data-theme="stackedit"] .sidebar input {background:#fff;color:#333;border-color:#c9c9c9;}
+[data-theme="stackedit"] .editor-bar {
+  background:#353535;color:#ececec;border-bottom:1px solid #464646;
+}
+[data-theme="stackedit"] .editor-bar .file-title strong {color:#f2f2f2;font-size:13px;}
+[data-theme="stackedit"] .editor-bar .mode {color:#dedede;}
+[data-theme="stackedit"] .editor-bar button:not(.primary) {
+  color:#f4f4f4;border-color:#626262;background:#3d3d3d;
+}
+[data-theme="stackedit"] .editor-bar .view-switch button.active {
+  color:#f3fff6!important;background:#31573c!important;
+  border-color:#72bd83!important;
+}
+[data-theme="stackedit"] .editor-bar .preview-export-options {
+  background:#363636;border-color:#707070;
+}
+[data-theme="stackedit"] .editor-bar .preview-export-options button {color:#fafafa;}
+[data-theme="stackedit"] .editor-bar .preview-export-options button:hover {background:#4a4a4a;}
+[data-theme="stackedit"] .pane,
+[data-theme="stackedit"] .markdown-preview {background:#fff;color:#333;}
+[data-theme="stackedit"] .pane-title {
+  background:#fafafa;color:#818181;border-bottom:1px solid #ededed;
+}
+[data-theme="stackedit"] .statusbar {
+  background:#f3f3f3;color:#777;border-color:#dedede;
+}
+/* Single-line compact toolbar like the original StackEdit. Never turn it into
+   multiple rows and steal vertical space from the editor. */
+.format-toolbar {
+  flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
+  white-space:nowrap;min-height:38px;max-height:38px;
+  scrollbar-width:thin;padding:5px 9px;gap:2px;
+}
+.format-toolbar button {
+  flex:0 0 auto;min-width:28px;height:27px;
+  font-size:13px;font-weight:650;line-height:1;padding:3px 6px;
+}
+.format-toolbar button[data-asset-kind="pdf"] {font-size:10px;letter-spacing:-.04em;}
+.format-toolbar button[disabled] {opacity:.38;cursor:default;}
+.format-toolbar .toolbar-divider {flex:0 0 1px;}
+
+/* Asset buttons have data-asset-kind instead of data-format; override older
+   generic button selectors so all toolbar icons share the same flat style. */
+:root[data-theme] .format-toolbar button[data-asset-kind] {
+  border:0!important;background:transparent!important;color:var(--text)!important;
+}
+:root[data-theme="dark"] .format-toolbar button[data-asset-kind] {color:#cadcf0!important;}
+:root[data-theme="stackedit"] .format-toolbar button[data-asset-kind] {color:#ddd!important;}
+:root[data-theme] .format-toolbar button[data-asset-kind]:hover:not(:disabled) {
+  background:color-mix(in srgb,var(--accent) 12%,var(--panel))!important;
+}
+:root[data-theme="stackedit"] .format-toolbar button[data-asset-kind]:hover:not(:disabled) {
+  background:#505050!important;color:white!important;
+}
+
+[data-theme="stackedit"] .format-toolbar {
+  background:#333;color:#e0e0e0;border-bottom:1px solid #505050;
+}
+[data-theme="stackedit"] .format-toolbar button {color:#ddd;background:transparent;}
+[data-theme="stackedit"] .format-toolbar button:hover:not(:disabled),
+[data-theme="stackedit"] .format-toolbar button:focus-visible {
+  color:white;background:#505050;outline:none;
+}
+[data-theme="stackedit"] .format-toolbar .toolbar-divider {background:#666;}
+/* Readable, centred reading width. The scrolling preview still uses the full
+   pane width, but paragraphs are centred using symmetric responsive padding. */
+[data-theme="stackedit"] #preview.markdown-preview {
+  box-sizing:border-box;
+  font:17px/1.76 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  color:#353535;background:#fff;
+  padding:36px max(30px,calc((100% - 900px)/2)) 64px;
+  overflow-wrap:anywhere;
+}
+[data-theme="stackedit"] .markdown-preview h1,
+[data-theme="stackedit"] .markdown-preview h2,
+[data-theme="stackedit"] .markdown-preview h3 {
+  font-family:inherit;color:#333;line-height:1.3;
+  margin:1.7em 0 .72em;font-weight:700;
+  padding-bottom:.25em;border-bottom:1px solid #ddd;
+}
+[data-theme="stackedit"] .markdown-preview h1 {font-size:2em;}
+[data-theme="stackedit"] .markdown-preview h2 {font-size:1.58em;}
+[data-theme="stackedit"] .markdown-preview h3 {font-size:1.26em;}
+[data-theme="stackedit"] .markdown-preview p,
+[data-theme="stackedit"] .markdown-preview ul,
+[data-theme="stackedit"] .markdown-preview ol {margin:0 0 1.25em;}
+[data-theme="stackedit"] .markdown-preview a {color:#3682b6;}
+[data-theme="stackedit"] .markdown-preview pre {background:#f6f6f6;border-color:#e5e5e5;font-size:13px;}
+[data-theme="stackedit"] .markdown-preview blockquote {
+  border-left:4px solid #dedede;background:transparent;color:#777;
+}
+[data-theme="stackedit"] .markdown-preview th {background:#f6f6f6;color:#333;border-color:#ddd;}
+[data-theme="stackedit"] .markdown-preview td {border-color:#ddd;}
+[data-theme="stackedit"] .pane .CodeMirror {
+  color:#444;background:#fff;
+  font:16px/1.72 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+}
+[data-theme="stackedit"] .pane .CodeMirror-lines {
+  box-sizing:border-box;max-width:980px;margin:0 auto;
+  padding:30px 30px 65px;
+}
+[data-theme="stackedit"] .pane .CodeMirror-gutters {
+  background:#fafafa;border-color:#e7e7e7;
+}
+[data-theme="stackedit"] .pane .CodeMirror-linenumber {color:#b0b0b0;}
+[data-theme="stackedit"] .pane .cm-header,
+[data-theme="stackedit"] .pane .cm-link,
+[data-theme="stackedit"] .pane .cm-url {color:#777;}
+[data-theme="stackedit"] .pane .CodeMirror-selected,
+[data-theme="stackedit"] .pane .CodeMirror-focused .CodeMirror-selected {
+  background:#d9e8f4;
+}
+[data-theme="stackedit"] .pane .CodeMirror-cursor {border-left-color:#444;}
+/* Accessible local-attachment chooser for the icon toolbar. */
+.toolbar-asset-dialog {width:min(560px,calc(100vw - 30px));max-height:85vh;}
+.toolbar-asset-dialog h2 {margin:0 0 10px;font-size:18px;}
+.toolbar-asset-dialog label {display:block;font-size:12px;color:var(--muted);margin-bottom:5px;}
+.toolbar-asset-dialog #toolbar-asset-search {
+  box-sizing:border-box;display:block;width:100%;max-width:none;
+  margin:0 0 9px;padding:9px;background:var(--panel);color:var(--text);
+  border:1px solid var(--line);border-radius:6px;
+}
+.toolbar-asset-results {display:flex;flex-direction:column;gap:3px;
+  min-height:80px;max-height:min(44vh,360px);overflow:auto;
+  border:1px solid var(--line);border-radius:7px;padding:5px;
+}
+[data-theme] .toolbar-asset-results button {
+  display:block;width:100%;text-align:left;font-size:12px;
+  border:0;padding:9px 10px;border-radius:5px;
+  overflow-wrap:anywhere;background:transparent;color:var(--text);
+}
+[data-theme] .toolbar-asset-results button:hover,
+[data-theme] .toolbar-asset-results button:focus-visible {
+  background:color-mix(in srgb,var(--accent) 12%,var(--panel));
+}
+.toolbar-asset-empty {padding:13px;color:var(--muted);font-size:12px;margin:0;}
+@media(max-width:850px) {
+  [data-theme="stackedit"] #preview.markdown-preview {padding:25px 24px 40px;font-size:16px;}
+  [data-theme="stackedit"] .pane .CodeMirror-lines {padding:20px 20px 44px;}
+}
