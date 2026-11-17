@@ -88,12 +88,19 @@ with sync_playwright() as pw:
       cm.setCursor(65, 4);
       cm.replaceRange(' EDITED', {line:65,ch:7});
     }""")
-    page.wait_for_function("document.querySelector('#preview').textContent.includes('EDITED')")
-    middle=page.evaluate("""() => {
+    # A three-second trailing delay avoids unnecessary re-renders while typing.
+    page.wait_for_timeout(650)
+    assert 'EDITED' not in page.locator('#preview').inner_text()
+    page.wait_for_function("document.querySelector('#preview').textContent.includes('EDITED')",timeout=8000)
+    # The preview should NOW follow the modified paragraph, rather than
+    # preserving unrelated old preview position or jumping to the beginning.
+    on_screen=page.evaluate("""() => {
       const p=document.querySelector('#preview');
-      return {top:p.scrollTop,max:p.scrollHeight-p.clientHeight};
+      const paragraph=[...p.querySelectorAll('p')].find(el=>el.textContent.includes('EDITED'));
+      const a=p.getBoundingClientRect(),b=paragraph.getBoundingClientRect();
+      return {visible:!!paragraph&&b.bottom>a.top&&b.top<a.bottom,top:p.scrollTop};
     }""")
-    assert middle['top']>middle['max']*.40 and middle['top']<middle['max']*.7,middle
+    assert on_screen['visible'] and on_screen['top']>0,on_screen
 
     # When typing at the last line, the preview follows the last paragraph
     # instead of jumping back to the document beginning.
@@ -109,5 +116,5 @@ with sync_playwright() as pw:
       return p.scrollHeight-p.clientHeight-p.scrollTop<45;
     }""")
     assert not errors,errors
-    print('PASS: SVG favicon, Expand all reveals last selected file/folder, live preview preserves position and follows ending')
+    print('PASS: SVG favicon, Expand all reveals file/folder, preview debounce, caret location and end follow')
     browser.close()
