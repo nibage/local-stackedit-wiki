@@ -22,8 +22,10 @@
   let backlinkRequest = 0, backlinksForPath = null;
   const AUTOSAVE_INTERVAL_MS = 5000;
   let blobURLs = [], selectedMode = 'split';
-  // Preserve the preview viewport when marked.js replaces its DOM on each
-  // keystroke; follow the bottom only while the editor caret is near the end.
+  const PREVIEW_DEBOUNCE_MS = 3000;
+  // A quiet-period redraw prevents empty lines from flashing image/media embeds.
+  // Keep existing Blob URLs alive while editing the same open document.
+  const previewImageCache = new Map();
   let previewPosition = null, previewPositionObserver = null;
   let previewPositionScheduled = false;
   function stopPreviewPositionTracking() {
@@ -32,17 +34,71 @@
     previewPosition = null;
     previewPositionScheduled = false;
   }
+  function sourceSearchFragments(lines, line) {
+    const candidates = [];
+    for (let i = line; i >= Math.max(0, line-5); i--) {
+      let value = (lines[i] || '').trim()
+        .replace(/^#{1,6}\s+/, '')
+        .replace(/^(?:[-*+]|\d+[.)])\s+/, '')
+        .replace(/^>\s*/, '')
+        .replace(/[*_\x60~]/g,'')
+        .replace(/!?\[([^\]]+)\]\(([^)]+)\)/g,'$1')
+        .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,(_,name,alias)=>alias||name);
+      if (value.length > 110) value=value.slice(0,110);
+      if (value.length >= 4) candidates.push(value);
+    }
+    return candidates;
+  }
+  function previewSourceTarget(position) {
+    const blocks = Array.from(ui.preview.querySelectorAll(
+      'h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,td,th'
+    ));
+    const fraction = position.line / Math.max(1,position.lastLine);
+    let fallback = null;
+    for (const query of position.fragments) {
+      const matches = blocks.map((el,i)=>({el,i})).filter(item=>
+        item.el.textContent.includes(query));
+      if (matches.length === 1) return matches[0].el;
+      if (matches.length && !fallback) {
+        // Repeated headings/paragraphs must not always jump to the first
+        // occurrence. Prefer the match nearest the caret's source fraction.
+        fallback = matches.reduce((best,item) =>
+          Math.abs(item.i / Math.max(1,blocks.length-1)-fraction) <
+          Math.abs(best.i / Math.max(1,blocks.length-1)-fraction) ? item:best).el;
+      }
+    }
+    return fallback;
+  }
   function restorePreviewPosition() {
     const position = previewPosition;
     if (!position || position.sequence !== renderSequence || position.userMoved) return;
-    if (position.lastApplied !== null &&
-        Math.abs(ui.preview.scrollTop - position.lastApplied) > 12) {
-      // A manual scroll takes precedence over automatic synchronization.
-      position.userMoved = true;
-      return;
-    }
+    // Do not mistake layout-induced native scroll anchoring for a user scroll.
+    // Explicit wheel/pointer/touch/keyboard events below mark user movement.
     const maxTop = Math.max(0, ui.preview.scrollHeight - ui.preview.clientHeight);
-    ui.preview.scrollTop = position.followBottom ? maxTop : Math.min(maxTop, position.top);
+    let nextTop = position.top;
+    if (position.followBottom) {
+      nextTop = maxTop;
+    } else {
+      const target = previewSourceTarget(position);
+      const height = ui.preview.clientHeight;
+      if (target) {
+        const offset = target.getBoundingClientRect().top -
+          ui.preview.getBoundingClientRect().top + ui.preview.scrollTop;
+        // Keep the edited paragraph in view, avoiding recenter on image growth.
+        if (offset < ui.preview.scrollTop + height*.15 ||
+            offset > ui.preview.scrollTop + height*.76)
+          nextTop = offset - height*.32;
+        else nextTop = ui.preview.scrollTop;
+      } else {
+        // New empty lines and specialized embeds may have no visible text.
+        const proportional = maxTop * Math.min(1, position.line /
+          Math.max(1, position.lastLine));
+        if (Math.abs(proportional - ui.preview.scrollTop) > height*.75)
+          nextTop = proportional;
+        else nextTop = ui.preview.scrollTop;
+      }
+    }
+    ui.preview.scrollTop = Math.max(0, Math.min(maxTop, nextTop));
     position.lastApplied = ui.preview.scrollTop;
   }
   function queuePreviewPositionRestore() {
@@ -53,7 +109,7 @@
       restorePreviewPosition();
     });
   }
-  for (const event of ['wheel', 'touchstart', 'pointerdown']) {
+  for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
     ui.preview.addEventListener(event, () => {
       if (previewPosition) previewPosition.userMoved = true;
     }, {passive:true});
@@ -153,10 +209,13 @@
       : 'Enable trash icons on hover or keyboard focus';
     if (!deleteEnabled) hideTreeDelete();
   }
-  $('delete-toggle').addEventListener('click', () => {
+  $('delete-toggle').addEventListener('click', event => {
     if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
     deleteEnabled = !deleteEnabled;
     updateDeleteModeUI();
+    // Pointer activation must not leave a focus outline looking like a
+    // still-enabled green underline after the toggle was switched off.
+    if (event.detail > 0) event.currentTarget.blur();
   });
   function clearDragHighlights() {
     ui.tree.querySelectorAll('.tree-drop-target,.tree-drag-source').forEach(
@@ -212,10 +271,14 @@
     root.querySelectorAll('.wiki-canvas-viewer,.wiki-bases-viewer,.wiki-drawio-viewer')
       .forEach(node => node.dispose?.());
   }
-  function releaseImages() {
-    // Replacing a note also terminates outstanding graph/table preview work.
+  function releaseImages(keepLocalImages = false) {
+    // Existing local image URLs remain valid during an ordinary source redraw.
     disposeStructured(ui.preview);
-    blobURLs.forEach(url => URL.revokeObjectURL(url)); blobURLs = [];
+    if (!keepLocalImages) {
+      blobURLs.forEach(url => URL.revokeObjectURL(url));
+      blobURLs = [];
+      previewImageCache.clear();
+    }
   }
   function clearEditor() {
     stopPreviewPositionTracking();
@@ -329,10 +392,16 @@
         continue;
       }
       try {
-        const blob = await bridge.readAsset(path);
+        let url = previewImageCache.get(path);
+        if (!url) {
+          const blob = await bridge.readAsset(path);
+          if (sequence !== renderSequence) return;
+          url = URL.createObjectURL(blob);
+          previewImageCache.set(path, url);
+          blobURLs.push(url);
+        }
         if (sequence !== renderSequence) return;
-        const url = URL.createObjectURL(blob);
-        blobURLs.push(url);
+        img.addEventListener('load', queuePreviewPositionRestore, {once:true});
         img.src = url;
         img.title = path;
       } catch (_) {
@@ -401,17 +470,19 @@
     const oldTop = ui.preview.scrollTop;
     const cursorLine = editor.cm.getCursor().line;
     const lastLine = editor.cm.lastLine();
-    // A writer working on the last few lines should always see the latest
-    // paragraph; otherwise preserve the reader's previous scroll position.
+    const lines = editor.getValue().split('\n');
     const followBottom = fromEditor && cursorLine >= Math.max(0,lastLine-2);
     stopPreviewPositionTracking();
     renderSequence++;
     const sequence = renderSequence;
-    releaseImages();
+    releaseImages(true);
     if (!activePath) return;
     if (fromEditor) {
-      previewPosition = {sequence, top:oldTop, followBottom,
-        lastApplied:null, userMoved:false};
+      previewPosition = {
+        sequence, top:oldTop, followBottom, line:cursorLine, lastLine,
+        fragments:sourceSearchFragments(lines,cursorLine),
+        lastApplied:null, userMoved:false
+      };
     }
     try {
       let baseStatus = 'Offline Markdown';
@@ -423,7 +494,22 @@
           stats.failed ? `Render failures: ${stats.failed}` : ''];
         $('render-status').textContent = [baseStatus, ...parts].filter(Boolean).join(' · ');
       };
+      const imageDimensions = new Map();
+      ui.preview.querySelectorAll('img[data-local-source]').forEach(img => {
+        const rect = img.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0)
+          imageDimensions.set(img.dataset.localSource, {width:rect.width,height:rect.height});
+      });
       const result = window.LocalWikiRender.render(editor.getValue(), ui.preview, { onDiagramUpdate: report });
+      // Reserve the same geometry immediately, before browser image decode,
+      // so a new blank line cannot shift loaded images up or down.
+      result.imageNodes.forEach(img => {
+        const size = imageDimensions.get(img.dataset.localSource);
+        if (!size) return;
+        img.setAttribute('width', String(Math.round(size.width)));
+        img.setAttribute('height', String(Math.round(size.height)));
+        img.style.aspectRatio = size.width+' / '+size.height;
+      });
       if (previewPosition) {
         // MathJax, Mermaid, Canvas and local assets may change the DOM after
         // initial rendering. Coalesce these changes into one animation frame.
@@ -447,11 +533,18 @@
       $('render-status').textContent = 'Preview error';
     }
   }
-  function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(() => renderPreview(true), 170); }
+  function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(() => renderPreview(true), PREVIEW_DEBOUNCE_MS); }
   async function selectFile(path, options = {}) {
     if (path === activePath && !options.force) return true;
     if (operations.isBusy()) { notice('A file operation is in progress; switching notes is temporarily disabled.', 'error'); return false; }
-    if (!options.skipConfirm && !confirmDiscard()) return false;
+    if (isDirty()) {
+      // Navigation writes through the existing fingerprint guard first. If
+      // anything fails, keep the original document and all unsaved text open.
+      if (!await saveCurrent(true, true)) {
+        notice('Cannot switch notes: unsaved changes could not be saved. The editor was preserved.', 'error');
+        return false;
+      }
+    }
     const ticket = operations.beginRead();
     const formerPath = activePath, formerText = editor.getValue();
     try {
@@ -461,6 +554,7 @@
         notice('The editor changed during loading. Switching was cancelled to protect unsaved changes.', 'error');
         return false;
       }
+      releaseImages(); // Revoke cached images when switching source notes.
       activePath = path; selectedFolder = parentPath(path); lastTreeSelection = path; fingerprint = result.fingerprint; hasBOM = Boolean(result.hasBOM);
       lineEnding = result.text.includes('\r\n') ? '\r\n' : '\n';
       const normalizedText = result.text.replace(/\r\n?/g, '\n');
@@ -1027,24 +1121,54 @@
       if (await selectFile(createdPath)) notice(`Note created: ${createdPath}. You can edit it now.`, 'success');
     }
   }
+  function confirmDeletion(path, kind, snapshot, discardsCurrent) {
+    const dialog = $('delete-dialog');
+    const folder = kind === 'directory';
+    const needsAck = folder && snapshot.files > 0;
+    $('delete-dialog-title').textContent = folder ? 'Delete folder permanently?' : 'Delete note permanently?';
+    $('delete-dialog-path').textContent = path;
+    $('delete-dialog-message').textContent = folder
+      ? 'This folder contains '+snapshot.files+' files and '+
+        Math.max(0,snapshot.directories-1)+' subfolders, including possible non-Markdown data. This action cannot be undone.'
+      : 'This note will be permanently removed from your wiki. This action cannot be undone.';
+    $('delete-dialog-ack-group').hidden = !needsAck;
+    $('delete-dialog-ack').checked = false;
+    $('delete-dialog-confirm').disabled = needsAck;
+    if (discardsCurrent) $('delete-dialog-message').textContent +=
+      ' Unsaved changes in the selected note will also be lost.';
+    return new Promise(resolve => {
+      dialog.addEventListener('close', () => resolve(dialog.returnValue === 'delete'), {once:true});
+      dialog.showModal();
+      requestAnimationFrame(() => $('delete-dialog-cancel').focus());
+    });
+  }
+  $('delete-dialog-ack').addEventListener('change', () => {
+    $('delete-dialog-confirm').disabled =
+      !$('delete-dialog-ack-group').hidden && !$('delete-dialog-ack').checked;
+  });
+  $('delete-dialog-cancel').addEventListener('click', () => $('delete-dialog').close('cancel'));
+  $('delete-dialog-confirm').addEventListener('click', () => {
+    if (!$('delete-dialog-confirm').disabled) $('delete-dialog').close('delete');
+  });
   async function deleteItem(path, kind) {
     if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
-    if (!confirmDiscard()) return;
+    // No native alert on deletion. The centered modal confirms the target.
+    // Save unrelated dirty notes first; never discard source changes silently.
+    const deletingOpen = activePath === path ||
+      (kind === 'directory' && activePath?.startsWith(path + '/'));
+    if (isDirty() && !deletingOpen && !await saveCurrent(true,true)) {
+      notice('Deletion cancelled: the current note could not be saved.', 'error');
+      return;
+    }
     if (!beginOperation('delete')) return;
     try {
       const snapshot = await bridge.deletionSnapshot(path, kind);
-      let message = kind === 'file' ? `Permanently delete note "${path}"?` :
-        `Permanently delete folder "${path}" and all of its contents?\n\n` +
-        `Contains ${snapshot.files} files and ${Math.max(0, snapshot.directories - 1)} subfolders. ` +
-        `This includes non-Markdown files. This action cannot be undone.`;
-      if (!window.confirm(message)) { notice('Deletion cancelled.'); return; }
-      if (kind === 'directory' && snapshot.files > 0 &&
-          !window.confirm('Final confirmation: permanently delete the entire folder "' + path + '" and all ' + snapshot.files + ' files?')) {
-        notice('Folder deletion cancelled.'); return;
+      if (!await confirmDeletion(path, kind, snapshot, deletingOpen && isDirty())) {
+        notice('Deletion cancelled.'); return;
       }
       await bridge.deleteEntry(path, kind, snapshot);
       invalidateWikiIndex();
-      if (activePath === path || (kind === 'directory' && activePath?.startsWith(path + '/'))) clearEditor();
+      if (deletingOpen) clearEditor();
       renderTree();
       notice(`Deleted: ${path}`, 'success');
     } catch (err) { notice('Deletion failed: ' + err.message, 'error'); }
@@ -1409,13 +1533,14 @@
   $('expand-all').addEventListener('click', () => setExpandedAll(true));
   $('collapse-all').addEventListener('click', () => setExpandedAll(false));
   document.querySelectorAll('.view-switch button').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
-  async function saveCurrent(automatic = false) {
-    if (!activePath || !isDirty() || bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
+  async function saveCurrent(automatic = false, force = false) {
+    if (!activePath || !isDirty()) return true;
+    if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return false;
     const path = activePath, savedText = editor.getValue();
     // Do not retry a failed autosave forever: the user must make another edit
     // or explicitly press Save. Manual save always remains available.
-    if (automatic && autosaveBlocked?.path === path && autosaveBlocked.text === savedText) return;
-    if (!beginOperation('save')) return;
+    if (automatic && !force && autosaveBlocked?.path === path && autosaveBlocked.text === savedText) return false;
+    if (!beginOperation('save')) return false;
     // Capture write context before awaiting; later edits remain dirty.
     const expected = fingerprint, bom = hasBOM, eol = lineEnding;
     try {
@@ -1432,9 +1557,11 @@
             : `Saved an earlier version of ${path}. Newer edits still need saving.`, 'success');
         }
       }
+      return activePath === path && editor.getValue() === savedText;
     } catch (err) {
       autosaveBlocked = { path, text: savedText };
       notice(`${automatic ? 'Autosave' : 'Save'} blocked: ${err.message} The text remains in the editor.`, 'error');
+      return false;
     } finally { endOperation('save'); }
   }
   ui.save.addEventListener('click', () => { void saveCurrent(false); });

@@ -40,6 +40,8 @@ jobs:
         run: python tests/tree-autosave-ui-smoke.py
       - name: Verify live preview scroll, selected tree reveal and favicon
         run: python tests/preview-navigation-ui-smoke.py
+      - name: Verify safe navigation autosave and themed delete modal
+        run: python tests/navigation-save-delete-ui-smoke.py
       - name: Verify scrollable tree, stable Move button and responsive sidebar
         run: python tests/tree-layout-scroll-ui-smoke.py
       - name: Verify Links navigation, Refresh tree state, status popups and diagnostics

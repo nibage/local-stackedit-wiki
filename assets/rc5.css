@@ -185,3 +185,43 @@
   .wiki-structured-embed .canvas-viewport,
   .wiki-structured-embed .drawio-viewport {min-height:260px;height:320px;}
 }
+
+/* A true application modal for permanent deletion, respecting both themes. */
+.delete-confirm-dialog {
+  position:fixed; inset:auto; left:50%; top:50%;
+  transform:translate(-50%,-50%); margin:0;
+  width:min(475px,calc(100vw - 32px)); max-height:calc(100vh - 32px);
+  overflow:auto; background:var(--panel); color:var(--text);
+  border:1px solid var(--line); border-radius:12px;
+  padding:24px; box-shadow:0 24px 70px #0007;
+}
+.delete-confirm-dialog::backdrop {background:#060912a3;}
+.delete-dialog-message {color:var(--text);line-height:1.6;font-size:13px;}
+.delete-dialog-path {background:var(--panel-alt);border:1px solid var(--line);
+  border-radius:7px;padding:10px 12px;margin:12px 0;
+  color:var(--text);font-family:ui-monospace,Consolas,monospace;
+  overflow-wrap:anywhere;font-size:12px;}
+.delete-dialog-ack[hidden] {display:none;}
+.delete-dialog-ack {margin:15px 0 0;padding:10px;border-radius:7px;
+  background:color-mix(in srgb,#b54c42 8%,var(--panel));}
+.delete-dialog-ack label {display:flex;align-items:flex-start;gap:9px;
+  cursor:pointer;font-size:12px;font-weight:400;line-height:1.45;}
+.delete-dialog-ack input {width:auto;flex:0 0 auto;margin:2px 0 0;accent-color:#bd4b40;}
+.delete-confirm-dialog .dialog-actions {display:flex;justify-content:flex-end;
+  gap:9px;flex-wrap:wrap;margin-top:18px;}
+[data-theme] .delete-confirm-dialog .delete-danger {
+  background:#a62e35;color:#fff;border-color:#a62e35;
+}
+[data-theme] .delete-confirm-dialog .delete-danger:hover:not(:disabled) {
+  background:#8b222a;color:#fff;
+}
+[data-theme] .delete-confirm-dialog .delete-danger:disabled {
+  background:#8c5d60;color:#fff;opacity:.5;
+}
+[data-theme] .file-actions #delete-toggle:not(.move-enabled):not(:focus-visible) {
+  box-shadow:none !important;outline:none !important;
+}
+
+/* Prevent native scroll anchoring from competing with caret-aware preview
+   positioning while delayed Markdown/math/attachments grow the layout. */
+#preview.markdown-preview { overflow-anchor:none; }
