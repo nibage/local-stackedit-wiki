@@ -85,11 +85,14 @@
       const pending=[];
       for(const original of document.querySelectorAll('link[rel="stylesheet"],style')) {
         if (original.localName==='link') {
-          let uri;
-          try {uri=new URL(original.href,document.baseURI);} catch(_) {continue;}
-          const allowed=uri.protocol==='file:' && location.protocol==='file:' ||
-            uri.origin===location.origin && /^https?:$/.test(uri.protocol);
-          if (!allowed) continue;
+          const relative=original.getAttribute('href')||'';
+          // Only bundle-local relative stylesheets: never follow external URLs.
+          if (!relative || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(relative))continue;
+          let uri,base;
+          try {base=new URL(document.baseURI);uri=new URL(relative,base);}catch(_){continue;}
+          const allowed=uri.protocol==='file:'&&base.protocol==='file:'||
+            uri.origin===base.origin&&/^https?:$/.test(uri.protocol);
+          if(!allowed)continue;
           const sheet=doc.createElement('link');
           sheet.rel='stylesheet';sheet.href=uri.href;
           pending.push(new Promise(resolve=>{
