@@ -190,38 +190,166 @@
     if (typeof value==='object') return '[structured property]';
     return String(value);
   }
+  // Temporary in-memory filters never modify the .base YAML or source notes.
+  function applyTemporary(rows, rules, mode='and', negate=false) {
+    if (!Array.isArray(rules) || rules.length > 8) throw new Error('At most eight temporary filters are supported.');
+    if (!rules.length) return rows.slice();
+    function match(row, rule) {
+      if (!rule || typeof rule.key !== 'string' || rule.key.length > 100 ||
+          !/^(?:file\.(?:name|path|folder|ext|tags)|(?:note\.)?[a-zA-Z_][\w.-]*)$/.test(rule.key) ||
+          rule.key.startsWith('formula.')) return false;
+      const actual=rule.key==='file.tags' ? Array.from(row.tags || []) : property(row,rule.key);
+      const want=String(rule.value ?? '').slice(0,300);
+      const shown=display(actual);
+      switch (rule.op) {
+        case 'contains': return shown.toLocaleLowerCase().includes(want.toLocaleLowerCase());
+        case 'equals': return shown.toLocaleLowerCase()===want.toLocaleLowerCase();
+        case 'notEquals': return shown.toLocaleLowerCase()!==want.toLocaleLowerCase();
+        case 'greater': return actual != null && Number.isFinite(Number(actual)) &&
+          Number.isFinite(Number(want)) && Number(actual)>Number(want);
+        case 'less': return actual != null && Number.isFinite(Number(actual)) &&
+          Number.isFinite(Number(want)) && Number(actual)<Number(want);
+        case 'empty': return actual == null || actual==='' || (Array.isArray(actual)&&!actual.length);
+        case 'notEmpty': return actual != null && actual!=='' && (!Array.isArray(actual)||actual.length>0);
+        case 'tag': return row.tags && row.tags.has(want.replace(/^#/,'').toLocaleLowerCase());
+        default: return false;
+      }
+    }
+    return rows.filter(row=>{
+      const matched=mode==='or' ? rules.some(rule=>match(row,rule)) : rules.every(rule=>match(row,rule));
+      return negate ? !matched : matched;
+    });
+  }
+
   function render(source, files, options={}) {
     const model=parseYaml(source);
     if (!model || typeof model!=='object' || Array.isArray(model)) throw new Error('Base must be a YAML mapping.');
     const root=text('div','wiki-bases-viewer');
     const views=Array.isArray(model.views)?model.views.filter(v=>v && typeof v==='object' && v.type==='table'):[];
-    root.append(text('p','bases-intro','Obsidian Bases · read-only table over local Markdown frontmatter'));
+    root.append(text('p','bases-intro','Obsidian Bases · read-only Markdown data · temporary table controls'));
     if (!views.length) {root.append(text('p','bases-warning','No supported table views found. Other Bases layouts are not implemented.'));return root;}
     const tabs=text('div','bases-tabs');
+    const toolbar=text('div','bases-toolbar');
+    const filterPanel=text('div','bases-filter-panel');
+    filterPanel.hidden=true;
     const status=text('p','bases-status');
     const warnings=text('div','bases-warnings');
     const area=text('div','bases-table-scroll');
-    root.append(tabs,status,warnings,area);
+    root.append(tabs,toolbar,filterPanel,status,warnings,area);
     const sourceRows=files.slice(0,MAX_FILES);
     const totalFiles=Math.max(options.totalFiles||files.length,files.length);
-    const viewButtons=[];
+    const viewButtons=[],viewStates=views.map(()=>({
+      rules:[],mode:'and',negate:false,sort:null,widths:new Map()
+    }));
+    const availableKeys=[
+      'file.name','file.path','file.folder','file.ext','file.tags',
+      ...new Set(sourceRows.flatMap(row=>Object.keys(row.props||{}).filter(key=>/^[a-zA-Z_][\w.-]{0,60}$/.test(key))))
+    ].slice(0,100);
     let disposed=false,active=0;
-    const renderView=(index)=>{
+    const filterButton=text('button','bases-filter-toggle','Filter (temporary)');
+    filterButton.type='button';
+    const resetButton=text('button','bases-reset','Reset filters and sort');
+    resetButton.type='button';
+    toolbar.append(filterButton,resetButton);
+    filterButton.addEventListener('click',()=>{
+      filterPanel.hidden=!filterPanel.hidden;
+      filterButton.setAttribute('aria-expanded',String(!filterPanel.hidden));
+      if (!filterPanel.hidden) renderRules();
+    });
+    resetButton.addEventListener('click',()=>{
+      const state=viewStates[active];
+      state.rules=[];state.mode='and';state.negate=false;state.sort=null;
+      renderRules();renderView(active);
+    });
+
+    function option(select,value,label) {
+      const choice=text('option','',label);choice.value=value;select.append(choice);return choice;
+    }
+    function renderRules() {
+      if (disposed) return;
+      filterPanel.replaceChildren();
+      const state=viewStates[active];
+      const help=text('p','bases-filter-note','Filters here affect only this table session. They are not saved into the .base file or Markdown notes.');
+      filterPanel.append(help);
+      const ruleList=text('div','bases-filter-list');
+      filterPanel.append(ruleList);
+      const operatorList=[
+        ['contains','contains'],['equals','equals'],['notEquals','does not equal'],
+        ['greater','greater than (number)'],['less','less than (number)'],
+        ['empty','is empty'],['notEmpty','is not empty'],['tag','has tag']
+      ];
+      state.rules.forEach((rule,index)=>{
+        const row=text('div','bases-filter-rule');
+        const key=text('select','bases-filter-key');
+        key.setAttribute('aria-label','Filter property');
+        availableKeys.forEach(k=>option(key,k,k));
+        key.value=rule.key;
+        key.addEventListener('change',()=>{rule.key=key.value;renderView(active);});
+        const op=text('select','bases-filter-operator');
+        op.setAttribute('aria-label','Filter comparison');
+        operatorList.forEach(([value,label])=>option(op,value,label));
+        op.value=rule.op;
+        const value=text('input','bases-filter-value');
+        value.type='text';value.maxLength=300;value.value=rule.value;
+        value.setAttribute('aria-label','Filter value');
+        value.hidden=rule.op==='empty'||rule.op==='notEmpty';
+        op.addEventListener('change',()=>{
+          rule.op=op.value;
+          value.hidden=rule.op==='empty'||rule.op==='notEmpty';
+          renderView(active);
+        });
+        value.addEventListener('input',()=>{rule.value=value.value;renderView(active);});
+        const remove=text('button','bases-filter-remove','Remove');
+        remove.type='button';remove.setAttribute('aria-label','Remove filter');
+        remove.addEventListener('click',()=>{
+          state.rules.splice(index,1);renderRules();renderView(active);
+        });
+        row.append(key,op,value,remove);ruleList.append(row);
+      });
+      const footer=text('div','bases-filter-footer');
+      const add=text('button','bases-add-filter','+ Condition');
+      add.type='button';add.disabled=state.rules.length>=8;
+      add.addEventListener('click',()=>{
+        state.rules.push({key:availableKeys[0]||'file.name',op:'contains',value:''});
+        renderRules();renderView(active);
+      });
+      const combination=text('select','bases-filter-combination');
+      combination.setAttribute('aria-label','Combine conditions');
+      option(combination,'and','All conditions (AND)');
+      option(combination,'or','Any condition (OR)');
+      combination.value=state.mode;
+      combination.addEventListener('change',()=>{state.mode=combination.value;renderView(active);});
+      const negate=text('label','bases-filter-negate');
+      const checkbox=text('input');checkbox.type='checkbox';checkbox.checked=state.negate;
+      checkbox.addEventListener('change',()=>{state.negate=checkbox.checked;renderView(active);});
+      negate.append(checkbox,text('span','','NOT'));
+      footer.append(add,combination,negate);filterPanel.append(footer);
+      filterButton.textContent='Filter'+(state.rules.length ? ' ('+state.rules.length+')':'')+' (temporary)';
+    }
+
+    function renderView(index) {
       if (disposed) return;
       active=index;
       viewButtons.forEach((button,i)=>button.setAttribute('aria-pressed',String(i===index)));
-      const view=views[index],issues=[];
+      const view=views[index],state=viewStates[index],issues=[];
       warnings.replaceChildren();area.replaceChildren();
       if (totalFiles>MAX_FILES) issues.push('First '+MAX_FILES+' Markdown files only; '+(totalFiles-MAX_FILES)+' files were not scanned.');
       if (options.failedFiles) issues.push(options.failedFiles+' Markdown files could not be read.');
       if (Array.isArray(model.formulas)?model.formulas.length:Object.keys(model.formulas||{}).length)
         issues.push('Formula expressions are not evaluated; formula columns show unavailable values.');
       if (view.groupBy) issues.push('Grouping is not applied in this read-only preview.');
-      if (view.type!=='table') issues.push('Unsupported view type.');
       try {
-        const globalFilter=filterFunction(model.filters), localFilter=filterFunction(view.filters);
-        let visible=sourceRows.filter(row=>globalFilter(row)&&localFilter(row));
-        if (Array.isArray(view.sort)) {
+        const globalFilter=filterFunction(model.filters),localFilter=filterFunction(view.filters);
+        const based=sourceRows.filter(row=>globalFilter(row)&&localFilter(row));
+        let visible=applyTemporary(based,state.rules,state.mode,state.negate);
+        if (state.sort) {
+          const {key,direction}=state.sort;
+          visible.sort((a,b)=>{
+            const left=property(a,key),right=property(b,key);
+            const result=String(left??'').localeCompare(String(right??''),'cs',{numeric:true});
+            return result*(direction==='desc'?-1:1) || a.path.localeCompare(b.path,'cs');
+          });
+        } else if (Array.isArray(view.sort)) {
           const criteria=view.sort.filter(v=>v && typeof v.property==='string').slice(0,3);
           visible.sort((a,b)=>{
             for(const item of criteria) {
@@ -233,11 +361,76 @@
           });
         } else visible.sort((a,b)=>a.path.localeCompare(b.path,'cs',{numeric:true}));
         const limit=Number.isInteger(view.limit)&&view.limit>0?Math.min(view.limit,MAX_ROWS):MAX_ROWS;
-        const shown=visible.slice(0,limit);
-        const columns=describeColumns(model,view,shown);
+        const shown=visible.slice(0,limit),columns=describeColumns(model,view,shown);
         const table=text('table','bases-table');
+        table.style.tableLayout='fixed';
+        const colgroup=text('colgroup');
+        const colSizes=columns.map(col=>state.widths.get(col.key)||180);
+        const colElements=columns.map((col,i)=>{
+          const el=text('col');el.style.width=colSizes[i]+'px';colgroup.append(el);return el;
+        });
+        const updateTableWidth=()=>{table.style.width=colSizes.reduce((sum,width)=>sum+width,0)+'px';};
+        updateTableWidth();table.style.minWidth='100%';
+        table.append(colgroup);
         const head=text('thead'),heading=text('tr');
-        columns.forEach(col=>heading.append(text('th','',col.title)));
+        columns.forEach((col,i)=>{
+          const header=text('th','bases-sortable-heading');
+          header.setAttribute('scope','col');header.tabIndex=0;
+          header.setAttribute('aria-label','Sort by '+col.title);
+          header.setAttribute('aria-sort',state.sort?.key===col.key
+            ? (state.sort.direction==='asc'?'ascending':'descending'):'none');
+          header.append(text('span','bases-heading-label',col.title));
+          header.addEventListener('click',event=>{
+            if (event.target.closest('.bases-column-grip')) return;
+            const old=state.sort;
+            state.sort=old?.key!==col.key?{key:col.key,direction:'asc'}:
+              old.direction==='asc'?{key:col.key,direction:'desc'}:null;
+            renderView(active);
+          });
+          header.addEventListener('keydown',event=>{
+            if (event.target!==header || !['Enter',' '].includes(event.key)) return;
+            event.preventDefault();header.click();
+          });
+          const grip=text('span','bases-column-grip','⋮');
+          grip.tabIndex=0;grip.setAttribute('role','separator');
+          grip.setAttribute('aria-label','Resize column '+col.title);
+          grip.setAttribute('aria-orientation','vertical');
+          const applyWidth=number=>{
+            const width=Math.min(700,Math.max(90,Math.round(number)));
+            colSizes[i]=width;state.widths.set(col.key,width);
+            colElements[i].style.width=width+'px';updateTableWidth();
+          };
+          let drag=null;
+          grip.addEventListener('pointerdown',event=>{
+            if (event.button!==0) return;
+            event.preventDefault();event.stopPropagation();
+            drag={id:event.pointerId,x:event.clientX,width:colSizes[i]};
+            grip.setPointerCapture(event.pointerId);
+          });
+          grip.addEventListener('pointermove',event=>{
+            if (!drag || drag.id!==event.pointerId) return;
+            applyWidth(drag.width+event.clientX-drag.x);
+          });
+          const stop=event=>{
+            if (!drag || drag.id!==event.pointerId) return;
+            drag=null;if(grip.hasPointerCapture(event.pointerId))grip.releasePointerCapture(event.pointerId);
+          };
+          grip.addEventListener('pointerup',stop);
+          grip.addEventListener('pointercancel',stop);
+          grip.addEventListener('keydown',event=>{
+            if (event.key==='ArrowLeft' || event.key==='ArrowRight') {
+              event.preventDefault();event.stopPropagation();
+              applyWidth(colSizes[i]+(event.key==='ArrowRight'?20:-20));
+            }
+          });
+          grip.addEventListener('dblclick',event=>{
+            event.preventDefault();event.stopPropagation();
+            const chars=Math.max(col.title.length,...shown.map(row=>
+              (col.key==='file.name'?row.name:display(property(row,col.key))).length));
+            applyWidth(Math.min(700,Math.max(90,chars*8+36)));
+          });
+          header.append(grip);heading.append(header);
+        });
         head.append(heading);table.append(head);
         const body=text('tbody');
         shown.forEach(row=>{
@@ -255,21 +448,24 @@
           body.append(tr);
         });
         table.append(body);area.append(table);
-        status.textContent=shown.length+' of '+visible.length+' matching Markdown notes (scanned '+sourceRows.length+').';
+        status.textContent=shown.length+' of '+visible.length+' matching Markdown notes (scanned '+sourceRows.length+')'+
+          (state.rules.length?' · '+state.rules.length+' temporary filter(s)':'')+'.';
         if (visible.length>shown.length) issues.push('Showing first '+shown.length+' matches.');
       } catch(error) {
         status.textContent='Results withheld: unsupported filter.';
         issues.push(error.message+' No rows are displayed to avoid misleading results.');
       }
       issues.forEach(message=>warnings.append(text('p','bases-warning',message)));
-    };
+    }
+
     views.forEach((view,i)=>{
       const button=text('button','bases-tab',view.name||'Table '+(i+1));button.type='button';
-      button.addEventListener('click',()=>renderView(i));tabs.append(button);viewButtons.push(button);
+      button.addEventListener('click',()=>{renderView(i);renderRules();});tabs.append(button);viewButtons.push(button);
     });
+    renderRules();
     renderView(0);
     root.dispose=()=>{disposed=true;};
     return root;
   }
-  global.LocalWikiBases={parseYaml,readFrontmatter,fileData,filterFunction,property,render};
+  global.LocalWikiBases={parseYaml,readFrontmatter,fileData,filterFunction,applyTemporary,property,render};
 })(window);
