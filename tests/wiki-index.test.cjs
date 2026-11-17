@@ -41,11 +41,11 @@ test('nevyhledává odkazy uvnitř bloků kódu', () => {
 
 test('outgoing and incoming link occurrences include exact line, column and duplicate links', async () => {
   const local = new Map([
-    ['Home.md', '# Home\\n\\n[Other](Docs/Other.md) and [[Other|Other again]]\\n' +
-      '\\x60[not a link](Docs/Other.md)\\x60\\n' +
-      '\\x60\\x60\\x60md\\n[[Other]]\\n\\x60\\x60\\x60\\n' +
-      'Again [go](Docs/Other.md)\\n'],
-    ['Docs/Other.md', '# Other\\n\\n[[Home]]\\n']
+    ['Home.md', '# Home\n\n[Other](Docs/Other.md) and [[Other|Other again]]\n' +
+      '\x60[not a link](Docs/Other.md)\x60\n' +
+      '\x60\x60\x60md\n[[Other]]\n\x60\x60\x60\n' +
+      'Again [go](Docs/Other.md)\n'],
+    ['Docs/Other.md', '# Other\n\n[[Home]]\n']
   ]);
   const localBridge = {getFilePaths:()=>[...local.keys()],read:async p=>({text:local.get(p)})};
   const index=createIndex(localBridge);
