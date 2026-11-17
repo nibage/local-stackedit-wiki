@@ -62,11 +62,8 @@
   function restorePreviewPosition() {
     const position = previewPosition;
     if (!position || position.sequence !== renderSequence || position.userMoved) return;
-    if (position.lastApplied !== null &&
-        Math.abs(ui.preview.scrollTop - position.lastApplied) > 12) {
-      position.userMoved = true; // Respect deliberate preview scrolling.
-      return;
-    }
+    // Do not mistake layout-induced native scroll anchoring for a user scroll.
+    // Explicit wheel/pointer/touch/keyboard events below mark user movement.
     const maxTop = Math.max(0, ui.preview.scrollHeight - ui.preview.clientHeight);
     let nextTop = position.top;
     if (position.followBottom) {
@@ -102,7 +99,7 @@
       restorePreviewPosition();
     });
   }
-  for (const event of ['wheel', 'touchstart', 'pointerdown']) {
+  for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
     ui.preview.addEventListener(event, () => {
       if (previewPosition) previewPosition.userMoved = true;
     }, {passive:true});
@@ -487,7 +484,22 @@
           stats.failed ? `Render failures: ${stats.failed}` : ''];
         $('render-status').textContent = [baseStatus, ...parts].filter(Boolean).join(' · ');
       };
+      const imageDimensions = new Map();
+      ui.preview.querySelectorAll('img[data-local-source]').forEach(img => {
+        const rect = img.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0)
+          imageDimensions.set(img.dataset.localSource, {width:rect.width,height:rect.height});
+      });
       const result = window.LocalWikiRender.render(editor.getValue(), ui.preview, { onDiagramUpdate: report });
+      // Reserve the same geometry immediately, before browser image decode,
+      // so a new blank line cannot shift loaded images up or down.
+      result.imageNodes.forEach(img => {
+        const size = imageDimensions.get(img.dataset.localSource);
+        if (!size) return;
+        img.setAttribute('width', String(Math.round(size.width)));
+        img.setAttribute('height', String(Math.round(size.height)));
+        img.style.aspectRatio = size.width+' / '+size.height;
+      });
       if (previewPosition) {
         // MathJax, Mermaid, Canvas and local assets may change the DOM after
         // initial rendering. Coalesce these changes into one animation frame.
