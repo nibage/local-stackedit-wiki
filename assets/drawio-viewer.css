@@ -1,0 +1,31 @@
+/* Safe, offline diagrams.net XML preview: native DOM/SVG only. */
+.attachment-dialog.drawio-dialog-open { width:min(1120px,calc(100vw - 32px)); }
+.attachment-dialog.drawio-dialog-open .attachment-dialog-viewer { overflow:visible; max-height:none; }
+.wiki-drawio-viewer { width:100%; min-width:0; color:var(--text); }
+.drawio-summary { margin:0 0 8px; color:var(--muted); font-size:12px; }
+.drawio-tabs { display:flex; flex-wrap:wrap; gap:5px; margin:0 0 10px; }
+.drawio-tabs .drawio-tab { border:1px solid var(--line); border-radius:6px; padding:6px 10px; font-size:12px; }
+.drawio-tabs .drawio-tab[aria-pressed="true"] { background:color-mix(in srgb,var(--accent) 10%,var(--panel));
+  border-color:var(--accent); color:var(--accent); }
+.drawio-controls { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:0 0 8px; }
+.drawio-control { padding:6px 9px; font-size:12px; min-width:36px; border:1px solid var(--line); border-radius:6px; }
+.drawio-zoom { min-width:40px; text-align:center; color:var(--muted); font:12px ui-monospace,Consolas,monospace; }
+.drawio-hint { margin-left:auto; color:var(--muted); font-size:11px; }
+.drawio-warning { margin:6px 0; padding:7px 10px; font-size:12px; color:var(--text);
+  background:color-mix(in srgb,#c78b2d 10%,var(--panel));
+  border-left:3px solid #c78b2d; }
+.drawio-warning[hidden] { display:none; }
+.drawio-viewport { position:relative; overflow:hidden; height:min(56vh,620px); min-height:300px;
+  width:100%; border:1px solid var(--line); border-radius:9px; touch-action:none; cursor:grab;
+  background:var(--panel-alt); background-image:radial-gradient(circle,color-mix(in srgb,var(--muted) 25%,transparent) 1px,transparent 1px); background-size:20px 20px; }
+.drawio-viewport:active { cursor:grabbing; }
+.drawio-viewport:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.drawio-board { position:absolute; inset:0 auto auto 0; transform-origin:0 0; }
+.drawio-graph { display:block; overflow:visible; background:transparent; }
+.drawio-label { font-family:Arial,sans-serif; pointer-events:auto; user-select:text; }
+.drawio-edge-label { font-size:12px; fill:var(--text); stroke:var(--panel-alt); stroke-width:4px;
+  paint-order:stroke; pointer-events:none; }
+.drawio-loading,.drawio-error { font-size:12px; padding:12px; color:var(--muted); }
+.drawio-error { color:#b14e32; }
+@media(max-width:620px) { .drawio-viewport { min-height:260px; height:45vh; }
+  .drawio-hint { margin:0; width:100%; } }

@@ -6,7 +6,7 @@
   const ALLOWED_CODE_CLASSES = /^language-[a-z\d_+.-]+$/i;
   const MATH_MARKER = 'LOCALWIKIMATHBLOCK';
   const OBSIDIAN_IMAGE = /\.(?:png|jpe?g|gif|webp|bmp|avif|svg)$/i;
-  const OBSIDIAN_MEDIA = /\.(?:flac|m4a|mp3|ogg|wav|webm|3gp|mkv|mov|mp4|ogv|pdf|canvas|base)$/i;
+  const OBSIDIAN_MEDIA = /\.(?:flac|m4a|mp3|ogg|wav|webm|3gp|mkv|mov|mp4|ogv|pdf|canvas|base|drawio)$/i;
   const CALLOUT_LABELS = { note: 'Note', abstract: 'Summary', info: 'Info', todo: 'Todo', tip: 'Tip', success: 'Success', question: 'Question', warning: 'Warning', failure: 'Failure', danger: 'Danger', bug: 'Bug', example: 'Example', quote: 'Quote' }; 
   const tokenCounter = () => Math.floor(Math.random() * 1000000000).toString(36);
   function convertWikiLinks(line) {

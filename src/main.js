@@ -286,7 +286,7 @@
         const file = await bridge.readAsset(path);
         if (sequence !== renderSequence) return;
         const label = document.createElement('span'); label.className = 'attachment-label'; label.textContent = path;
-        if (types.kind(path) === 'canvas' || types.kind(path) === 'base') {
+        if (['canvas','base','drawio'].includes(types.kind(path))) {
           const link = document.createElement('button'); link.type = 'button'; link.textContent = 'Open structured file preview';
           link.addEventListener('click', () => void showAttachment(path));
           placeholder.replaceChildren(label, link);
@@ -450,6 +450,12 @@
       } catch (error) {
         output.textContent = 'Invalid JSON Canvas: ' + error.message + ' The file was not modified.';
       }
+    } else if (types.kind(path) === 'drawio') {
+      try {
+        output.append(window.LocalWikiDrawio.render(text));
+      } catch (error) {
+        output.textContent = 'Cannot preview draw.io: ' + error.message + ' The file was not modified.';
+      }
     } else {
       try {
         const allPaths = bridge.getFilePaths();
@@ -486,10 +492,12 @@
     const viewer = $('attachment-dialog-viewer');
     viewer.querySelector('.wiki-canvas-viewer')?.dispose?.();
     viewer.querySelector('.wiki-bases-viewer')?.dispose?.();
+    viewer.querySelector('.wiki-drawio-viewer')?.dispose?.();
     if (attachmentDialogURL) { URL.revokeObjectURL(attachmentDialogURL); attachmentDialogURL = null; }
     viewer.replaceChildren();
     dialog.classList.toggle('canvas-dialog-open', types.kind(path) === 'canvas');
     dialog.classList.toggle('bases-dialog-open', types.kind(path) === 'base');
+    dialog.classList.toggle('drawio-dialog-open', types.kind(path) === 'drawio');
     $('attachment-dialog-title').textContent = basename(path);
     $('attachment-dialog-path').textContent = path;
     $('attachment-insert').disabled = bridge.getMode() !== 'readwrite' || !activePath || operations.isBusy();
@@ -498,12 +506,13 @@
     try {
       const file = await bridge.readAsset(path);
       if (!dialog.open || $('attachment-dialog-path').textContent !== path) return;
-      if (types.kind(path) === 'canvas' || types.kind(path) === 'base') {
+      if (['canvas','base','drawio'].includes(types.kind(path))) {
         const node = await attachmentTextPreview(file, path);
         if (dialog.open && $('attachment-dialog-path').textContent === path) viewer.replaceChildren(node);
         else {
           node.querySelector('.wiki-canvas-viewer')?.dispose?.();
           node.querySelector('.wiki-bases-viewer')?.dispose?.();
+          node.querySelector('.wiki-drawio-viewer')?.dispose?.();
         }
         return;
       }
@@ -521,8 +530,9 @@
   $('attachment-dialog').addEventListener('close', () => {
     $('attachment-dialog-viewer').querySelector('.wiki-canvas-viewer')?.dispose?.();
     $('attachment-dialog-viewer').querySelector('.wiki-bases-viewer')?.dispose?.();
+    $('attachment-dialog-viewer').querySelector('.wiki-drawio-viewer')?.dispose?.();
     $('attachment-dialog-viewer').replaceChildren();
-    $('attachment-dialog').classList.remove('canvas-dialog-open', 'bases-dialog-open');
+    $('attachment-dialog').classList.remove('canvas-dialog-open', 'bases-dialog-open', 'drawio-dialog-open');
     if (attachmentDialogURL) { URL.revokeObjectURL(attachmentDialogURL); attachmentDialogURL = null; }
   });
   function showImage(path) {
@@ -641,7 +651,7 @@
       const open = expanded.has(node.path) || Boolean(needle);
       const glyph = document.createElement('span');
       glyph.className = 'glyph ' + (node.kind === 'directory' ? 'glyph-folder' : node.kind === 'file' ? 'glyph-note' : 'glyph-asset');
-      const icons = {image:'▧',audio:'♫',video:'▶',pdf:'▤',canvas:'◇',base:'▦'};
+      const icons = {image:'▧',audio:'♫',video:'▶',pdf:'▤',canvas:'◇',base:'▦',drawio:'⬡'};
       glyph.textContent = node.kind === 'directory' ? (open ? '▼' : '▶') : icons[node.kind] || '●';
       const label = document.createElement('span'); label.textContent = node.name;
       row.append(glyph, label);

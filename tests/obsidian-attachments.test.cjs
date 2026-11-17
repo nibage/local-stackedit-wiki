@@ -13,7 +13,7 @@ test('recognizes every accepted Obsidian attachment extension with case-insensit
     image: ['avif','bmp','gif','jpeg','jpg','png','svg','webp'],
     audio: ['flac','m4a','mp3','ogg','wav','3gp'],
     video: ['mkv','mov','mp4','ogv','webm'],
-    pdf: ['pdf'], canvas:['canvas'], base:['base']
+    pdf: ['pdf'], canvas:['canvas'], base:['base'], drawio:['drawio']
   };
   for (const [kind, extensions] of Object.entries(groups)) for (const ext of extensions) {
     assert.equal(types.kind('Wiki/File.' + ext.toUpperCase()), kind, ext);
@@ -30,7 +30,7 @@ test('File System Access scans all formats in readwrite and readonly fallback', 
   const context = { console, TextDecoder, TextEncoder, setTimeout }; context.window = context;
   vm.runInNewContext(src('attachment-types.js'), context);
   vm.runInNewContext(src('file-system.js'), context);
-  const names = ['One.md','pic.svg','music.flac','music.3gp','clip.mp4','clip.webm','doc.pdf','board.canvas','data.base'];
+  const names = ['One.md','pic.svg','music.flac','music.3gp','clip.mp4','clip.webm','doc.pdf','board.canvas','data.base','process.drawio'];
   const entries = names.map(name => ({ kind:'file', name, async getFile(){return {type:'',size:0,arrayBuffer:async()=>new Uint8Array().buffer}} }));
   const root = {kind:'directory',name:'Wiki',async *values(){yield* entries;}};
   context.showDirectoryPicker=async()=>root;
@@ -43,6 +43,7 @@ test('File System Access scans all formats in readwrite and readonly fallback', 
   assert.ok(kinds.some(([p,k])=>p==='clip.mp4'&&k==='video'));
   assert.ok(kinds.some(([p,k])=>p==='board.canvas'&&k==='canvas'));
   assert.ok(kinds.some(([p,k])=>p==='data.base'&&k==='base'));
+  assert.ok(kinds.some(([p,k])=>p==='process.drawio'&&k==='drawio'));
   const files = names.map(name => ({name,webkitRelativePath:'Wiki/'+name}));
   const fallback=context.LocalWikiFS.createBridge();
   fallback.openReadOnly(files);
@@ -58,6 +59,7 @@ test('Obsidian embeds convert media without changing note embeds or inline code'
   assert.match(r.convertEmbeds('![[dir\/movie.webm]]'),/obsidian-attachment:dir%2Fmovie.webm/);
   assert.match(r.convertEmbeds('![[pdf document.pdf]]'),/obsidian-attachment:pdf%20document.pdf/);
   assert.match(r.convertEmbeds('![[diagram.svg]]'),/obsidian-asset:diagram.svg/);
+  assert.match(r.convertEmbeds('![[process.drawio]]'),/obsidian-attachment:process.drawio/);
   assert.equal(r.convertEmbeds('![[other.md]]'),'![[other.md]]');
   const parsed=r.prepareSource('`![[audio.mp3]]`\n```md\n![[movie.mp4]]\n```\n![[audio.mp3]]');
   assert.match(parsed.prepared,/`!\[\[audio.mp3\]\]`/);
