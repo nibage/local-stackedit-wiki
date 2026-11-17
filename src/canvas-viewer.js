@@ -218,7 +218,7 @@
             picture.alt=path;picture.src=url;
             card.append(picture);
           }).catch(()=>{ /* a missing image is already represented by its file path */ });
-        } else if (path && /\\.(?:md|markdown)$/i.test(path) && typeof options.readNote === 'function') {
+        } else if (path && (/\.md$|\.markdown$/i.test(path)) && typeof options.readNote === 'function') {
           const excerpt=create('div','canvas-note-excerpt');
           excerpt.setAttribute('aria-label','Read-only Markdown note excerpt');
           excerpt.append(create('p','canvas-note-loading','Loading note excerpt…'));
