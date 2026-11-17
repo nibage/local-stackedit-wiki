@@ -221,3 +221,7 @@
 [data-theme] .file-actions #delete-toggle:not(.move-enabled):not(:focus-visible) {
   box-shadow:none !important;outline:none !important;
 }
+
+/* Prevent native scroll anchoring from competing with caret-aware preview
+   positioning while delayed Markdown/math/attachments grow the layout. */
+#preview.markdown-preview { overflow-anchor:none; }
