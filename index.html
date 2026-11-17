@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="assets/canvas-viewer.css">
   <link rel="stylesheet" href="assets/bases-viewer.css">
   <link rel="stylesheet" href="assets/drawio-viewer.css">
+  <link rel="stylesheet" href="assets/preview-export.css">
   <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css">
   <link rel="stylesheet" href="vendor/codemirror/addon/dialog/dialog.css">
   <script>
@@ -83,9 +84,9 @@
         <div class="editor-actions">
           <span id="mode" class="mode">Waiting for folder</span>
           <div class="view-switch" role="group" aria-label="Editor layout">
-            <button id="view-edit" type="button" data-view="edit">Editor</button>
-            <button id="view-split" type="button" data-view="split" class="active">Side by side</button>
-            <button id="view-preview" type="button" data-view="preview">Preview</button>
+            <button id="view-edit" type="button" data-view="edit" aria-pressed="false">Editor</button>
+            <button id="view-split" type="button" data-view="split" class="active" aria-pressed="true">Side by side</button>
+            <button id="view-preview" type="button" data-view="preview" aria-pressed="false">Preview</button>
           </div>
           <button id="renderer-check" type="button" title="Offline library status and diagnostics">Status</button>
           <button id="refresh" type="button" disabled title="Refresh folder tree and current note from disk; unsaved changes require confirmation">Refresh</button>
@@ -104,7 +105,7 @@
           <button type="button" data-format="undo" title="Undo (Ctrl+Z)">↶</button>
           <button type="button" data-format="redo" title="Redo (Ctrl+Y)">↷</button>
         </div><textarea id="editor" spellcheck="false" disabled placeholder="Choose a note on the left.&#10;&#10;Saved changes are written to its original .md file."></textarea></section>
-        <section class="pane preview-pane" aria-label="Live Markdown preview"><div class="pane-title"><span>Live preview</span><span id="render-status">Offline</span></div><div id="preview" class="markdown-preview"><div class="preview-placeholder"><h2>Welcome to your local wiki</h2><p>Markdown and math will appear here when you open a note.</p><p>Mermaid and ABC notation work offline when the libraries are bundled.</p></div></div></section>
+        <section class="pane preview-pane" aria-label="Live Markdown preview"><div class="pane-title preview-title"><span>Live preview</span><div class="preview-title-tools"><span id="render-status">Offline</span><div class="preview-export-menu"><button id="preview-export-toggle" type="button" class="preview-export-toggle" aria-haspopup="menu" aria-expanded="false" aria-controls="preview-export-options" aria-label="Export preview" title="Export the currently rendered preview" disabled>Export <span aria-hidden="true">▾</span></button><div id="preview-export-options" class="preview-export-options" role="menu" aria-label="Export preview" hidden><button id="preview-export-pdf" type="button" role="menuitem">PDF…</button><button id="preview-export-html" type="button" role="menuitem">HTML</button></div></div></div></div><div id="preview" class="markdown-preview"><div class="preview-placeholder"><h2>Welcome to your local wiki</h2><p>Markdown and math will appear here when you open a note.</p><p>Mermaid and ABC notation work offline when the libraries are bundled.</p></div></div></section>
       </div>
       <footer class="statusbar"><span id="save-status">No file</span><span id="stats">0 characters</span></footer>
     </main>
@@ -184,6 +185,7 @@
 <script src="src/attachment-types.js"></script>
 <script src="src/file-system.js"></script>
 <script src="src/renderer.js"></script>
+<script src="src/preview-export.js"></script>
 <script src="src/canvas-viewer.js"></script>
 <script src="src/canvas-editor.js"></script>
 <script src="src/bases-viewer.js"></script>
