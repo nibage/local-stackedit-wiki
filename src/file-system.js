@@ -218,24 +218,24 @@
     }
     // Structured Canvas writes are explicitly opt-in. Unknown attachment types stay read-only.
     async function readAssetSnapshot(path) {
-      if (!/\.canvas$/i.test(path)) throw new Error('Only JSON Canvas assets can be edited here.');
+      if (!/\.(?:canvas|base)$/i.test(path)) throw new Error('Only Canvas and Bases assets can be edited here.');
       const handle = assetHandles.get(path);
       if (!handle) throw new Error('Canvas not found in the selected wiki.');
       const file = typeof handle.getFile === 'function' ? await handle.getFile() : handle;
-      if (file.size > 2 * 1024 * 1024) throw new Error('Canvas is larger than the 2 MB editing limit.');
+      if (file.size > 2 * 1024 * 1024) throw new Error('Structured file is larger than the 2 MB editing limit.');
       const {text,hasBOM,fingerprint} = await fileSnapshot(file);
       return {text,hasBOM,fingerprint};
     }
     async function writeAsset(path, text, expectedFingerprint) {
       if (mode !== 'readwrite') throw new Error('The folder is open read-only.');
-      if (!/\.canvas$/i.test(path)) throw new Error('This editor only writes .canvas files.');
+      if (!/\.(?:canvas|base)$/i.test(path)) throw new Error('This editor only writes .canvas and .base files.');
       if (typeof text !== 'string' || new TextEncoder().encode(text).length > 2 * 1024 * 1024)
-        throw new Error('Canvas exceeds the 2 MB write limit.');
+        throw new Error('Structured file exceeds the 2 MB write limit.');
       const handle = assetHandles.get(path);
-      if (!handle || typeof handle.createWritable !== 'function') throw new Error('Canvas write permission is missing.');
+      if (!handle || typeof handle.createWritable !== 'function') throw new Error('Structured file write permission is missing.');
       const current = await handle.getFile();
       if (expectedFingerprint !== (await fileSnapshot(current)).fingerprint) {
-        const error = new Error('The Canvas file changed outside the wiki. Nothing was overwritten.');
+        const error = new Error('The structured file changed outside the wiki. Nothing was overwritten.');
         error.code = 'EXTERNAL_CHANGE';
         throw error;
       }
