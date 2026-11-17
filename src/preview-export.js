@@ -68,9 +68,56 @@
       reader.readAsDataURL(blob);
     });
   }
+  async function lightThemeSnapshot(preview) {
+    // Create an off-screen same-origin document with the actual light-theme
+    // stylesheets. Never change the application's selected theme or print dark
+    // inline CSS values. No scripts are copied, no external hosts are allowed.
+    const frame=document.createElement('iframe');
+    frame.setAttribute('aria-hidden','true');
+    frame.tabIndex=-1;
+    frame.style.cssText='position:fixed;left:-200vw;top:0;visibility:hidden;'+
+      'pointer-events:none;border:0;height:30px;width:'+
+      Math.max(320,preview.clientWidth||780)+'px;';
+    document.body.append(frame);
+    try {
+      const doc=frame.contentDocument;
+      doc.documentElement.dataset.theme='light';
+      const pending=[];
+      for(const original of document.querySelectorAll('link[rel="stylesheet"],style')) {
+        if (original.localName==='link') {
+          let uri;
+          try {uri=new URL(original.href,document.baseURI);} catch(_) {continue;}
+          const allowed=uri.protocol==='file:' && location.protocol==='file:' ||
+            uri.origin===location.origin && /^https?:$/.test(uri.protocol);
+          if (!allowed) continue;
+          const sheet=doc.createElement('link');
+          sheet.rel='stylesheet';sheet.href=uri.href;
+          pending.push(new Promise(resolve=>{
+            sheet.addEventListener('load',resolve,{once:true});
+            sheet.addEventListener('error',resolve,{once:true});
+          }));
+          doc.head.append(sheet);
+        } else {
+          const style=doc.createElement('style');
+          style.textContent=original.textContent;
+          doc.head.append(style);
+        }
+      }
+      const wrapper=doc.createElement('section');
+      wrapper.className='pane preview-pane';
+      const light=doc.importNode(preview,true);
+      wrapper.append(light);doc.body.append(wrapper);
+      // CSS is loaded from the same offline bundle, not the network.
+      await Promise.race([Promise.all(pending),new Promise(resolve=>setTimeout(resolve,2500))]);
+      return {node:light,frame};
+    } catch(error) {
+      frame.remove();
+      throw error;
+    }
+  }
   function copyStyle(source,target) {
-    if (!(source instanceof Element) || !(target instanceof Element)) return;
-    const css=getComputedStyle(source);
+    if (!source || !target || source.nodeType!==1 || target.nodeType!==1) return;
+    const css=source.ownerDocument.defaultView.getComputedStyle(source);
     for(const name of STYLES) {
       const value=css.getPropertyValue(name);
       if (!value || value==='initial' || value==='normal' && name==='background-image') continue;
@@ -122,10 +169,13 @@
       copy.removeAttribute('preload');
     }
   }
-  async function build(preview,{title='Wiki preview'}={}) {
+  async function build(preview,{title='Wiki preview',theme='current'}={}) {
     if (!preview || !preview.isConnected) throw new Error('No rendered preview is available.');
-    const cloned=preview.cloneNode(true);
-    const originals=[preview,...preview.querySelectorAll('*')];
+    const light=theme==='light'?await lightThemeSnapshot(preview):null;
+    const source=light?.node||preview;
+    try {
+    const cloned=source.cloneNode(true);
+    const originals=[source,...source.querySelectorAll('*')];
     const copies=[cloned,...cloned.querySelectorAll('*')];
     const budget={bytes:0},cache=new Map();
     for(let i=0;i<originals.length;i++){
@@ -149,8 +199,9 @@
           element.removeAttribute(attribute.name);
       });
     }
-    const color=getComputedStyle(preview).color || '#222';
-    const background=getComputedStyle(preview).backgroundColor || '#fff';
+    const renderedStyle=source.ownerDocument.defaultView.getComputedStyle(source);
+    const color=renderedStyle.color || '#222';
+    const background=renderedStyle.backgroundColor || '#fff';
     const width=Math.max(320,Math.round(preview.clientWidth || preview.getBoundingClientRect().width || 780));
     const name=validTitle(title);
     // Inline style snapshot is self-contained; no libraries, fonts, network or
@@ -178,6 +229,7 @@
       '<main class="wiki-export-preview markdown-preview" style="'+escapeHtml(cloned.style.cssText)+'">'+cloned.innerHTML+
       '</main>\n</body></html>';
     return html;
+    } finally {if (light) light.frame.remove();}
   }
   function waitForReady(preview,isPending=()=>false) {
     return new Promise((resolve,reject)=>{
