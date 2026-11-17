@@ -98,3 +98,18 @@
   .canvas-editor-field { flex-basis:calc(50% - 8px); }
   .canvas-editor-board .canvas-viewport { height:40vh; }
 }
+
+/* Keep resize handles within the owning card stacking context. They should
+   appear on hover/selection only, never float on top of other Canvas nodes. */
+.canvas-editor-board .canvas-node {isolation:isolate;z-index:1;}
+.canvas-editor-board .canvas-node[data-kind="group"] {z-index:0;}
+.canvas-editor-board .canvas-node-selected {z-index:2;}
+.canvas-editor-board .canvas-node .canvas-editor-resize {
+  z-index:1;opacity:0;pointer-events:none;
+  transition:opacity .12s ease;
+}
+.canvas-editor-board .canvas-node:hover .canvas-editor-resize,
+.canvas-editor-board .canvas-node:focus-within .canvas-editor-resize,
+.canvas-editor-board .canvas-node-selected .canvas-editor-resize {
+  opacity:1;pointer-events:auto;
+}
