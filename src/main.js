@@ -747,6 +747,8 @@
     if (types.isImage(path)) { showImage(path); return; }
     activeCanvasEditor?.dispose?.();
     activeCanvasEditor = null;
+    $('attachment-dialog-canvas-info').replaceChildren();
+    $('attachment-dialog-canvas-info').hidden=true;
     activeBaseEditor?.dispose?.();
     activeBaseEditor = null;
     const dialog = $('attachment-dialog');
@@ -761,6 +763,8 @@
     dialog.classList.toggle('drawio-dialog-open', types.kind(path) === 'drawio');
     $('attachment-dialog-title').textContent = basename(path);
     $('attachment-dialog-path').textContent = path;
+    const canvasInfo=$('attachment-dialog-canvas-info');
+    canvasInfo.replaceChildren();canvasInfo.hidden=true;
     $('attachment-insert').disabled = bridge.getMode() !== 'readwrite' || !activePath || operations.isBusy();
     $('attachment-insert').onclick = () => { if (insertAttachment(path)) dialog.close(); };
     const editCanvas = $('attachment-edit-canvas');
@@ -793,6 +797,7 @@
           onPreview:async () => {
             activeCanvasEditor?.dispose?.();
             activeCanvasEditor=null;
+            canvasInfo.replaceChildren();canvasInfo.hidden=true;
             const file=await bridge.readAsset(path);
             const display=await attachmentTextPreview(file,path);
             if (dialog.open && $('attachment-dialog-path').textContent===path) {
@@ -805,6 +810,8 @@
         viewer.querySelector('.wiki-canvas-viewer')?.dispose?.();
         activeCanvasEditor=canvasEditor;
         viewer.replaceChildren(canvasEditor.root);
+        canvasInfo.replaceChildren(canvasEditor.meta);
+        canvasInfo.hidden=false;
         editCanvas.hidden=true;
       } catch (error) {
         viewer.textContent='Cannot edit Canvas: '+error.message+' The file has not been changed.';

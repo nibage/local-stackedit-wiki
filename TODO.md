@@ -169,3 +169,11 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Add live Markdown source bytes/words/lines/cursor and HTML markup characters/rendered text words/paragraphs to compact bottom status bar.
 - [ ] Review very narrow-screen top-header wrapping and visually verify typography against an actual exported StackEdit HTML stylesheet when available (not present with current screenshots/PDF).
 - [ ] Canvas editor spacing to be reviewed later after user collects examples.
+
+## Canvas edit-mode UI polish (November 2026)
+
+- [x] Consolidate Canvas path, saved/unsaved text, card/connection counts and gesture help in one metadata row.
+- [x] Combine creation, Connect, Undo, Redo, Save, Preview and zoom controls on one line; show back/undo/redo/save icons.
+- [x] Replace tall dirty-close prompt with right-aligned **Discard changes / Keep editing** buttons on the same toolbar, maintaining save protection.
+- [x] Replace wide/tall scrolling inspector with compact x/y/width/height, property/color/delete rows and separate adjacent connections controls.
+- [x] Clicking the currently selected Canvas card again clears selection, including keyboard activation; empty-space click also deselects.

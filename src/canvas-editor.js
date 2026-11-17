@@ -74,21 +74,54 @@
     const root = make('section','canvas-editor');
     root.tabIndex = -1;
     const toolbar = make('div','canvas-editor-toolbar');
+    const actions = make('div','canvas-editor-actions');
+    const zoomControls = make('div','canvas-editor-zoom');
     const board = make('div','canvas-editor-board');
     const inspector = make('div','canvas-editor-inspector');
-    const message = make('p','canvas-editor-message');
+    const meta = make('div','canvas-editor-meta');
+    const message = make('span','canvas-editor-message');
+    const summary = make('span','canvas-editor-info-summary');
+    const hint = make('span','canvas-editor-info-hint');
     message.setAttribute('role','status');
+    meta.append(message,summary,hint);
     const warning = make('div','canvas-editor-confirm');
     warning.hidden = true;
-    root.append(toolbar, message, warning, board, inspector);
+    toolbar.append(actions,zoomControls,warning);
+    root.append(toolbar,board,inspector);
 
     function status(text) { message.textContent = text; }
     function button(label, callback) {
       const b = make('button','canvas-control',label);
       b.type = 'button';
       b.addEventListener('click',callback);
-      toolbar.append(b);
+      actions.append(b);
       return b;
+    }
+    function iconButton(label,name,callback) {
+      const control=button(label,callback);
+      control.classList.add('canvas-icon-button');
+      const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('viewBox','0 0 24 24');
+      svg.setAttribute('aria-hidden','true');
+      svg.setAttribute('fill','none');
+      svg.setAttribute('stroke','currentColor');
+      svg.setAttribute('stroke-width','2');
+      svg.setAttribute('stroke-linecap','round');
+      svg.setAttribute('stroke-linejoin','round');
+      const paths={
+        undo:['M3 7v6h6','M3 13a9 9 0 1 0 2.6-6.4L3 9'],
+        redo:['M21 7v6h-6','M21 13a9 9 0 1 1-2.6-6.4L21 9'],
+        save:['M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z',
+          'M17 21v-8H7v8','M7 3v5h8'],
+        back:['M12 19l-7-7 7-7','M5 12h14']
+      };
+      for (const d of paths[name]||[]) {
+        const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d',d);
+        svg.append(path);
+      }
+      control.prepend(svg);
+      return control;
     }
     function randomId(prefix, array) {
       let value;
@@ -106,7 +139,11 @@
       } catch (error) { status(error.message); }
     }
     function question(messageText, action) {
-      warning.replaceChildren(make('span','',messageText));
+      // Inline confirmation replaces the zoom controls; do not add a new
+      // message row or move the centered dialog while a draft is unsaved.
+      warning.replaceChildren();
+      warning.setAttribute('role','group');
+      warning.setAttribute('aria-label',messageText);
       const confirm = make('button','canvas-control','Discard changes');
       const cancel = make('button','canvas-control','Keep editing');
       confirm.type = cancel.type = 'button';
@@ -137,9 +174,9 @@
       connectFrom = selected;
       status('Click the target card to create a connection.');
     });
-    const undo = button('Undo',() => { if (draft.undo()) render(); });
-    const redo = button('Redo',() => { if (draft.redo()) render(); });
-    const save = button('Save canvas',async () => {
+    const undo = iconButton('Undo','undo',() => { if (draft.undo()) render(); });
+    const redo = iconButton('Redo','redo',() => { if (draft.redo()) render(); });
+    const save = iconButton('Save canvas','save',async () => {
       if (saving || !draft.dirty) return;
       saving = true; save.disabled = true;
       status('Checking source file and saving…');
@@ -155,7 +192,7 @@
           'External modification detected. Reload the file before retrying. ' : 'Save failed: ') + error.message);
       } finally { saving = false; refreshButtons(); }
     });
-    button('Preview',leave);
+    iconButton('Preview','back',leave);
 
     function refreshButtons() {
       undo.disabled = !draft.canUndo || saving;
@@ -185,66 +222,101 @@
       const el = make(multiline ? 'textarea':'input');
       el.value = value || '';
       if (!multiline) el.type = 'text';
-      if (multiline) el.rows = 4;
+      if (multiline) el.rows = 2;
       el.addEventListener('change',() => callback(el.value));
       wrap.append(el);
       container.append(wrap);
+      return wrap;
     }
     function numberField(container,node,name) {
-      field(container,name,String(node[name]),value => {
+      const wrap=field(container,name,String(node[name]),value => {
         const num = Number(value);
         change(doc => {doc.nodes.find(n=>n.id===node.id)[name] = num;});
       });
+      wrap.classList.add('canvas-prop-'+name);
+      const input=wrap.querySelector('input');
+      input.type='number';input.step='1';
+      input.title=name+' (Canvas units)';
     }
     function renderInspector() {
       inspector.replaceChildren();
-      const data = draft.data;
-      const node = data.nodes.find(n=>n.id===selected);
+      const data=draft.data;
+      const node=data.nodes.find(n=>n.id===selected);
+      const properties=make('section','canvas-editor-inspector-properties');
+      const heading=make('strong','canvas-editor-inspector-heading',
+        node?node.type.toUpperCase()+':':'Card:');
+      if (node) heading.title=node.id;
+      properties.append(heading);
       if (!node) {
-        inspector.append(make('p','canvas-summary','Select a card to edit its properties, drag it to move, or drag its corner to resize.'));
+        properties.append(make('p','canvas-editor-unselected',
+          'Select a card to edit · click it again to unselect'));
       } else {
-        inspector.append(make('strong','',node.type.toUpperCase() + ' · ' + node.id));
-        for (const name of ['x','y','width','height']) numberField(inspector,node,name);
-        const property = {text:'text',file:'file',link:'url',group:'label'}[node.type];
-        field(inspector,property,node[property],value => {
+        const grid=make('div','canvas-editor-properties-grid'+
+          (node.type==='text'?' canvas-properties-multiline':''));
+        // Fixed two-row geometry grid. Every field uses a short, horizontal
+        // label/input pair instead of four full-width vertically stacked fields.
+        for (const name of ['x','width','y','height']) numberField(grid,node,name);
+        const property={text:'text',file:'file',link:'url',group:'label'}[node.type];
+        const content=field(grid,property,node[property],value=>{
           if (property==='file' && value && !global.LocalWikiCanvas.canonicalPath(value)) {
             status('File paths must stay inside the selected wiki folder.'); return;
           }
           change(doc=>{doc.nodes.find(n=>n.id===node.id)[property]=value;});
         },property==='text');
-        field(inspector,'Color (1–6 or #RRGGBB)',node.color || '',value => {
+        content.classList.add('canvas-prop-content');
+        const color=field(grid,'color',node.color||'',value=>{
           if (value && !/^(?:[1-6]|#[0-9a-f]{3}|#[0-9a-f]{6})$/i.test(value)) {
             status('Use preset 1–6 or a hex color.'); return;
           }
-          change(doc=>{const n=doc.nodes.find(n=>n.id===node.id); if (value) n.color=value; else delete n.color;});
-        });
-        const remove = make('button','canvas-control','Delete card');
-        remove.type = 'button';
-        remove.onclick = () => {
-          const id = selected;
-          change(doc => {
-            doc.nodes = doc.nodes.filter(n=>n.id!==id);
-            doc.edges = doc.edges.filter(e=>e.fromNode!==id && e.toNode!==id);
+          change(doc=>{
+            const target=doc.nodes.find(n=>n.id===node.id);
+            if(value)target.color=value;else delete target.color;
           });
-          selected = null;
+        });
+        color.classList.add('canvas-prop-color');
+        color.querySelector('input').title='Preset 1–6 or a hex color';
+        const remove=make('button','canvas-control canvas-editor-delete','Delete card');
+        remove.type='button';
+        remove.onclick=()=>{
+          const id=selected;
+          change(doc=>{
+            doc.nodes=doc.nodes.filter(n=>n.id!==id);
+            doc.edges=doc.edges.filter(edge=>edge.fromNode!==id && edge.toNode!==id);
+          });
+          selected=null;
           render();
         };
-        inspector.append(remove);
+        grid.append(remove);
+        properties.append(grid);
       }
+      const connections=make('section','canvas-editor-inspector-connections');
+      connections.append(make('strong','canvas-editor-inspector-heading','Connections:'));
+      const row=make('div','canvas-editor-connection-row');
       if (data.edges.length) {
-        const edgeTitle = make('strong','','Connections');
-        inspector.append(edgeTitle);
-        const select = make('select','canvas-editor-edge-list');
-        data.edges.forEach((edge,index) => {
-          const item = make('option','',edge.fromNode+' → '+edge.toNode);
-          item.value = String(index);
+        const nodeLabel=id=>{
+          const item=data.nodes.find(n=>n.id===id);
+          if (!item) return id;
+          const title={text:item.text,file:item.file,link:item.url,group:item.label}[item.type];
+          const first=typeof title==='string'?title.split('\n')[0].trim():'';
+          return (first||item.type).slice(0,28);
+        };
+        const select=make('select','canvas-editor-edge-list');
+        select.setAttribute('aria-label','Choose a Canvas connection');
+        data.edges.forEach((edge,index)=>{
+          const item=make('option','',nodeLabel(edge.fromNode)+' → '+nodeLabel(edge.toNode));
+          item.value=String(index);
+          item.title=edge.fromNode+' → '+edge.toNode;
           select.append(item);
         });
-        const removeEdge = make('button','canvas-control','Delete connection');
+        const removeEdge=make('button','canvas-control','Delete connection');
         removeEdge.type='button';
         removeEdge.onclick=()=>change(doc=>{doc.edges.splice(Number(select.value),1);});
-        inspector.append(select,removeEdge);
+        row.append(select,removeEdge);
+      } else {
+        row.append(make('span','canvas-editor-no-connections','No connections'));
       }
+      connections.append(row);
+      inspector.append(properties,connections);
     }
 
     function transformScale(viewer) {
@@ -261,10 +333,15 @@
         readImage:options.readImage,readNote:options.readNote,camera
       });
       activeViewer=viewer;
-      viewer.querySelector('.canvas-summary').textContent =
-        'JSON Canvas editor · ' + data.nodes.length + ' cards · ' + data.edges.length + ' connections';
-      const hint=viewer.querySelector('.canvas-hint');
-      if (hint) hint.textContent='Drag cards to move · corner to resize · Ctrl+wheel to zoom';
+      // Put all explanatory text alongside "Attachments/example.canvas", not
+      // in extra rows above the viewport.
+      summary.textContent='JSON Canvas editor · '+data.nodes.length+' cards · '+
+        data.edges.length+' connections';
+      hint.textContent='Drag cards to move · corner to resize · Ctrl+wheel to zoom';
+      viewer.querySelector('.canvas-summary')?.remove();
+      const zoomBar=viewer.querySelector('.canvas-controls');
+      zoomBar.querySelector('.canvas-hint')?.remove();
+      zoomControls.replaceChildren(zoomBar);
       const rendered=global.LocalWikiCanvas.cleanGraph(data).nodes;
       viewer.querySelectorAll('.canvas-node').forEach((card,index)=>{
         const node=rendered[index]; if (!node) return;
@@ -273,15 +350,28 @@
         card.style.pointerEvents='auto';
         card.style.cursor='move';
         card.classList.toggle('canvas-node-selected',selected===node.id);
+        let suppressClick=false;
+        const updateSelected=()=>{
+          viewer.querySelectorAll('.canvas-node').forEach(el=>
+            el.classList.toggle('canvas-node-selected',el.dataset.nodeId===selected));
+          renderInspector();
+        };
         card.addEventListener('click',event=>{
           event.stopPropagation();
+          if(event.target.closest('.canvas-editor-resize'))return;
+          // Pointer selection happens on release. Do not toggle it a second
+          // time in the click synthesized after pointerup/pointer capture.
+          if(suppressClick){suppressClick=false;return;}
           if (connectFrom) {
             const from=connectFrom;connectFrom=null;
             if (from!==node.id) change(doc=>{
               doc.edges.push({id:randomId('edge',doc.edges),fromNode:from,toNode:node.id,fromSide:'right',toSide:'left',toEnd:'arrow'});
             });
             else status('Choose a different target card.');
-          } else {selected=node.id; renderInspector(); viewer.querySelectorAll('.canvas-node').forEach(el=>el.classList.toggle('canvas-node-selected',el.dataset.nodeId===selected));}
+          } else {
+            selected=selected===node.id?null:node.id;
+            updateSelected();
+          }
         });
         card.addEventListener('keydown',event=>{
           if (event.key==='Enter' || event.key===' ') {event.preventDefault();card.click();}
@@ -292,12 +382,13 @@
         const begin=(event,kind)=>{
           if (event.button!==0 || saving) return;
           event.preventDefault();event.stopPropagation();
+          const initiallySelected=selected===node.id;
+          suppressClick=false;
           selected=node.id;
-          viewer.querySelectorAll('.canvas-node').forEach(el=>
-            el.classList.toggle('canvas-node-selected',el.dataset.nodeId===selected));
-          renderInspector();
+          updateSelected();
           const current=data.nodes.find(n=>n.id===node.id);
           drag={pointer:event.pointerId,element:event.currentTarget,kind,id:node.id,
+            initiallySelected,
             startX:event.clientX,startY:event.clientY,x:current.x,y:current.y,
             width:current.width,height:current.height,scale:transformScale(viewer)};
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -332,7 +423,18 @@
           }
           const dx=Math.round((event.clientX-last.startX)/last.scale);
           const dy=Math.round((event.clientY-last.startY)/last.scale);
-          if (!dx && !dy) {renderInspector();return;}
+          if (!dx && !dy) {
+            // Clicking the currently selected card unselects it; pointer
+            // selection on another card still works and a grip click never
+            // changes selection. Keyboard Enter/Space follow the click path.
+            if(last.kind==='move' && !connectFrom) {
+              selected=last.initiallySelected?null:last.id;
+              suppressClick=true;
+            }
+            updateSelected();
+            return;
+          }
+          suppressClick=true;
           change(doc=>{
             const n=doc.nodes.find(n=>n.id===last.id);
             if (last.kind==='move') {
@@ -352,6 +454,13 @@
         resize.addEventListener('pointercancel',finish);
       });
       board.replaceChildren(viewer);
+      const viewport=viewer.querySelector('.canvas-viewport');
+      viewport.addEventListener('click',event=>{
+        if(event.target.closest('.canvas-node'))return;
+        if(!connectFrom&&selected){selected=null;renderInspector();
+          viewer.querySelectorAll('.canvas-node').forEach(card=>
+            card.classList.remove('canvas-node-selected'));}
+      });
       renderInspector();
       refreshButtons();
     }
@@ -364,6 +473,7 @@
     render();
     return {
       root,
+      meta,
       get isDirty() {return draft.dirty;},
       requestClose:askClose,
       dispose(){disposed=true;activeViewer?.dispose?.();}
