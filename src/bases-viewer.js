@@ -146,6 +146,9 @@
       if (tagged) return row => row.tags.has(tagged[2].replace(/^#/,'').toLowerCase());
       const c = /^((?:(?:note|file)\.)?[a-zA-Z_][\w.-]*)\s*(===|==|!=|>=|<=|>|<)\s*(.+)$/.exec(source);
       if (c) {
+        if (c[1].startsWith('formula.') ||
+            (c[1].startsWith('file.') && !['file.name','file.path','file.folder','file.ext'].includes(c[1])))
+          throw new Error('Unsupported Bases filter property: ' + c[1]);
         const right = scalar(c[3]);
         if (!['string','number','boolean'].includes(typeof right))
           throw new Error('Unsupported filter value: ' + c[3]);
