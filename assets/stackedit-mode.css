@@ -62,6 +62,21 @@
 .format-toolbar button[data-asset-kind="pdf"] {font-size:10px;letter-spacing:-.04em;}
 .format-toolbar button[disabled] {opacity:.38;cursor:default;}
 .format-toolbar .toolbar-divider {flex:0 0 1px;}
+
+/* Asset buttons have data-asset-kind instead of data-format; override older
+   generic button selectors so all toolbar icons share the same flat style. */
+:root[data-theme] .format-toolbar button[data-asset-kind] {
+  border:0!important;background:transparent!important;color:var(--text)!important;
+}
+:root[data-theme="dark"] .format-toolbar button[data-asset-kind] {color:#cadcf0!important;}
+:root[data-theme="stackedit"] .format-toolbar button[data-asset-kind] {color:#ddd!important;}
+:root[data-theme] .format-toolbar button[data-asset-kind]:hover:not(:disabled) {
+  background:color-mix(in srgb,var(--accent) 12%,var(--panel))!important;
+}
+:root[data-theme="stackedit"] .format-toolbar button[data-asset-kind]:hover:not(:disabled) {
+  background:#505050!important;color:white!important;
+}
+
 [data-theme="stackedit"] .format-toolbar {
   background:#333;color:#e0e0e0;border-bottom:1px solid #505050;
 }
