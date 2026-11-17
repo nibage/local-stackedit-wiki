@@ -39,6 +39,10 @@
 .tree-expand-controls button { flex:1;min-width:0;padding:6px 4px;font-size:11px;white-space:nowrap; }
 [data-theme] .tree-expand-controls button:focus-visible { outline:2px solid var(--accent);outline-offset:2px; }
 
+/* Reserve enough header height for a two-line notice, so changing messages
+   never shifts the workspace/tree buttons by a line. */
+.topbar { min-height:78px; }
+
 /* Notices share the logo/header row instead of covering the editor action buttons.
    The brand expands into available flex space; messages truncate in narrow windows. */
 .topbar .brand { flex:1 1 230px; min-width:0; }
