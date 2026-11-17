@@ -129,3 +129,12 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Chromium smoke and unit tests for filtering, resizing and source immutability.
 - [x] Source-preserving `.base` YAML edit mode with explicit Save/Discard, safe subset validation and fingerprint checks.
 - [ ] Next: GUI persistence of view configuration and filters; separately guarded per-note Markdown frontmatter property editing. No automatic bulk rewriting.
+
+## Preview export and layout selection (November 2026)
+
+- [x] Highlight the active Editor / Side by side / Preview button in green, including accessible pressed state.
+- [x] Compact Export ▾ dropdown anchored to the right side of the live preview pane header.
+- [x] Self-contained HTML export of already-rendered DOM with inline computed styles, local image/media data URLs and SVG diagrams; no network calls.
+- [x] PDF print-preview route based on that same HTML, with background-color preservation and browser Save as PDF (no extra PDF library or cloud dependency).
+- [x] Chromium regression for layout selection, HTML file content, offline reopening and PDF print document.
+- [ ] Further fidelity audit for very complex MathJax/Canvas/Bases structures and optional print pagination controls; browser-native PDF/embedded media plugins can vary.
