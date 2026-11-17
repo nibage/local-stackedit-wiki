@@ -17,7 +17,7 @@ test('basic filters, tags, folders and comparisons',()=>{
  const a=api(),row=a.fileData('Attachments/Book.md',{status:'done',rating:8,tags:['books']});
  assert.equal(a.filterFunction({and:['file.ext == "md"','note.rating >= 7','file.inFolder("Attachments")']})(row),true);
  assert.equal(a.filterFunction({or:['status == "todo"','file.hasTag("books")']})(row),true);
- assert.equal(a.filterFunction({not:['status == "done"]})(row),false);
+ assert.equal(a.filterFunction({not:['status == "done"']})(row),false);
  assert.throws(()=>a.filterFunction('formula.custom > 5'),/Unsupported/);
  assert.throws(()=>a.filterFunction('file.hasLink("secret")'),/Unsupported/);
 });
