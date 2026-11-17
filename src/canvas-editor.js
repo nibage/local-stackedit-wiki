@@ -254,10 +254,11 @@
     }
     function render() {
       if (disposed) return;
+      const camera=activeViewer?.getCamera?.()||null;
       activeViewer?.dispose?.();
       const data=draft.data;
       const viewer=global.LocalWikiCanvas.render(data, {
-        readImage:options.readImage,readNote:options.readNote
+        readImage:options.readImage,readNote:options.readNote,camera
       });
       activeViewer=viewer;
       viewer.querySelector('.canvas-summary').textContent =
@@ -292,6 +293,9 @@
           if (event.button!==0 || saving) return;
           event.preventDefault();event.stopPropagation();
           selected=node.id;
+          viewer.querySelectorAll('.canvas-node').forEach(el=>
+            el.classList.toggle('canvas-node-selected',el.dataset.nodeId===selected));
+          renderInspector();
           const current=data.nodes.find(n=>n.id===node.id);
           drag={pointer:event.pointerId,element:event.currentTarget,kind,id:node.id,
             startX:event.clientX,startY:event.clientY,x:current.x,y:current.y,
@@ -305,17 +309,27 @@
           event.stopPropagation();
           const dx=(event.clientX-drag.startX)/drag.scale,dy=(event.clientY-drag.startY)/drag.scale;
           if (drag.kind==='move') {
-            card.style.left=(node.x + Math.round(dx))+'px';
-            card.style.top=(node.y + Math.round(dy))+'px';
+            viewer.updateNodeGeometry(node.id,{
+              x:Math.max(-1000000,Math.min(1000000,drag.x+Math.round(dx))),
+              y:Math.max(-1000000,Math.min(1000000,drag.y+Math.round(dy)))
+            });
           } else {
-            card.style.width=Math.max(45,drag.width+Math.round(dx))+'px';
-            card.style.height=Math.max(35,drag.height+Math.round(dy))+'px';
+            viewer.updateNodeGeometry(node.id,{
+              width:Math.max(45,Math.min(1000000,drag.width+Math.round(dx))),
+              height:Math.max(35,Math.min(1000000,drag.height+Math.round(dy)))
+            });
           }
         };
         const finish=event=>{
           if (!drag || event.pointerId!==drag.pointer || drag.element!==event.currentTarget) return;
           const last=drag; drag=null;
           if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+          if (event.type==='pointercancel') {
+            viewer.updateNodeGeometry(last.id,{
+              x:last.x,y:last.y,width:last.width,height:last.height
+            });
+            renderInspector();return;
+          }
           const dx=Math.round((event.clientX-last.startX)/last.scale);
           const dy=Math.round((event.clientY-last.startY)/last.scale);
           if (!dx && !dy) {renderInspector();return;}
