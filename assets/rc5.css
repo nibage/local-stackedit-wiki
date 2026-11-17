@@ -225,3 +225,11 @@
 /* Prevent native scroll anchoring from competing with caret-aware preview
    positioning while delayed Markdown/math/attachments grow the layout. */
 #preview.markdown-preview { overflow-anchor:none; }
+
+/* Folders and Markdown notes use recognizable Unicode pictograms. The
+   selected Markdown document gets a pencil-bearing memo icon. */
+[data-theme] .tree-row .glyph-folder,
+[data-theme] .tree-row .glyph-note {
+  font-family:"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",system-ui,sans-serif;
+  font-size:15px; font-weight:400; line-height:1.25;
+}

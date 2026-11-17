@@ -71,7 +71,6 @@ def main():
         assert page.locator('#preview img').first.get_attribute('title') == 'obrazky/schema.png'
         assert page.locator('#preview img').first.evaluate('(img) => img.complete && img.naturalWidth > 0')
         assert '![[schema.png]]' in page.locator('#preview pre').last.inner_text()
-        page.screenshot(path=str(ROOT/'docs'/'batch08-smoke.png'))
         assert not errors, errors
         print('PASS: Obsidian YAML, callouts, folding, local embed, safe code fences, no JS errors')
         browser.close()

@@ -89,7 +89,6 @@ def main():
         assert page.locator('#preview .visualization').count() == 0
         assert page.locator('#preview h1').inner_text() == 'Nový náhled'
         assert not errors, errors
-        page.screenshot(path=str(ROOT/'docs'/'batch09-smoke.png'))
         print('PASS: missing renderers, diagnostics, Mermaid/ABC UMD bridge, SVG cleaning, async, export, stale preview')
         browser.close()
 

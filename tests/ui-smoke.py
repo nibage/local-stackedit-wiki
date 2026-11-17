@@ -52,7 +52,6 @@ def main():
         assert page.locator('#preview .unsupported').count() == 1, 'Mermaid placeholder se nezobrazuje'
         assert not errors, f'JavaScript chyby: {errors}'
         assert not missing, f'Nenalezené assets: {missing}'
-        page.screenshot(path=str(ROOT / 'docs' / 'ui-smoke.png'))
         print('PASS: Markdown, MathJax SVG, wiki linky, XSS ochrana, Mermaid fallback')
         browser.close()
 

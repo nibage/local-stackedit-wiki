@@ -917,8 +917,12 @@
       const glyph = document.createElement('span');
       glyph.className = 'glyph ' + (node.kind === 'directory' ? 'glyph-folder' : node.kind === 'file' ? 'glyph-note' : 'glyph-asset');
       const icons = {image:'▧',audio:'♫',video:'▶',pdf:'▤',canvas:'◇',base:'▦',drawio:'⬡'};
-      glyph.textContent = node.kind === 'directory' ? (open ? '▼' : '▶') :
-        node.kind === 'file' ? '★' : icons[node.kind] || '◆';
+      // Unicode folder/document glyphs make hierarchy clearer than stars
+      // and triangles. Only the current Markdown note gets the edit glyph.
+      // Other attachment-format icons are intentionally unchanged.
+      glyph.textContent = node.kind === 'directory' ? (open ? '📂' : '📁') :
+        node.kind === 'file' ? (node.path === activePath ? '📝' : '📄') :
+        icons[node.kind] || '◆';
       const label = document.createElement('span'); label.textContent = node.name;
       row.append(glyph, label);
       const entry = document.createElement('div'); entry.className = 'tree-entry';

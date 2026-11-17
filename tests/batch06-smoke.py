@@ -63,7 +63,6 @@ def main():
         assert page.evaluate("() => window.mockRoot.entries.has('index.md')") is False
         assert page.evaluate("() => window.mockRoot.entries.get('Dokumenty').entries.get('Přesunutá.md').body") == '# Hlavní stránka\r\n\r\nTest přesunu.'
         assert 'Upraveno 0 odkazů' in page.locator('#notice').inner_text()
-        page.screenshot(path=str(ROOT / 'docs' / 'batch06-smoke.png'))
         assert not errors, errors
         print('PASS: rename via UI, nested move, bytes content preserved, tree updates, no JS errors')
         browser.close()

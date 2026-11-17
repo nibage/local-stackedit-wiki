@@ -26,9 +26,9 @@
   color:var(--text);background:var(--canvas);
 }
 [data-theme] .topbar {background:var(--panel);color:var(--text);border-bottom:2px solid var(--accent);}
-[data-theme="light"] .topbar {background:#891928;color:white;}
-[data-theme="light"] .topbar .brand small,[data-theme="light"] .topbar .theme-label {color:#f1c9d0;}
-[data-theme="light"] .topbar .brand-icon {background:#fff;color:#891928;}
+[data-theme="light"] .topbar {background:#592033;color:white;}
+[data-theme="light"] .topbar .brand small,[data-theme="light"] .topbar .theme-label {color:#ecd1da;}
+[data-theme="light"] .topbar .brand-icon {background:#fff;color:#592033;}
 [data-theme="dark"] .topbar .brand-icon {background:var(--accent);color:#17130b;}
 [data-theme] .workspace,[data-theme] .main-area {background:var(--canvas);}
 [data-theme] .sidebar,[data-theme] .editor-bar,[data-theme] .pane,[data-theme] .markdown-preview,[data-theme] .format-toolbar,

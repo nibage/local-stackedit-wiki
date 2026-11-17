@@ -130,7 +130,7 @@ with sync_playwright() as pw:
     assert page.locator('.topbar').evaluate('(e)=>getComputedStyle(e).borderBottomColor')=='rgb(246, 166, 34)'
     assert page.locator('.sidebar-tabs .active').evaluate('(e)=>getComputedStyle(e).borderTopColor')=='rgb(88, 163, 106)'
     page.locator('#theme-select').select_option('light')
-    assert page.locator('.topbar').evaluate('(e)=>getComputedStyle(e).backgroundColor')=='rgb(137, 25, 40)'
+    assert page.locator('.topbar').evaluate('(e)=>getComputedStyle(e).backgroundColor')=='rgb(89, 32, 51)'
     assert page.locator('#move-dialog').count()==1
     # Open in read-only mode; drag & drop must become unavailable.
     page.locator('#read-only-toggle').check()

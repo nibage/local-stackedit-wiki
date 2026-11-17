@@ -103,3 +103,10 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Switching between Markdown notes saves dirty text first and blocks on write errors or external changes, without a discard confirm dialog.
 - [x] Delete confirms through a centered color-themed dialog, with explicit extra acknowledgement for nonempty folders, no browser confirm.
 - [x] Remove residual green focus/box-shadow styling when Delete mode is toggled off with a pointer.
+
+## Current UI and marketing capture (November 2026)
+
+- [x] Use Unicode 📁 closed folder / 📂 expanded folder, 📄 other Markdown notes and 📝 active Markdown note; preserve other attachment icons.
+- [x] Darken the light-mode header banner to a calmer burgundy tone.
+- [x] Replace 10 old docs screenshots with one genuine current dark-mode screenshot including two real offline Mermaid diagrams. Capture script verifies rendering in Chromium.
+- [x] Keep only `docs/app-dark-diagrams.jpg` in README and the lean offline ZIP.

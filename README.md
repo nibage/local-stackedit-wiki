@@ -10,24 +10,13 @@ A fully offline, portable Markdown knowledge base for Chrome and Edge. Write in 
 
 ## The experience
 
-![Local StackEdit Wiki editor and Markdown preview](docs/editor-smoke.png)
+![Latest Local StackEdit Wiki in dark mode, showing Markdown, Mermaid diagrams and offline previews](docs/app-dark-diagrams.jpg)
 
-*Real browser screenshot from the project's visual regression tests. Current buttons and colors may vary slightly.*
+*Captured in Chromium from the actual current application and verified offline renderer bundle, with a curated demonstration note. No composited or generated UI elements.*
 
 | Write in Markdown | Connect your ideas | Explore visually |
 |---|---|---|
 | Syntax highlighting, formatting toolbar, live preview and safe autosave | Full-text search, in-links, out-links, Back and separate heading outline | Local Canvas graphs, read-only Bases tables, draw.io diagrams, Mermaid and MathJax |
-
-<details>
-<summary>More screenshots</summary>
-
-| Wiki layout | Interface smoke test |
-|---|---|
-| ![Wiki browser and editor](docs/ui-smoke.png) | ![Older application screenshot](docs/batch11-smoke.png) |
-
-These are real development screenshots, not mockups. They document representative layouts; the latest UI may differ.
-
-</details>
 
 ### Designed for your files
 
@@ -49,7 +38,7 @@ These are real development screenshots, not mockups. They document representativ
 
 ### Navigation and file safety
 
-**Files** is the folder tree, with all four action buttons on one row. **Search** finds words in note contents. **Links** lists Out-links and In-links with source positions. **Contents** navigates headings. **← Back** returns to the previous note.
+**Files** is the folder tree, with familiar 📁 closed-folder, 📂 open-folder, 📄 Markdown and 📝 active-note icons. All four file action buttons remain on one row. **Search** finds words in note contents. **Links** lists Out-links and In-links with source positions. **Contents** navigates headings. **← Back** returns to the previous note.
 
 **→ Move** enables dragging notes, attachments and folders to an existing directory. Folder moves copy and verify the complete subtree, require confirmation, and conservatively migrate local Markdown/wikilinks and common attachment references. The browser filesystem does not offer atomic multi-file transactions, so maintain backups. **- Delete** starts **off**: turn it on to reveal trash icons on hover or focus; permanent removal still requires confirmation.
 
