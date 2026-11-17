@@ -74,7 +74,7 @@ with sync_playwright() as pw:
     page.locator('#view-edit').click()
     width=page.locator('.CodeMirror-lines').evaluate('(e)=>e.getBoundingClientRect().toJSON()')
     cm=page.locator('.edit-pane .CodeMirror').evaluate('(e)=>e.getBoundingClientRect().toJSON()')
-    assert width['width']<=902 and width['width']>=800,(width,cm)
+    assert width['width']<=992 and width['width']>=960,(width,cm)
     assert abs(width['x']+width['width']/2-(cm['x']+cm['width']/2))<25,(width,cm)  # CodeMirror gutter adds ~18px
     gutter=page.locator('.CodeMirror-linenumber').first
     gutter.wait_for(state='attached')
@@ -93,7 +93,7 @@ with sync_playwright() as pw:
     })""")
     assert article['font']=='18px',article
     assert abs(article['padLeft']-article['padRight'])<=2,article
-    assert 840<=article['width']-article['padLeft']-article['padRight']<=905,article
+    assert 980<=article['width']-article['padLeft']-article['padRight']<=995,article
     page.locator('#theme-select').select_option('dark')
     dark=page.locator('#preview').evaluate("""el=>({
       width:el.clientWidth,padLeft:parseFloat(getComputedStyle(el).paddingLeft),
