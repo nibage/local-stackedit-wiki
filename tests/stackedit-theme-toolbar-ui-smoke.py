@@ -94,6 +94,39 @@ with sync_playwright() as pw:
     assert '| Column 1 | Column 2 |' in page.evaluate('window.LocalWikiDebug.editor.getValue()')
     page.locator('[data-format="code-block"]').click()
     assert '\u0060\u0060\u0060text' in page.evaluate('window.LocalWikiDebug.editor.getValue()')
+    page.locator('[data-format="mermaid"]').click()
+    assert 'graph TD' in page.evaluate('window.LocalWikiDebug.editor.getValue()')
+    page.locator('[data-format="abc"]').click()
+    assert 'T:New tune' in page.evaluate('window.LocalWikiDebug.editor.getValue()')
+    page.evaluate("""() => {
+      const cm=window.LocalWikiDebug.editor.cm;
+      cm.setValue('E=mc^2');
+      cm.setSelection({line:0,ch:0},{line:0,ch:6});
+    }""")
+    page.locator('[data-format="math"]').click()
+    assert page.evaluate('window.LocalWikiDebug.editor.getValue()')=='$E=mc^2
+
+    for kind,filename in [('image','photo.png'),('video','movie.mp4'),('audio','sound.wav'),
+                          ('pdf','paper.pdf'),('canvas','board.canvas'),('base','example.base'),
+                          ('drawio','flow.drawio')]:
+        page.locator(f'.format-toolbar button[data-asset-kind="{kind}"]').click()
+        assert page.locator('#toolbar-asset-dialog').is_visible(),kind
+        assert page.locator('#toolbar-asset-results button').count()==1,kind
+        assert page.locator('#toolbar-asset-results button').inner_text()==filename
+        page.locator('#toolbar-asset-results button').click()
+        assert not page.locator('#toolbar-asset-dialog').is_visible()
+        source=page.evaluate('window.LocalWikiDebug.editor.getValue()')
+        if kind=='image':assert '![photo](photo.png)' in source,source
+        else:assert '![[{}]]'.format(filename) in source,source
+    page.locator('.format-toolbar button[data-asset-kind="audio"]').click()
+    page.locator('#toolbar-asset-search').fill('nonexistent')
+    assert page.locator('#toolbar-asset-results button').count()==0
+    assert 'No matching' in page.locator('#toolbar-asset-results').inner_text()
+    page.locator('#toolbar-asset-close').click()
+    assert not errors,errors
+    print('PASS: StackEdit theme, single-row toolbar, Markdown formatting and seven safe attachment pickers')
+    browser.close()
+
 
     for kind,filename in [('image','photo.png'),('video','movie.mp4'),('audio','sound.wav'),
                           ('pdf','paper.pdf'),('canvas','board.canvas'),('base','example.base'),
