@@ -202,10 +202,13 @@
       : 'Enable trash icons on hover or keyboard focus';
     if (!deleteEnabled) hideTreeDelete();
   }
-  $('delete-toggle').addEventListener('click', () => {
+  $('delete-toggle').addEventListener('click', event => {
     if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
     deleteEnabled = !deleteEnabled;
     updateDeleteModeUI();
+    // Pointer activation must not leave a focus outline looking like a
+    // still-enabled green underline after the toggle was switched off.
+    if (event.detail > 0) event.currentTarget.blur();
   });
   function clearDragHighlights() {
     ui.tree.querySelectorAll('.tree-drop-target,.tree-drag-source').forEach(
@@ -512,7 +515,14 @@
   async function selectFile(path, options = {}) {
     if (path === activePath && !options.force) return true;
     if (operations.isBusy()) { notice('A file operation is in progress; switching notes is temporarily disabled.', 'error'); return false; }
-    if (!options.skipConfirm && !confirmDiscard()) return false;
+    if (isDirty()) {
+      // Navigation writes through the existing fingerprint guard first. If
+      // anything fails, keep the original document and all unsaved text open.
+      if (!await saveCurrent(true, true)) {
+        notice('Cannot switch notes: unsaved changes could not be saved. The editor was preserved.', 'error');
+        return false;
+      }
+    }
     const ticket = operations.beginRead();
     const formerPath = activePath, formerText = editor.getValue();
     try {
@@ -1089,24 +1099,54 @@
       if (await selectFile(createdPath)) notice(`Note created: ${createdPath}. You can edit it now.`, 'success');
     }
   }
+  function confirmDeletion(path, kind, snapshot, discardsCurrent) {
+    const dialog = $('delete-dialog');
+    const folder = kind === 'directory';
+    const needsAck = folder && snapshot.files > 0;
+    $('delete-dialog-title').textContent = folder ? 'Delete folder permanently?' : 'Delete note permanently?';
+    $('delete-dialog-path').textContent = path;
+    $('delete-dialog-message').textContent = folder
+      ? 'This folder contains '+snapshot.files+' files and '+
+        Math.max(0,snapshot.directories-1)+' subfolders, including possible non-Markdown data. This action cannot be undone.'
+      : 'This note will be permanently removed from your wiki. This action cannot be undone.';
+    $('delete-dialog-ack-group').hidden = !needsAck;
+    $('delete-dialog-ack').checked = false;
+    $('delete-dialog-confirm').disabled = needsAck;
+    if (discardsCurrent) $('delete-dialog-message').textContent +=
+      ' Unsaved changes in the selected note will also be lost.';
+    return new Promise(resolve => {
+      dialog.addEventListener('close', () => resolve(dialog.returnValue === 'delete'), {once:true});
+      dialog.showModal();
+      requestAnimationFrame(() => $('delete-dialog-cancel').focus());
+    });
+  }
+  $('delete-dialog-ack').addEventListener('change', () => {
+    $('delete-dialog-confirm').disabled =
+      !$('delete-dialog-ack-group').hidden && !$('delete-dialog-ack').checked;
+  });
+  $('delete-dialog-cancel').addEventListener('click', () => $('delete-dialog').close('cancel'));
+  $('delete-dialog-confirm').addEventListener('click', () => {
+    if (!$('delete-dialog-confirm').disabled) $('delete-dialog').close('delete');
+  });
   async function deleteItem(path, kind) {
     if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
-    if (!confirmDiscard()) return;
+    // No native alert on deletion. The centered modal confirms the target.
+    // Save unrelated dirty notes first; never discard source changes silently.
+    const deletingOpen = activePath === path ||
+      (kind === 'directory' && activePath?.startsWith(path + '/'));
+    if (isDirty() && !deletingOpen && !await saveCurrent(true,true)) {
+      notice('Deletion cancelled: the current note could not be saved.', 'error');
+      return;
+    }
     if (!beginOperation('delete')) return;
     try {
       const snapshot = await bridge.deletionSnapshot(path, kind);
-      let message = kind === 'file' ? `Permanently delete note "${path}"?` :
-        `Permanently delete folder "${path}" and all of its contents?\n\n` +
-        `Contains ${snapshot.files} files and ${Math.max(0, snapshot.directories - 1)} subfolders. ` +
-        `This includes non-Markdown files. This action cannot be undone.`;
-      if (!window.confirm(message)) { notice('Deletion cancelled.'); return; }
-      if (kind === 'directory' && snapshot.files > 0 &&
-          !window.confirm('Final confirmation: permanently delete the entire folder "' + path + '" and all ' + snapshot.files + ' files?')) {
-        notice('Folder deletion cancelled.'); return;
+      if (!await confirmDeletion(path, kind, snapshot, deletingOpen && isDirty())) {
+        notice('Deletion cancelled.'); return;
       }
       await bridge.deleteEntry(path, kind, snapshot);
       invalidateWikiIndex();
-      if (activePath === path || (kind === 'directory' && activePath?.startsWith(path + '/'))) clearEditor();
+      if (deletingOpen) clearEditor();
       renderTree();
       notice(`Deleted: ${path}`, 'success');
     } catch (err) { notice('Deletion failed: ' + err.message, 'error'); }
@@ -1471,13 +1511,14 @@
   $('expand-all').addEventListener('click', () => setExpandedAll(true));
   $('collapse-all').addEventListener('click', () => setExpandedAll(false));
   document.querySelectorAll('.view-switch button').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
-  async function saveCurrent(automatic = false) {
-    if (!activePath || !isDirty() || bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
+  async function saveCurrent(automatic = false, force = false) {
+    if (!activePath || !isDirty()) return true;
+    if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return false;
     const path = activePath, savedText = editor.getValue();
     // Do not retry a failed autosave forever: the user must make another edit
     // or explicitly press Save. Manual save always remains available.
-    if (automatic && autosaveBlocked?.path === path && autosaveBlocked.text === savedText) return;
-    if (!beginOperation('save')) return;
+    if (automatic && !force && autosaveBlocked?.path === path && autosaveBlocked.text === savedText) return false;
+    if (!beginOperation('save')) return false;
     // Capture write context before awaiting; later edits remain dirty.
     const expected = fingerprint, bom = hasBOM, eol = lineEnding;
     try {
@@ -1494,9 +1535,11 @@
             : `Saved an earlier version of ${path}. Newer edits still need saving.`, 'success');
         }
       }
+      return activePath === path && editor.getValue() === savedText;
     } catch (err) {
       autosaveBlocked = { path, text: savedText };
       notice(`${automatic ? 'Autosave' : 'Save'} blocked: ${err.message} The text remains in the editor.`, 'error');
+      return false;
     } finally { endOperation('save'); }
   }
   ui.save.addEventListener('click', () => { void saveCurrent(false); });

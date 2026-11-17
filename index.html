@@ -110,6 +110,18 @@
     </main>
   </div>
 </div>
+<dialog id="delete-dialog" class="wiki-dialog delete-confirm-dialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-message">
+  <h2 id="delete-dialog-title">Delete permanently?</h2>
+  <p id="delete-dialog-message" class="delete-dialog-message"></p>
+  <p id="delete-dialog-path" class="delete-dialog-path"></p>
+  <div id="delete-dialog-ack-group" class="delete-dialog-ack" hidden>
+    <label><input id="delete-dialog-ack" type="checkbox"> I understand: this folder and its contents cannot be recovered from the app.</label>
+  </div>
+  <div class="dialog-actions">
+    <button id="delete-dialog-cancel" type="button">Cancel</button>
+    <button id="delete-dialog-confirm" class="delete-danger" type="button">Delete permanently</button>
+  </div>
+</dialog>
 <dialog id="move-dialog" class="wiki-dialog" aria-labelledby="move-dialog-title">
   <form id="move-form">
     <h2 id="move-dialog-title">Move note</h2>
