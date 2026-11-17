@@ -55,8 +55,8 @@ with sync_playwright() as pw:
     page.wait_for_function("document.querySelector('#filename').textContent==='Note.md'")
     page.locator('#theme-select').select_option('stackedit')
     assert page.locator('html').get_attribute('data-theme')=='stackedit'
-    assert page.locator('#preview').evaluate('(el)=>getComputedStyle(el).fontSize')=='17px'
-    assert page.locator('.edit-pane .CodeMirror').evaluate('(el)=>getComputedStyle(el).fontSize')=='16px'
+    assert page.locator('#preview').evaluate('(el)=>getComputedStyle(el).fontSize')=='18px'
+    assert page.locator('.edit-pane .CodeMirror').evaluate('(el)=>getComputedStyle(el).fontSize')=='18px'
     assert page.locator('.format-toolbar').evaluate('(el)=>getComputedStyle(el).flexWrap')=='nowrap'
     assert page.locator('.format-toolbar').evaluate('(el)=>el.scrollHeight')<=40
     assert page.locator('.format-toolbar button[data-asset-kind]').count()==7
