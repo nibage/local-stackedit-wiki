@@ -93,3 +93,5 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 - [x] Preserve preview scroll during live Markdown rendering, following the ending paragraphs when the cursor is near the end, and respect manual preview scrolling.
 - [x] After **Expand all**, scroll the tree to the currently selected note or folder.
 - [ ] Bases: adjustable column widths, client-side filter builder, then guarded YAML/view editing and frontmatter updates.
+
+The future Canvas/Bases editing design and the draw.io non-goal are explained in [docs/EDITING_ROADMAP.md](docs/EDITING_ROADMAP.md).
