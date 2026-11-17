@@ -22,8 +22,10 @@
   let backlinkRequest = 0, backlinksForPath = null;
   const AUTOSAVE_INTERVAL_MS = 5000;
   let blobURLs = [], selectedMode = 'split';
-  // Preserve the preview viewport when marked.js replaces its DOM on each
-  // keystroke; follow the bottom only while the editor caret is near the end.
+  const PREVIEW_DEBOUNCE_MS = 3000;
+  // A quiet-period redraw prevents empty lines from flashing image/media embeds.
+  // Keep existing Blob URLs alive while editing the same open document.
+  const previewImageCache = new Map();
   let previewPosition = null, previewPositionObserver = null;
   let previewPositionScheduled = false;
   function stopPreviewPositionTracking() {
@@ -32,17 +34,64 @@
     previewPosition = null;
     previewPositionScheduled = false;
   }
+  function sourceSearchFragments(lines, line) {
+    const candidates = [];
+    for (let i = line; i >= Math.max(0, line-5); i--) {
+      let value = (lines[i] || '').trim()
+        .replace(/^#{1,6}\s+/, '')
+        .replace(/^(?:[-*+]|\d+[.)])\s+/, '')
+        .replace(/^>\s*/, '')
+        .replace(/[*_\x60~]/g,'')
+        .replace(/!?\[([^\]]+)\]\(([^)]+)\)/g,'$1')
+        .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,(_,name,alias)=>alias||name);
+      if (value.length > 110) value=value.slice(0,110);
+      if (value.length >= 4) candidates.push(value);
+    }
+    return candidates;
+  }
+  function previewSourceTarget(position) {
+    const blocks = Array.from(ui.preview.querySelectorAll(
+      'h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,td,th'
+    ));
+    for (const query of position.fragments) {
+      const found = blocks.find(el => el.textContent.includes(query));
+      if (found) return found;
+    }
+    return null;
+  }
   function restorePreviewPosition() {
     const position = previewPosition;
     if (!position || position.sequence !== renderSequence || position.userMoved) return;
     if (position.lastApplied !== null &&
         Math.abs(ui.preview.scrollTop - position.lastApplied) > 12) {
-      // A manual scroll takes precedence over automatic synchronization.
-      position.userMoved = true;
+      position.userMoved = true; // Respect deliberate preview scrolling.
       return;
     }
     const maxTop = Math.max(0, ui.preview.scrollHeight - ui.preview.clientHeight);
-    ui.preview.scrollTop = position.followBottom ? maxTop : Math.min(maxTop, position.top);
+    let nextTop = position.top;
+    if (position.followBottom) {
+      nextTop = maxTop;
+    } else {
+      const target = previewSourceTarget(position);
+      const height = ui.preview.clientHeight;
+      if (target) {
+        const offset = target.getBoundingClientRect().top -
+          ui.preview.getBoundingClientRect().top + ui.preview.scrollTop;
+        // Keep the edited paragraph in view, avoiding recenter on image growth.
+        if (offset < ui.preview.scrollTop + height*.15 ||
+            offset > ui.preview.scrollTop + height*.76)
+          nextTop = offset - height*.32;
+        else nextTop = ui.preview.scrollTop;
+      } else {
+        // New empty lines and specialized embeds may have no visible text.
+        const proportional = maxTop * Math.min(1, position.line /
+          Math.max(1, position.lastLine));
+        if (Math.abs(proportional - ui.preview.scrollTop) > height*.75)
+          nextTop = proportional;
+        else nextTop = ui.preview.scrollTop;
+      }
+    }
+    ui.preview.scrollTop = Math.max(0, Math.min(maxTop, nextTop));
     position.lastApplied = ui.preview.scrollTop;
   }
   function queuePreviewPositionRestore() {
@@ -212,10 +261,14 @@
     root.querySelectorAll('.wiki-canvas-viewer,.wiki-bases-viewer,.wiki-drawio-viewer')
       .forEach(node => node.dispose?.());
   }
-  function releaseImages() {
-    // Replacing a note also terminates outstanding graph/table preview work.
+  function releaseImages(keepLocalImages = false) {
+    // Existing local image URLs remain valid during an ordinary source redraw.
     disposeStructured(ui.preview);
-    blobURLs.forEach(url => URL.revokeObjectURL(url)); blobURLs = [];
+    if (!keepLocalImages) {
+      blobURLs.forEach(url => URL.revokeObjectURL(url));
+      blobURLs = [];
+      previewImageCache.clear();
+    }
   }
   function clearEditor() {
     stopPreviewPositionTracking();
@@ -329,10 +382,16 @@
         continue;
       }
       try {
-        const blob = await bridge.readAsset(path);
+        let url = previewImageCache.get(path);
+        if (!url) {
+          const blob = await bridge.readAsset(path);
+          if (sequence !== renderSequence) return;
+          url = URL.createObjectURL(blob);
+          previewImageCache.set(path, url);
+          blobURLs.push(url);
+        }
         if (sequence !== renderSequence) return;
-        const url = URL.createObjectURL(blob);
-        blobURLs.push(url);
+        img.addEventListener('load', queuePreviewPositionRestore, {once:true});
         img.src = url;
         img.title = path;
       } catch (_) {
@@ -401,17 +460,19 @@
     const oldTop = ui.preview.scrollTop;
     const cursorLine = editor.cm.getCursor().line;
     const lastLine = editor.cm.lastLine();
-    // A writer working on the last few lines should always see the latest
-    // paragraph; otherwise preserve the reader's previous scroll position.
+    const lines = editor.getValue().split('\n');
     const followBottom = fromEditor && cursorLine >= Math.max(0,lastLine-2);
     stopPreviewPositionTracking();
     renderSequence++;
     const sequence = renderSequence;
-    releaseImages();
+    releaseImages(true);
     if (!activePath) return;
     if (fromEditor) {
-      previewPosition = {sequence, top:oldTop, followBottom,
-        lastApplied:null, userMoved:false};
+      previewPosition = {
+        sequence, top:oldTop, followBottom, line:cursorLine, lastLine,
+        fragments:sourceSearchFragments(lines,cursorLine),
+        lastApplied:null, userMoved:false
+      };
     }
     try {
       let baseStatus = 'Offline Markdown';
@@ -447,7 +508,7 @@
       $('render-status').textContent = 'Preview error';
     }
   }
-  function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(() => renderPreview(true), 170); }
+  function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(() => renderPreview(true), PREVIEW_DEBOUNCE_MS); }
   async function selectFile(path, options = {}) {
     if (path === activePath && !options.force) return true;
     if (operations.isBusy()) { notice('A file operation is in progress; switching notes is temporarily disabled.', 'error'); return false; }
@@ -461,6 +522,7 @@
         notice('The editor changed during loading. Switching was cancelled to protect unsaved changes.', 'error');
         return false;
       }
+      releaseImages(); // Revoke cached images when switching source notes.
       activePath = path; selectedFolder = parentPath(path); lastTreeSelection = path; fingerprint = result.fingerprint; hasBOM = Boolean(result.hasBOM);
       lineEnding = result.text.includes('\r\n') ? '\r\n' : '\n';
       const normalizedText = result.text.replace(/\r\n?/g, '\n');
