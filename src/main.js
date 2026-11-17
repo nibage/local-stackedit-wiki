@@ -15,7 +15,7 @@
   let activePath = null, originalText = '', fingerprint = null, lineEnding = '\n', hasBOM = false;
   let expanded = new Set(['']), renderTimer = null, renderSequence = 0;
   let inlineDraft = null, imageDialogURL = null, attachmentDialogURL = null, pendingMovePath = null;
-  let selectedFolder = '', treeClickTimer = null;
+  let selectedFolder = '', treeClickTimer = null, lastTreeSelection = null;
   let moveEnabled = false, deleteEnabled = false, draggedPath = null, draggedKind = null;
   let noticeTimer = null, autosaveBlocked = null;
   const navigationHistory = [];
@@ -461,7 +461,7 @@
         notice('The editor changed during loading. Switching was cancelled to protect unsaved changes.', 'error');
         return false;
       }
-      activePath = path; selectedFolder = parentPath(path); fingerprint = result.fingerprint; hasBOM = Boolean(result.hasBOM);
+      activePath = path; selectedFolder = parentPath(path); lastTreeSelection = path; fingerprint = result.fingerprint; hasBOM = Boolean(result.hasBOM);
       lineEnding = result.text.includes('\r\n') ? '\r\n' : '\n';
       const normalizedText = result.text.replace(/\r\n?/g, '\n');
       originalText = normalizedText; editor.setValue(normalizedText);
@@ -887,6 +887,7 @@
         row.addEventListener('click', event => {
           if (event.detail > 1) return;
           clearTimeout(treeClickTimer);
+          lastTreeSelection = node.path;
           treeClickTimer = setTimeout(() => void selectFile(node.path), 265);
         });
         row.addEventListener('dblclick', event => {
@@ -895,7 +896,7 @@
       } else if (bridge.hasAsset(node.path)) {
         row.addEventListener('click', () => void showAttachment(node.path));
       } else {
-        row.addEventListener('click', () => { selectedFolder = node.path; if (open) expanded.delete(node.path); else expanded.add(node.path); renderTree(); });
+        row.addEventListener('click', () => { selectedFolder = node.path; lastTreeSelection = node.path; if (open) expanded.delete(node.path); else expanded.add(node.path); renderTree(); });
         if (open) {
           const nested = document.createElement('div'); nested.className = 'tree-children';
           parent.append(nested); node.children.forEach(child => make(child, nested));
@@ -928,7 +929,7 @@
     if (expand) {
       // Locate the selected file (or explicitly selected folder) inside the
       // expanded tree without changing the active document or editor focus.
-      const selectedPath = activePath || selectedFolder;
+      const selectedPath = lastTreeSelection || activePath || selectedFolder;
       requestAnimationFrame(() => {
         if (!selectedPath) return;
         const selected = Array.from(ui.tree.querySelectorAll('.tree-row'))
@@ -951,6 +952,7 @@
     const savedFilter = options.preserveTree ? ui.search.value : '';
     clearEditor(); inlineDraft = null;
     selectedFolder = savedFolder; expanded = savedExpanded; ui.search.value = savedFilter;
+    if (!options.preserveTree) lastTreeSelection = null;
     if (!options.preserveTree) { navigationHistory.length = 0; updateBackButton(); }
     ui.mode.textContent = result.mode === 'readwrite' ? 'Read/write' : 'Read-only';
     ui.refresh.disabled = !bridge.getRootHandle();
