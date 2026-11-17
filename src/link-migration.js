@@ -53,7 +53,7 @@
     }
     return mask;
   }
-  function rewriteText(text, from, effectiveFrom, oldPath, newPath, beforePaths, afterPaths) {
+  function rewriteText(text, from, effectiveFrom, oldPath, newPath, beforePaths, afterPaths, mapTarget, assetsBefore, assetsAfter) {
     const protectedMask = buildProtectedMask(text);
     const patches = [];
     let count = 0;
@@ -66,6 +66,23 @@
     }
     const lookup = href => global.LocalWikiIndex.targetFor(href, from, beforePaths);
     const lookupAfter = href => global.LocalWikiIndex.targetFor(href, effectiveFrom, afterPaths);
+    const mapped = target => mapTarget ? mapTarget(target) : (target === oldPath ? newPath : target);
+    function assetLookup(raw, fromPath, assetSet, wiki) {
+      if (!assetSet || !raw) return null;
+      let target;
+      try {target=decodeURIComponent(raw);} catch(_) {target=raw;}
+      target=target.replace(/\\/g,'/');
+      if (!target || target.startsWith('/') || /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(target)) return null;
+      const relativeTo=fromPath.split('/').slice(0,-1).join('/');
+      const rel=global.LocalWikiFS.normalizePath([relativeTo,target].filter(Boolean).join('/'));
+      if (rel && assetSet.has(rel)) return rel;
+      if (assetSet.has(target)) return target;
+      if (!wiki) return null;
+      const suffix=target.toLocaleLowerCase('cs');
+      const matches=Array.from(assetSet).filter(item=>item.toLocaleLowerCase('cs')===suffix||
+        (!target.includes('/')&&item.split('/').pop().toLocaleLowerCase('cs')===suffix));
+      return matches.length===1?matches[0]:null;
+    }
     for (const m of text.matchAll(wikiLink)) {
       if (protectedMask[m.index]) continue;
       const content = m[1];
@@ -75,14 +92,17 @@
       if (!match) continue;
       const target = match[1].trim(), suffix = match[2];
       if (!target) continue;
-      const intended = lookup(`wiki:${target}`);
+      const noteTarget=lookup(`wiki:${target}`);
+      const intended=noteTarget || assetLookup(target,from,assetsBefore,true);
       if (!intended) continue;
-      const finalTarget = intended === oldPath ? newPath : intended;
-      if (lookupAfter(`wiki:${target}`) === finalTarget) continue;
-      let newRef = relative(effectiveFrom, finalTarget).replace(mdExt, '');
-      // Use a full path with extension if dropping it would introduce ambiguity.
-      if (lookupAfter(`wiki:${newRef}`) !== finalTarget) newRef = relative(effectiveFrom, finalTarget);
-      if (lookupAfter(`wiki:${newRef}`) !== finalTarget) continue;
+      const finalTarget=mapped(intended);
+      const afterLookup=ref=>noteTarget?lookupAfter(`wiki:${ref}`):
+        assetLookup(ref,effectiveFrom,assetsAfter,true);
+      if (afterLookup(target)===finalTarget) continue;
+      let newRef=relative(effectiveFrom,finalTarget);
+      if (noteTarget && mdExt.test(finalTarget)) newRef=newRef.replace(mdExt,'');
+      if (afterLookup(newRef)!==finalTarget) newRef=relative(effectiveFrom,finalTarget);
+      if (afterLookup(newRef)!==finalTarget) continue;
       safePatch(m.index + m[0].indexOf(content), left, newRef + suffix);
     }
     function rewriteMarkdownTarget(m) {
@@ -90,11 +110,13 @@
       const raw = m[1], angled = raw.startsWith('<') && raw.endsWith('>');
       const target = angled ? raw.slice(1, -1) : raw;
       const [pathname, suffix] = splitSuffix(target);
-      if (!pathname || !mdExt.test(pathname)) return;
-      const intended = lookup(target);
+      if (!pathname) return;
+      const noteTarget=mdExt.test(pathname)?lookup(target):null;
+      const intended=noteTarget||assetLookup(pathname,from,assetsBefore,false);
       if (!intended) return;
-      const finalTarget = intended === oldPath ? newPath : intended;
-      if (lookupAfter(target) === finalTarget) return;
+      const finalTarget=mapped(intended);
+      if (noteTarget ? lookupAfter(target)===finalTarget :
+          assetLookup(pathname,effectiveFrom,assetsAfter,false)===finalTarget) return;
       const newHref = encodePath(relative(effectiveFrom, finalTarget)) + suffix;
       const newRaw = angled ? `<${newHref}>` : newHref;
       safePatch(m.index + m[0].indexOf(raw), raw, newRaw);
@@ -123,6 +145,65 @@
       }
     }
     return { oldPath, newPath, changes, totalLinks, affectedFiles: changes.length };
+  }
+  function planDirectory(snapshots,oldPath,newPath,assetPaths=[]) {
+    if (!oldPath || !newPath || oldPath===newPath || newPath.startsWith(oldPath+'/'))
+      throw new Error('Invalid folder move destination.');
+    const remap=path=>path===oldPath||path.startsWith(oldPath+'/')
+      ?newPath+path.slice(oldPath.length):path;
+    const beforePaths=new Set(snapshots.keys());
+    const afterPaths=new Set(Array.from(beforePaths,remap));
+    const assetsBefore=new Set(assetPaths);
+    const assetsAfter=new Set(Array.from(assetsBefore,remap));
+    const changes=[];let totalLinks=0;
+    for(const [path,snapshot] of snapshots) {
+      const to=remap(path);
+      if(path!==to && beforePaths.has(to))
+        throw new Error('Moved folder has a colliding Markdown destination: '+to);
+      const result=rewriteText(snapshot.text,path,to,null,null,beforePaths,afterPaths,
+        remap,assetsBefore,assetsAfter);
+      if(result.count){
+        changes.push({oldPath:path,path:to,before:snapshot.text,after:result.text,
+          fingerprint:snapshot.fingerprint,links:result.count});
+        totalLinks+=result.count;
+      }
+    }
+    return {oldPath,newPath,changes,totalLinks,affectedFiles:changes.length};
+  }
+  async function executeDirectory(bridge,migration,snapshots) {
+    for(const [path,source] of snapshots) {
+      const actual=await bridge.readRaw(path);
+      if(actual.fingerprint!==source.fingerprint || actual.text!==source.text)
+        throw new Error('A note changed outside the application; folder move cancelled: '+path);
+    }
+    await bridge.moveDirectory(migration.oldPath,migration.newPath);
+    const committed=[];
+    try {
+      for(const entry of migration.changes) {
+        const current=await bridge.readRaw(entry.path);
+        if(current.text!==entry.before)
+          throw new Error('Note changed while updating moved folder links: '+entry.path);
+        await bridge.write(entry.path,entry.after,current.fingerprint);
+        committed.push(entry);
+      }
+      return {moved:migration.newPath,updated:committed.length,links:migration.totalLinks};
+    } catch(error) {
+      const problems=[];
+      for(const entry of committed.reverse()) {
+        try {
+          const fresh=await bridge.readRaw(entry.path);
+          if(fresh.text!==entry.after) throw new Error('Changed again, cannot overwrite.');
+          await bridge.write(entry.path,entry.before,fresh.fingerprint);
+        } catch(err){problems.push(entry.path+': '+err.message);}
+      }
+      if(!problems.length) {
+        try{await bridge.moveDirectory(migration.newPath,migration.oldPath);}
+        catch(err){problems.push('folder: '+err.message);}
+      }
+      throw new Error('Folder link update failed: '+error.message+
+        (problems.length ? '; recovery incomplete ('+problems.join('; ')+'); check backup.' :
+          '; move and link edits were rolled back.'));
+    }
   }
   async function snapshotAll(bridge) {
     const snapshots = new Map();
@@ -272,5 +353,6 @@
     }
   }
 
-  global.LocalWikiMigration = { plan, snapshotAll, execute, rewriteText, relative, planAsset, executeAsset };
+  global.LocalWikiMigration = { plan, planDirectory, snapshotAll, execute, executeDirectory,
+    rewriteText, relative, planAsset, executeAsset };
 })(typeof window !== 'undefined' ? window : globalThis);

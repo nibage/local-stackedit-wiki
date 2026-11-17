@@ -16,7 +16,7 @@
   let expanded = new Set(['']), renderTimer = null, renderSequence = 0;
   let inlineDraft = null, imageDialogURL = null, attachmentDialogURL = null, pendingMovePath = null;
   let selectedFolder = '', treeClickTimer = null;
-  let moveEnabled = false, draggedPath = null;
+  let moveEnabled = false, deleteEnabled = false, draggedPath = null, draggedKind = null;
   let noticeTimer = null, autosaveBlocked = null;
   const navigationHistory = [];
   let backlinkRequest = 0, backlinksForPath = null;
@@ -101,10 +101,27 @@
     toggle.setAttribute('aria-pressed', String(moveEnabled));
     toggle.setAttribute('aria-label', moveEnabled ? 'Disable drag and drop mode' : 'Enable drag and drop mode');
     toggle.title = moveEnabled
-      ? 'Drag and drop a note or attachment onto a folder to move immediately. Existing destinations and unsaved edits are protected. Press M on a focused note to enter a destination path manually.'
+      ? 'Drag and drop a note, attachment or folder onto another folder. Folder moves require confirmation. Press M on a focused note for a manual path.'
       : 'Enable drag and drop file moves';
     ui.tree.classList.toggle('move-mode-enabled', moveEnabled);
   }
+  function updateDeleteModeUI() {
+    const button = $('delete-toggle');
+    const allowed = bridge.getMode() === 'readwrite' && !operations.isBusy();
+    if (bridge.getMode() !== 'readwrite') deleteEnabled = false;
+    button.disabled = !allowed;
+    button.classList.toggle('move-enabled', deleteEnabled);
+    button.setAttribute('aria-pressed', String(deleteEnabled));
+    button.title = deleteEnabled
+      ? 'Hide trash icons (deleting still requires confirmation)'
+      : 'Enable trash icons on hover or keyboard focus';
+    if (!deleteEnabled) hideTreeDelete();
+  }
+  $('delete-toggle').addEventListener('click', () => {
+    if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
+    deleteEnabled = !deleteEnabled;
+    updateDeleteModeUI();
+  });
   function clearDragHighlights() {
     ui.tree.querySelectorAll('.tree-drop-target,.tree-drag-source').forEach(
       row => row.classList.remove('tree-drop-target', 'tree-drag-source'));
@@ -136,13 +153,13 @@
     // Prevent editing a document that may be replaced by a move, open or refresh.
     // Saving is the exception: edits made while a write is in progress remain dirty.
     if (name !== 'save') editor.setReadOnly(true);
-    redrawDirty(); updateMoveModeUI();
+    redrawDirty(); updateMoveModeUI(); updateDeleteModeUI();
     return true;
   }
   function endOperation(name) {
     operations.release(name);
     editor.setReadOnly(bridge.getMode() !== 'readwrite' || !activePath);
-    redrawDirty(); updateMoveModeUI();
+    redrawDirty(); updateMoveModeUI(); updateDeleteModeUI();
   }
   function isDirty() { return activePath !== null && editor.getValue() !== originalText; }
   function confirmDiscard() {
@@ -450,6 +467,12 @@
             if (!bridge.hasAsset(target) || !types.isImage(target)) return null;
             const image = await bridge.readAsset(target);
             return image.size <= 8 * 1024 * 1024 ? image : null;
+          },
+          readNote: async target => {
+            // Only an already opened wiki note; no traversal, network or writes.
+            if (!bridge.hasFile(target) || !(/\.md$|\.markdown$/i.test(target))) return null;
+            const source = await bridge.read(target);
+            return source.text.length <= 160000 ? source.text : source.text.slice(0,160000);
           }
         });
         output.append(graph);
@@ -647,7 +670,7 @@
   let deleteHover = null;
   function hideTreeDelete() { deleteHover = null; floatingDelete.hidden = true; }
   function positionTreeDelete() {
-    if (!deleteHover || bridge.getMode() !== 'readwrite' || !deleteHover.row.isConnected) {
+    if (!deleteHover || !deleteEnabled || bridge.getMode() !== 'readwrite' || !deleteHover.row.isConnected) {
       hideTreeDelete(); return;
     }
     const row = deleteHover.row.getBoundingClientRect();
@@ -685,7 +708,7 @@
     event.preventDefault();
     const selected=deleteHover;
     hideTreeDelete();
-    if (selected && bridge.getMode() === 'readwrite') void deleteItem(selected.path,selected.kind);
+    if (selected && deleteEnabled && bridge.getMode() === 'readwrite') void deleteItem(selected.path,selected.kind);
   });
   function renderTree() {
     hideTreeDelete();
@@ -712,18 +735,21 @@
       if (bridge.hasAsset(node.path)) row.classList.add('tree-attachment');
       // Native HTML5 DnD is enabled only in explicit move mode. The source
       // comes from this tree, never from untrusted external drops.
-      if ((node.kind === 'file' || bridge.hasAsset(node.path)) && moveEnabled && bridge.getMode() === 'readwrite') {
+      if ((node.kind === 'file' || bridge.hasAsset(node.path) ||
+           (node.kind === 'directory' && node.path)) &&
+          moveEnabled && bridge.getMode() === 'readwrite') {
         row.draggable = true;
         row.classList.add('tree-draggable');
         row.title = 'Drag to a folder to move immediately' + (node.kind === 'file' ? ', or press M for a manual move' : '');
         row.addEventListener('dragstart', event => {
           if (!moveEnabled || operations.isBusy()) { event.preventDefault(); return; }
           draggedPath = node.path;
+          draggedKind = node.kind;
           event.dataTransfer.effectAllowed = 'move';
           event.dataTransfer.setData('text/plain', node.path);
           row.classList.add('tree-drag-source');
         });
-        row.addEventListener('dragend', () => { draggedPath = null; clearDragHighlights(); });
+        row.addEventListener('dragend', () => { draggedPath = null; draggedKind = null; clearDragHighlights(); });
         row.addEventListener('keydown', event => {
           if (event.key.toLowerCase() === 'm' && !event.altKey && !event.ctrlKey && !event.metaKey) {
             event.preventDefault(); showMoveDialog(node.path);
@@ -732,21 +758,28 @@
       }
       if (node.kind === 'directory') {
         row.addEventListener('dragover', event => {
-          if (!moveEnabled || !draggedPath || !(bridge.hasFile(draggedPath) || bridge.hasAsset(draggedPath)) || operations.isBusy()) return;
+          if (!moveEnabled || !draggedPath ||
+              !(bridge.hasFile(draggedPath) || bridge.hasAsset(draggedPath) || draggedKind === 'directory') ||
+              operations.isBusy() || node.path === draggedPath ||
+              node.path.startsWith(draggedPath+'/')) return;
           event.preventDefault(); event.stopPropagation();
           event.dataTransfer.dropEffect = 'move';
           clearDragHighlights(); row.classList.add('tree-drop-target');
         });
         row.addEventListener('dragleave', () => row.classList.remove('tree-drop-target'));
         row.addEventListener('drop', event => {
-          if (!moveEnabled || !draggedPath || !(bridge.hasFile(draggedPath) || bridge.hasAsset(draggedPath)) || operations.isBusy()) return;
+          if (!moveEnabled || !draggedPath ||
+              !(bridge.hasFile(draggedPath) || bridge.hasAsset(draggedPath) || draggedKind === 'directory') ||
+              operations.isBusy() || node.path === draggedPath ||
+              node.path.startsWith(draggedPath+'/')) return;
           event.preventDefault(); event.stopPropagation();
-          const source = draggedPath;
-          draggedPath = null;
+          const source = draggedPath, sourceKind = draggedKind;
+          draggedPath = null; draggedKind = null;
           clearDragHighlights();
           // Explicit move mode and a deliberate drop authorize the move.
           // Keep collision/external-change checks, but no confirm/modal for a drop.
-          void renamePath(source, combinePath(node.path, basename(source)), { directDrop: true });
+          void renamePath(source, combinePath(node.path, basename(source)),
+            { directDrop: true, sourceKind });
         });
       }
       // One shared trash action stays pinned to the visible tree viewport.
@@ -816,7 +849,8 @@
     ui.readonlyToggle.checked = result.mode === 'readonly';
     $('new-file').disabled = result.mode !== 'readwrite';
     $('new-folder').disabled = result.mode !== 'readwrite';
-    draggedPath = null; moveEnabled = false; updateMoveModeUI();
+    draggedPath = null; draggedKind = null; moveEnabled = false; deleteEnabled = false;
+    updateMoveModeUI(); updateDeleteModeUI();
     wikiIndex.invalidate(); indexPromise = null;
     $('fulltext-results').replaceChildren(); $('backlinks-results').replaceChildren();
     backlinksForPath = null;
@@ -913,14 +947,18 @@
     updateMoveModeUI();
     let moved = null, summaryNotice = '';
     try {
-      const movingImage = bridge.hasAsset(oldPath);
-      const newPath = movingImage ? bridge.normalizeAssetDestination(requested) : bridge.normalizeDestination(requested);
+      const movingFolder = options.sourceKind === 'directory';
+      const movingImage = !movingFolder && bridge.hasAsset(oldPath);
+      const newPath = movingFolder ? bridge.normalizeDirectoryDestination(requested) :
+        movingImage ? bridge.normalizeAssetDestination(requested) : bridge.normalizeDestination(requested);
       if (newPath === oldPath) return;
       notice('Checking links across the wiki…');
       const snapshots = await window.LocalWikiMigration.snapshotAll(bridge);
-      const plan = movingImage
-        ? window.LocalWikiMigration.planAsset(snapshots, oldPath, newPath, bridge.getAssetPaths())
-        : window.LocalWikiMigration.plan(snapshots, oldPath, newPath);
+      const plan = movingFolder
+        ? window.LocalWikiMigration.planDirectory(snapshots, oldPath, newPath, bridge.getAssetPaths())
+        : movingImage
+          ? window.LocalWikiMigration.planAsset(snapshots, oldPath, newPath, bridge.getAssetPaths())
+          : window.LocalWikiMigration.plan(snapshots, oldPath, newPath);
       // A transaction spanning multiple disk files is not available in the
       // browser; request explicit user confirmation with the computed scope.
       const examples = plan.changes.slice(0, 6).map(x => `• ${x.path} (${x.links})`).join('\n');
@@ -931,13 +969,24 @@
         '\n\nOnly unambiguous Markdown and [[wiki]] links will be updated. ' +
         'Unsupported syntax is left unchanged. Multi-file operations are not atomic. ' +
         'Keep a backup of your wiki. Continue?';
-      if (!options.directDrop && plan.totalLinks > 0 && !window.confirm(summary)) { notice('Move cancelled.'); return; }
-      const result = movingImage
-        ? await window.LocalWikiMigration.executeAsset(bridge, plan, snapshots, await bridge.assetFingerprint(oldPath))
-        : await window.LocalWikiMigration.execute(bridge, plan, snapshots);
+      // Folder moves affect entire subtrees and arbitrary binary files.
+      // Always confirm, even on direct drag and drop.
+      if ((movingFolder || (!options.directDrop && plan.totalLinks > 0)) &&
+          !window.confirm(summary)) { notice('Move cancelled.'); return; }
+      const result = movingFolder
+        ? await window.LocalWikiMigration.executeDirectory(bridge, plan, snapshots)
+        : movingImage
+          ? await window.LocalWikiMigration.executeAsset(bridge, plan, snapshots, await bridge.assetFingerprint(oldPath))
+          : await window.LocalWikiMigration.execute(bridge, plan, snapshots);
       invalidateWikiIndex();
       for (const prefix of newPath.split('/').slice(0, -1).map((_, i, all) => all.slice(0, i + 1).join('/'))) expanded.add(prefix);
       moved = result.moved;
+      if (movingFolder) {
+        expanded = new Set(Array.from(expanded, p => p===oldPath||p.startsWith(oldPath+'/')
+          ? newPath+p.slice(oldPath.length) : p));
+        if (selectedFolder===oldPath||selectedFolder.startsWith(oldPath+'/'))
+          selectedFolder=newPath+selectedFolder.slice(oldPath.length);
+      }
       summaryNotice = `Moved: ${oldPath} → ${newPath}. Updated ${result.links} links in ${result.updated} documents.`;
     } catch (err) {
       notice(`Move failed: ${err.message}`, 'error');
@@ -954,7 +1003,8 @@
     if (moved) {
       // Re-read the active document even if another note was renamed: the link
       // migration may have changed its bytes, invalidating the fingerprint.
-      const next = activePath === oldPath ? moved : activePath;
+      const next = options.sourceKind === 'directory' && activePath?.startsWith(oldPath+'/')
+        ? moved+activePath.slice(oldPath.length) : activePath === oldPath ? moved : activePath;
       clearEditor();
       if (next && bridge.hasFile(next)) await selectFile(next);
       notice(summaryNotice, 'success');
@@ -1002,29 +1052,54 @@
     if (!activePath) { target.textContent = 'Open a note.'; return; }
     const headings = Array.from(ui.preview.querySelectorAll('h1,h2,h3,h4,h5,h6'));
     if (!headings.length) { target.textContent = 'No headings in this note.'; return; }
-    const lines=editor.getValue().split('\n');
-    let lastLine=-1;
-    headings.forEach(h => {
-      const b = document.createElement('button'); b.className = 'toc-item'; b.type = 'button';
-      const depth = Number(h.tagName.slice(1)); b.style.paddingLeft = `${8 + (depth - 1) * 10}px`;
-      b.textContent = h.textContent.trim();
-      b.addEventListener('click', () => {
-        if (selectedMode === 'edit') setView('split');
-        h.scrollIntoView({ behavior: 'instant', block: 'center' });
-        if (selectedMode !== 'preview') {
-          // Find the corresponding ATX Markdown heading after the preceding one.
-          let line=lines.findIndex((text,i)=>i>lastLine &&
-            /^ {0,3}#{1,6}\s+/.test(text) &&
-            window.LocalWikiNavigation.headingSlug(text.replace(/^ {0,3}#{1,6}\s+/,'').replace(/\s+#+\s*$/,''))
-              === window.LocalWikiNavigation.headingSlug(h.textContent));
-          if (line < 0) line=lines.findIndex(text=>text.includes(h.textContent.trim()));
-          if (line>=0) {
-            lastLine=line;editor.cm.setCursor(line,0);
-            editor.cm.scrollIntoView({line,ch:0},75);
-          }
+    // Resolve heading positions once, in document order. The old lastLine
+    // variable changed *on each click*, so navigating backwards could move
+    // the source cursor to the wrong occurrence (or nowhere).
+    const lines = editor.getValue().split('\n'), positions = [];
+    let fence=null;
+    for (let i=0;i<lines.length;i++) {
+      const line=lines[i],mark=/^ {0,3}(`{3,}|~{3,})/.exec(line);
+      if (mark) {
+        if (!fence) fence={char:mark[1][0],length:mark[1].length};
+        else if(mark[1][0]===fence.char && mark[1].length>=fence.length) fence=null;
+        continue;
+      }
+      if(fence) continue;
+      const atx=/^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*$/.exec(line);
+      if (atx) {
+        positions.push({line:i,depth:atx[1].length,
+          slug:window.LocalWikiNavigation.headingSlug(atx[2].replace(/[ \t]+#+[ \t]*$/,''))});
+        continue;
+      }
+      if(i>0 && /^ {0,3}(=+|-+)[ \t]*$/.test(line) && lines[i-1].trim()) {
+        positions.push({line:i-1,depth:line.trim()[0]==='='?1:2,
+          slug:window.LocalWikiNavigation.headingSlug(lines[i-1])});
+      }
+    }
+    const used=new Set();
+    headings.forEach((h,index)=>{
+      const depth=Number(h.tagName.slice(1));
+      const slug=window.LocalWikiNavigation.headingSlug(h.textContent);
+      const position=positions.findIndex((p,i)=>!used.has(i)&&p.depth===depth&&p.slug===slug);
+      if(position>=0)used.add(position);
+      const sourceLine=position>=0?positions[position].line:null;
+      const button=document.createElement('button');button.className='toc-item';button.type='button';
+      button.style.paddingLeft=`${8+(depth-1)*10}px`;
+      button.textContent=h.textContent.trim();
+      button.addEventListener('click',()=>{
+        // Preview-only must reveal the source editor so the cursor is visible.
+        if(selectedMode==='preview'||selectedMode==='edit')setView('split');
+        h.scrollIntoView({behavior:'instant',block:'center'});
+        if(sourceLine!==null){
+          const ch=lines[sourceLine].search(/\S/);
+          editor.cm.setCursor(sourceLine,Math.max(0,ch));
+          editor.cm.scrollIntoView({line:sourceLine,ch:0},75);
+          editor.focus();
+        } else {
+          notice('This heading is generated by Markdown and has no exact source line.');
         }
       });
-      target.append(b);
+      target.append(button);
     });
   }
   async function ensureIndex() {
@@ -1301,6 +1376,9 @@
       details.appendChild(row);
     }
     const dialog = $('renderer-dialog');
+    const ready = items.every(([,available])=>available);
+    $('renderer-repair-tools').hidden = ready;
+    $('renderer-ready-note').hidden = !ready;
     if (typeof dialog.showModal === 'function') dialog.showModal();
     else dialog.setAttribute('open','');
   });

@@ -25,10 +25,22 @@ def prepare_root(zip_path, output):
         bad = archive.testzip()
         if bad:
             raise AssertionError(f'Poškozený soubor ZIP: {bad}')
+        allow_root = {'index.html', 'README.md'}
+        allow_dirs = {'src', 'assets', 'vendor'}
+        allow_images = {'docs/editor-smoke.png', 'docs/ui-smoke.png', 'docs/batch11-smoke.png'}
+        shipped=set()
         for info in archive.infolist():
             target = output / info.filename
             if not target.resolve().is_relative_to(output.resolve()):
                 raise AssertionError('Nebezpečná cesta v ZIPu')
+            parts=Path(info.filename).parts
+            relative=Path(*parts[1:]).as_posix()
+            if not relative or not (relative in allow_root or relative in allow_images or
+                   Path(relative).parts[0] in allow_dirs):
+                raise AssertionError('Development-only file leaked into user ZIP: '+relative)
+            shipped.add(relative)
+        if not (allow_root | allow_images).issubset(shipped):
+            raise AssertionError('Essential offline README/screenshots missing from ZIP')
         archive.extractall(output)
     matches = list(output.glob('*/index.html'))
     if len(matches) != 1:
@@ -74,6 +86,11 @@ def run(root, browser_path=None):
         page.wait_for_function('Boolean(window.LocalWikiRender && window.LocalWikiRendererSmoke)', timeout=12000)
         caps = page.evaluate('window.LocalWikiDiagrams.capabilities()')
         assert caps == {'mermaid': True, 'abc': True}, f'UMD knihovny se nenačetly: {caps}'
+        page.locator('#renderer-check').click()
+        assert page.locator('#renderer-repair-tools').is_hidden(), 'Fully bundled release must not advertise installation'
+        assert page.locator('#renderer-ready-note').is_visible()
+        assert page.locator('#renderer-details .renderer-detail').count()==4
+        page.locator('#renderer-close').click()
         result = page.evaluate('window.LocalWikiRendererSmoke.run({timeoutMs:12000})')
         for kind in ('mermaid', 'abc'):
             assert result[kind]['status'] == 'ok', f'{kind}: neprošel skutečný SVG self-test: {result[kind]}'

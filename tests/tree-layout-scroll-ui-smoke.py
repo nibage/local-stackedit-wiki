@@ -80,6 +80,9 @@ with sync_playwright() as pw:
     # One trash control must stay a few pixels from the same scrollbar, even
     # when long/nested rows extend far beyond the horizontal viewport.
     assert page.locator('#tree-delete-overlay svg').count()==1
+    assert page.locator('#delete-toggle').get_attribute('aria-pressed')=='false'
+    page.locator('#delete-toggle').click()
+    assert page.locator('#delete-toggle').get_attribute('aria-pressed')=='true'
     page.evaluate("document.querySelector('#tree').scrollTop=90")
     anchored=page.evaluate("""() => {
       const tree=document.querySelector('#tree');

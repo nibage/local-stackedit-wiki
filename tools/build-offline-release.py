@@ -34,6 +34,28 @@ class BuildError(RuntimeError):
     pass
 
 
+# Only runtime assets, essential offline documentation, and the three
+# already-checked screenshots belong in user downloads. Never ship test code,
+# temporary caches, old development reports or a second sample vault.
+RELEASE_ROOT_FILES = {'index.html', 'README.md'}
+RELEASE_DIRS = {'assets', 'src', 'vendor'}
+RELEASE_SCREENSHOTS = {
+    'docs/ui-smoke.png', 'docs/editor-smoke.png', 'docs/batch11-smoke.png',
+}
+
+
+def is_release_file(relative):
+    path = relative.as_posix()
+    parts = relative.parts
+    if not parts or any(part.startswith('.') or part == '__pycache__' for part in parts):
+        return False
+    if path in RELEASE_ROOT_FILES or path in RELEASE_SCREENSHOTS:
+        return True
+    if len(parts) > 1 and parts[0] in RELEASE_DIRS and relative.suffix not in {'.pyc', '.map'}:
+        return True
+    return False
+
+
 def get_https(url, max_bytes=35_000_000):
     parts = urlparse(url)
     if parts.scheme != 'https' or parts.hostname != 'registry.npmjs.org':
@@ -170,7 +192,7 @@ def build_release(root, destination, fetch=get_https, specs=SPECS):
         destination.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=8) as archive:
             for file in sorted(stage.rglob('*')):
-                if file.is_file():
+                if file.is_file() and is_release_file(file.relative_to(stage)):
                     archive.write(file, file.relative_to(stage.parent).as_posix())
         with zipfile.ZipFile(destination) as archive:
             bad = archive.testzip()

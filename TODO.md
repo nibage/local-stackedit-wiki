@@ -43,7 +43,7 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 
 ## Future: richer structured diagrams and database views
 
-- [x] **Canvas (.canvas):** read-only visual graph with cards, connections, groups and zoom/pan. [x] Safe Markdown card formatting; [ ] note-file content previews. Editing/link updates require separate design and regression tests.
+- [x] **Canvas (.canvas):** read-only visual graph with cards, connections, groups and zoom/pan. [x] Safe Markdown card formatting; [x] vault-local Markdown note excerpts inside file cards. Editing/link updates require separate design and regression tests.
 - [x] **Bases (.base):** read-only tables backed by local Markdown frontmatter, multiple table views and basic filters. [ ] Full expression/formula compatibility, alternative view layouts and property editing. A .base file is not a database storing note rows.
 - [x] **draw.io/diagrams.net first-stage:** offline read-only `.drawio` graph with multipage UI and decompression of the official compressed format. Basic shapes/connections are drawn as safe SVG, no network or embedded code. [ ] Full-fidelity official viewer integration after security/license/size audit (current upstream bundle ~4.9 MB and can refer to hosted assets); complex stencils/layout currently approximate. `.drawio.svg` / `.drawio.png` remain normal images. **No draw.io editing is planned.**
 
@@ -68,3 +68,15 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 - [x] Separate **Contents** from **Links**; show **Out-links** and **In-links** with individual source positions and contextual Back navigation.
 - [x] Use consistent neutral sidebar text colors, gray light-mode active tabs, a distinctive note star, and a simple ASCII arrow on Move.
 - [ ] Extend link-position matching to nonstandard Markdown constructs (nested links, complex HTML) and build an optional dedicated external-URLs list.
+
+## Release and usability cleanup (November 2026)
+
+- [x] Lean GitHub Actions release ZIP: app runtime, renderer licenses, README and selected real screenshots only; no tests, dev tooling, demo vault or historic reports.
+- [x] README marketing overview with authentic project screenshots, followed by install/technical documentation.
+- [x] Renderer status/diagnostics are concise when all dependencies are already bundled.
+- [x] Contents jumps to the editor cursor even from Preview-only, without relying on the previous clicked heading.
+- [x] Opt-in hover trash via **- Delete**; green highlight and existing confirmations retained.
+- [x] Guarded folder drag/drop moves with byte verification and conservative note-link migration.
+- [x] Canvas local Markdown file cards display bounded, sanitized note excerpts.
+- [ ] Full Canvas editor: separate design, save conflicts, undo/redo and change tracking.
+- [ ] Full Bases editor: safe property updates across Markdown frontmatter with explicit conflict handling.

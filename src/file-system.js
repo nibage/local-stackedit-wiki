@@ -448,6 +448,120 @@
       return newPath;
     }
 
+
+    // Folder moves are copy/verify/delete, never an unchecked recursive rename.
+    // This includes unknown file formats, so browsing only recognized files
+    // cannot accidentally cause their loss. Reject any hidden configuration
+    // directory, oversized tree, destination within source or case collision.
+    async function moveDirectory(oldPath, rawDestination) {
+      if (mode !== 'readwrite' || !rootHandle) throw new Error('Folder moves need read/write permission.');
+      if (!oldPath || typeof oldPath !== 'string') throw new Error('The wiki root cannot be moved.');
+      const parts=creationSegments(rawDestination,'directory'), newPath=parts.join('/');
+      const from=creationSegments(oldPath,'directory');
+      if (!oldPath || oldPath!==from.join('/')) throw new Error('Invalid source folder path.');
+      if (newPath===oldPath) return newPath;
+      if (newPath.startsWith(oldPath+'/'))
+        throw new Error('A folder cannot be moved into itself or one of its descendants.');
+      const sourceNode=(function find(node,segments) {
+        for(const part of segments) {
+          if (!node || node.kind!=='directory') return null;
+          node=node.children.find(n=>n.name===part && n.kind==='directory');
+        }
+        return node;
+      })(tree,from);
+      if (!sourceNode) throw new Error('Source folder is not in the loaded wiki. Click Refresh first.');
+      const sourceParent=await parentFor(from);
+      const source=await sourceParent.getDirectoryHandle(from.at(-1),{create:false});
+      const targetParent=await parentFor(parts),targetName=parts.at(-1);
+      await assertNotExists(targetParent,targetName);
+      const records=[], directories=[];
+      let totalBytes=0;
+      async function inventory(dir,prefix,depth) {
+        if(depth>40) throw new Error('Folder nesting exceeds the safe limit of 40 levels.');
+        const children=[];
+        for await(const entry of dir.values()) children.push(entry);
+        for(const item of children) {
+          if (SKIP_DIRS.has(item.name.toLocaleLowerCase('cs')))
+            throw new Error('Folder contains protected configuration directory '+item.name+'; move it manually.');
+          if (/[\/\u0000-\u001f]/.test(item.name))
+            throw new Error('Folder contains an unsafe filename.');
+          const relative=prefix ? prefix+'/'+item.name : item.name;
+          if(item.kind==='directory') {
+            directories.push(relative);
+            if(directories.length>500) throw new Error('Folder exceeds the directory limit of 500.');
+            await inventory(item,relative,depth+1);
+          } else if(item.kind==='file') {
+            const file=await item.getFile();
+            if(file.size>64*1024*1024) throw new Error('Folder contains a file above 64 MB: '+relative);
+            totalBytes+=file.size;
+            if(totalBytes>256*1024*1024 || records.length>=1000)
+              throw new Error('Folder moves are capped at 256 MB and 1000 files.');
+            const bytes=new Uint8Array(await file.arrayBuffer());
+            records.push({path:relative,handle:item,bytes,
+              fingerprint:fingerprintBytes(bytes,file.lastModified)});
+          } else throw new Error('Unsupported item inside folder: '+relative);
+        }
+      }
+      await inventory(source,'',0);
+      // Detect concurrent external additions/deletions before irreversible removal.
+      async function verifyInventory() {
+        const actual=[];
+        async function walk(dir,prefix) {
+          for await(const item of dir.values()) {
+            const p=prefix?prefix+'/'+item.name:item.name;
+            actual.push((item.kind==='directory'?'d:':'f:')+p);
+            if(item.kind==='directory') await walk(item,prefix?prefix+'/'+item.name:item.name);
+          }
+        }
+        await walk(source,'');
+        const expected=[...directories.map(p=>'d:'+p),...records.map(r=>'f:'+r.path)];
+        if(actual.length!==expected.length ||
+           actual.slice().sort().some((item,i)=>item!==expected.slice().sort()[i]))
+          throw new Error('Folder contents changed while moving; original preserved.');
+        for(const record of records) {
+          const file=await record.handle.getFile();
+          const bytes=new Uint8Array(await file.arrayBuffer());
+          if(fingerprintBytes(bytes,file.lastModified)!==record.fingerprint)
+            throw new Error('File changed during folder move: '+record.path+'. Original preserved.');
+        }
+      }
+      let target;
+      try {
+        target=await targetParent.getDirectoryHandle(targetName,{create:true});
+        for(const folder of directories.sort((a,b)=>a.split('/').length-b.split('/').length)) {
+          let dir=target;
+          for(const segment of folder.split('/')) dir=await dir.getDirectoryHandle(segment,{create:true});
+        }
+        for(const record of records) {
+          const segments=record.path.split('/'),name=segments.pop();
+          let dir=target;
+          for(const part of segments) dir=await dir.getDirectoryHandle(part,{create:false});
+          const output=await dir.getFileHandle(name,{create:true});
+          const writer=await output.createWritable();
+          try {await writer.write(record.bytes);await writer.close();}
+          catch(error){try{await writer.abort();}catch(_){}throw error;}
+          const copy=new Uint8Array(await (await output.getFile()).arrayBuffer());
+          if(copy.length!==record.bytes.length || copy.some((byte,i)=>byte!==record.bytes[i]))
+            throw new Error('Copied bytes did not match: '+record.path);
+        }
+        await verifyInventory();
+      } catch(error) {
+        if(target) {
+          try {await targetParent.removeEntry(targetName,{recursive:true});}
+          catch(_) { /* A partial copy may require manual cleanup. */ }
+        }
+        applyScanned(await scan(rootHandle));
+        throw error;
+      }
+      try {await sourceParent.removeEntry(from.at(-1),{recursive:true});}
+      catch(error) {
+        applyScanned(await scan(rootHandle));
+        throw new Error('Verified folder copy exists but the source could not be removed; both folders may remain: '+error.message);
+      }
+      applyScanned(await scan(rootHandle));
+      return newPath;
+    }
+
     // Destructive operations are restricted to entries already exposed in the
     // scanned wiki tree. Hidden configuration directories are never deleted.
     function findNode(path, kind) {
@@ -507,9 +621,10 @@
       return applyScanned(await scan(rootHandle, onProgress));
     }
     return {
-      openWritable, openExisting, openReadOnly, read, readRaw, write, readAsset, refresh, createFile, createDirectory, missingParents, renameFile, moveAsset, assetFingerprint, deletionSnapshot, deleteEntry,
+      openWritable, openExisting, openReadOnly, read, readRaw, write, readAsset, refresh, createFile, createDirectory, missingParents, renameFile, moveAsset, moveDirectory, assetFingerprint, deletionSnapshot, deleteEntry,
       normalizeDestination: raw => creationSegments(raw, 'file').join('/'),
       normalizeAssetDestination: raw => creationSegments(raw, 'asset').join('/'),
+      normalizeDirectoryDestination: raw => creationSegments(raw, 'directory').join('/'),
       getTree: () => tree, getMode: () => mode, getRootHandle: () => rootHandle,
       hasFile: path => fileHandles.has(path), hasAsset: path => assetHandles.has(path),
       getFilePaths: () => Array.from(fileHandles.keys()), getAssetPaths: () => Array.from(assetHandles.keys())

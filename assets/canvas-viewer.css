@@ -55,3 +55,11 @@
 .canvas-node-content code { white-space:pre-wrap; overflow-wrap:anywhere; }
 .canvas-node-content img { display:none; }
 .canvas-inert-link { color:var(--accent); text-decoration:underline dotted; cursor:default; }
+
+/* First-stage note transclusion: safe, inert excerpts, never an editable iframe. */
+.canvas-note-excerpt { margin:7px 8px 8px; padding:7px 9px; max-height:calc(100% - 55px);
+  overflow:auto; border-top:1px solid var(--line); color:var(--text); font-size:12px; }
+.canvas-note-excerpt h1,.canvas-note-excerpt h2,.canvas-note-excerpt h3 {font-size:13px; margin:3px 0;}
+.canvas-note-excerpt p {margin:3px 0;line-height:1.5;}
+.canvas-note-excerpt img,.canvas-note-excerpt a {pointer-events:none;}
+.canvas-note-loading,.canvas-note-truncated,.canvas-note-missing {font-size:11px; color:var(--muted);}

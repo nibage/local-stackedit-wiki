@@ -113,6 +113,18 @@ class OfflineReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(module.BuildError, 'SHA-512'):
                 module.load_npm_bundle(spec, module.make_cache_fetch(d))
 
+    def test_release_whitelist_omits_development_files_and_keeps_runtime(self):
+        yes = ('index.html','README.md','src/main.js','assets/rc5.css',
+               'vendor/MathJax/MathJax.js','vendor/mermaid/LICENSE',
+               'docs/editor-smoke.png')
+        no = ('tests/wiki-index.test.cjs','tools/release-audit.py','demo-wiki/x.md',
+              '.github/workflows/offline-release.yml','docs/RC3_OPRAVY.md',
+              'tools/__pycache__/junk.pyc','src/vendor.min.js.map')
+        for filename in yes:
+            self.assertTrue(module.is_release_file(Path(filename)), filename)
+        for filename in no:
+            self.assertFalse(module.is_release_file(Path(filename)), filename)
+
     def test_builder_never_creates_partial_zip_if_network_fails(self):
         with tempfile.TemporaryDirectory() as td:
             out = Path(td) / 'release.zip'

@@ -40,7 +40,7 @@ with sync_playwright() as pw:
         }}
       window.mockWiki=dir('Wiki',[
         file('Home.md','# Home\\n\\n[Other](Docs/Other.md)\\n'),
-        file('Orphan.md','# Orphan\\n'),
+        file('Orphan.md','# Orphan\\n\\n## Section\\n\\n### Subsection\\n'),
         dir('Docs',[file('Other.md','# Other\\n\\n[[Home]]\\n')])
       ]);
       window.showDirectoryPicker=async()=>window.mockWiki;
@@ -75,6 +75,15 @@ with sync_playwright() as pw:
     page.locator('[data-side="files"]').click()
     page.locator('.tree-row[aria-label="Orphan.md"]').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Orphan.md'")
+    page.locator('[data-view="preview"]').click()
+    page.locator('[data-side="toc"]').click()
+    assert page.locator('#toc .toc-item').count()==3
+    page.locator('#toc .toc-item').nth(2).click()
+    assert page.locator('[data-view="split"]').get_attribute('class')=='active'
+    assert page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line")==4
+    page.locator('#toc .toc-item').nth(0).click()
+    assert page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line")==0
+    assert page.evaluate("document.querySelector('.CodeMirror').contains(document.activeElement)")
     page.locator('[data-side="links"]').click()
     page.wait_for_function("document.querySelector('#notice').textContent.includes('No other notes link')")
     assert page.locator('#backlinks-results').inner_text().strip()==''
