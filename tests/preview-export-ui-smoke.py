@@ -66,7 +66,7 @@ with sync_playwright() as pw:
     page.locator('#preview-export-toggle').click()
     assert page.locator('#preview-export-options').is_visible()
     assert page.locator('#preview-export-toggle').get_attribute('aria-expanded')=='true'
-    page.locator('#preview-export-options').press('Escape')
+    page.locator('#preview-export-html').press('Escape')
     assert not page.locator('#preview-export-options').is_visible()
 
     page.locator('#preview-export-toggle').click()
