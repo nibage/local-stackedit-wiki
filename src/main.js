@@ -451,9 +451,32 @@
         output.textContent = 'Invalid JSON Canvas: ' + error.message + ' The file was not modified.';
       }
     } else {
-      const info = document.createElement('p'); info.textContent = 'Obsidian Bases (read-only YAML preview). Full Bases queries and editing are not implemented.';
-      const pre = document.createElement('pre'); pre.className = 'attachment-plain-text'; pre.textContent = text.slice(0, 100000);
-      output.append(info, pre);
+      try {
+        const allPaths = bridge.getFilePaths();
+        const paths = allPaths.slice(0, 500), rows = new Array(paths.length);
+        let next = 0, failed = 0;
+        await Promise.all(Array.from({ length: Math.min(6, paths.length) }, async () => {
+          while (next < paths.length) {
+            const i = next++;
+            try {
+              const note = await bridge.read(paths[i]);
+              const properties = window.LocalWikiBases.readFrontmatter(note.text);
+              rows[i] = window.LocalWikiBases.fileData(paths[i], properties, note.text.slice(0, 100000));
+            } catch (_) { failed++; }
+          }
+        }));
+        const table = window.LocalWikiBases.render(text, rows.filter(Boolean), {
+          totalFiles: allPaths.length, failedFiles: failed,
+          onOpen: notePath => {
+            const dialog = $('attachment-dialog');
+            if (dialog.open) dialog.close();
+            void navigateTo(notePath);
+          }
+        });
+        output.append(table);
+      } catch (error) {
+        output.textContent = 'Cannot show Bases table: ' + error.message + ' The file was not modified.';
+      }
     }
     return output;
   }
@@ -462,9 +485,11 @@
     const dialog = $('attachment-dialog');
     const viewer = $('attachment-dialog-viewer');
     viewer.querySelector('.wiki-canvas-viewer')?.dispose?.();
+    viewer.querySelector('.wiki-bases-viewer')?.dispose?.();
     if (attachmentDialogURL) { URL.revokeObjectURL(attachmentDialogURL); attachmentDialogURL = null; }
     viewer.replaceChildren();
     dialog.classList.toggle('canvas-dialog-open', types.kind(path) === 'canvas');
+    dialog.classList.toggle('bases-dialog-open', types.kind(path) === 'base');
     $('attachment-dialog-title').textContent = basename(path);
     $('attachment-dialog-path').textContent = path;
     $('attachment-insert').disabled = bridge.getMode() !== 'readwrite' || !activePath || operations.isBusy();
@@ -476,7 +501,10 @@
       if (types.kind(path) === 'canvas' || types.kind(path) === 'base') {
         const node = await attachmentTextPreview(file, path);
         if (dialog.open && $('attachment-dialog-path').textContent === path) viewer.replaceChildren(node);
-        else node.querySelector('.wiki-canvas-viewer')?.dispose?.();
+        else {
+          node.querySelector('.wiki-canvas-viewer')?.dispose?.();
+          node.querySelector('.wiki-bases-viewer')?.dispose?.();
+        }
         return;
       }
       const url = URL.createObjectURL(file);
@@ -492,8 +520,9 @@
   $('attachment-close').addEventListener('click', () => $('attachment-dialog').close());
   $('attachment-dialog').addEventListener('close', () => {
     $('attachment-dialog-viewer').querySelector('.wiki-canvas-viewer')?.dispose?.();
+    $('attachment-dialog-viewer').querySelector('.wiki-bases-viewer')?.dispose?.();
     $('attachment-dialog-viewer').replaceChildren();
-    $('attachment-dialog').classList.remove('canvas-dialog-open');
+    $('attachment-dialog').classList.remove('canvas-dialog-open', 'bases-dialog-open');
     if (attachmentDialogURL) { URL.revokeObjectURL(attachmentDialogURL); attachmentDialogURL = null; }
   });
   function showImage(path) {
