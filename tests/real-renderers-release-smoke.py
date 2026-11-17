@@ -39,8 +39,8 @@ def prepare_root(zip_path, output):
                    Path(relative).parts[0] in allow_dirs):
                 raise AssertionError('Development-only file leaked into user ZIP: '+relative)
             shipped.add(relative)
-        if not allow_root.issubset(shipped):
-            raise AssertionError('Essential offline README missing from ZIP')
+        if not (allow_root | allow_images).issubset(shipped):
+            raise AssertionError('Essential offline README and current dark screenshot missing from ZIP')
         archive.extractall(output)
     matches = list(output.glob('*/index.html'))
     if len(matches) != 1:

@@ -29,7 +29,7 @@ jobs:
       - name: Verify bundled Mermaid and ABCjs render into SVG without network
         run: python tests/real-renderers-release-smoke.py --zip local-stackedit-wiki-offline.zip
       - name: Capture current dark-mode screenshot from real offline app
-        run: python tests/marketing-screenshot.py --zip local-stackedit-wiki-offline.zip --out marketing-current.jpg --emit-base64
+        run: python tests/marketing-screenshot.py --zip local-stackedit-wiki-offline.zip --out marketing-current.jpg
       - name: Verify workspace layout, sidebar resizing and theme colors
         run: python tests/rc3-layout-storage-smoke.py
       - name: Verify RC5 English UI, drag-and-drop safety, inline creation, images and palettes
