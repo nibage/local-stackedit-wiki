@@ -63,3 +63,38 @@
 .canvas-note-excerpt p {margin:3px 0;line-height:1.5;}
 .canvas-note-excerpt img,.canvas-note-excerpt a {pointer-events:none;}
 .canvas-note-loading,.canvas-note-truncated,.canvas-note-missing {font-size:11px; color:var(--muted);}
+
+/* Canvas editing is scoped to the large attachment dialog; inline embeds stay inert. */
+.canvas-editor { display:flex; flex-direction:column; gap:8px; min-width:0; }
+.canvas-editor-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
+.canvas-editor-toolbar .canvas-control:disabled { opacity:.45; cursor:not-allowed; }
+.canvas-editor-message { margin:0; font-size:12px; color:var(--muted); min-height:18px; }
+.canvas-editor[data-dirty="true"] .canvas-editor-message { color:var(--text); }
+.canvas-editor-confirm { border:1px solid var(--line); border-radius:7px; padding:9px;
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:var(--panel-alt); }
+.canvas-editor-confirm[hidden] { display:none; }
+.canvas-editor-board { min-width:0; }
+.canvas-editor-board .canvas-viewport { height:min(50vh,530px); }
+.canvas-editor-board .canvas-node[data-kind="group"] { pointer-events:auto; }
+.canvas-editor-board .canvas-node-selected { outline:3px solid var(--accent); outline-offset:2px; }
+.canvas-editor-board .canvas-node { touch-action:none; user-select:none; }
+.canvas-editor-board .canvas-node * { pointer-events:none; }
+.canvas-editor-board .canvas-editor-resize {
+  pointer-events:auto; position:absolute; bottom:2px; right:2px; z-index:3;
+  width:27px; height:27px; border:1px solid var(--line); border-radius:5px;
+  background:var(--panel); color:var(--text); cursor:nwse-resize;
+}
+.canvas-editor-inspector { display:flex; flex-wrap:wrap; align-items:end; gap:8px;
+  border-top:1px solid var(--line); padding-top:8px; }
+.canvas-editor-inspector > strong { width:100%; font-size:12px; }
+.canvas-editor-field { display:flex; flex-direction:column; gap:3px; color:var(--muted);
+  font-size:11px; min-width:88px; flex:1; }
+.canvas-editor-field input,.canvas-editor-field textarea,.canvas-editor-edge-list {
+  font:12px inherit; color:var(--text); background:var(--panel); border:1px solid var(--line);
+  border-radius:5px; padding:6px; min-width:0; width:100%; box-sizing:border-box; }
+.canvas-editor-field:has(textarea) { flex-basis:100%; }
+.canvas-editor-edge-list { width:auto; max-width:100%; }
+@media(max-width:620px) {
+  .canvas-editor-field { flex-basis:calc(50% - 8px); }
+  .canvas-editor-board .canvas-viewport { height:40vh; }
+}
