@@ -43,7 +43,7 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 
 ## Future: richer structured diagrams and database views
 
-- [x] **Canvas (.canvas):** read-only visual graph with cards, connections, groups and zoom/pan. [x] Safe Markdown card formatting; [ ] note-file content previews. Editing/link updates require separate design and regression tests.
+- [x] **Canvas (.canvas):** read-only visual graph with cards, connections, groups and zoom/pan. [x] Safe Markdown card formatting; [x] vault-local Markdown note excerpts inside file cards. Editing/link updates require separate design and regression tests.
 - [x] **Bases (.base):** read-only tables backed by local Markdown frontmatter, multiple table views and basic filters. [ ] Full expression/formula compatibility, alternative view layouts and property editing. A .base file is not a database storing note rows.
 - [x] **draw.io/diagrams.net first-stage:** offline read-only `.drawio` graph with multipage UI and decompression of the official compressed format. Basic shapes/connections are drawn as safe SVG, no network or embedded code. [ ] Full-fidelity official viewer integration after security/license/size audit (current upstream bundle ~4.9 MB and can refer to hosted assets); complex stencils/layout currently approximate. `.drawio.svg` / `.drawio.png` remain normal images. **No draw.io editing is planned.**
 

@@ -467,6 +467,12 @@
             if (!bridge.hasAsset(target) || !types.isImage(target)) return null;
             const image = await bridge.readAsset(target);
             return image.size <= 8 * 1024 * 1024 ? image : null;
+          },
+          readNote: async target => {
+            // Only an already opened wiki note; no traversal, network or writes.
+            if (!bridge.hasFile(target) || !/\\.(md|markdown)$/i.test(target)) return null;
+            const source = await bridge.read(target);
+            return source.text.length <= 160000 ? source.text : source.text.slice(0,160000);
           }
         });
         output.append(graph);

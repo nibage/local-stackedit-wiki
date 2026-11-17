@@ -218,6 +218,26 @@
             picture.alt=path;picture.src=url;
             card.append(picture);
           }).catch(()=>{ /* a missing image is already represented by its file path */ });
+        } else if (path && /\\.(?:md|markdown)$/i.test(path) && typeof options.readNote === 'function') {
+          const excerpt=create('div','canvas-note-excerpt');
+          excerpt.setAttribute('aria-label','Read-only Markdown note excerpt');
+          excerpt.append(create('p','canvas-note-loading','Loading note excerpt…'));
+          card.append(excerpt);
+          Promise.resolve().then(()=>options.readNote(path)).then(source=>{
+            if (disposed || !card.isConnected) return;
+            excerpt.replaceChildren();
+            if (typeof source !== 'string') {
+              excerpt.append(create('span','canvas-note-missing','Note unavailable'));return;
+            }
+            const content=source.replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n');
+            const stripped=content.startsWith('---\n')?
+              content.replace(/^---\n[\s\S]{0,10000}?\n(?:---|\.\.\.)\n/,''):content;
+            renderSafeMarkdown(excerpt,stripped.slice(0,3500));
+            if (stripped.length>3500) excerpt.append(create('p','canvas-note-truncated','Excerpt truncated'));
+          }).catch(()=>{
+            if (!disposed && card.isConnected)
+              excerpt.replaceChildren(create('span','canvas-note-missing','Unable to read note'));
+          });
         }
       }
       layers.append(card);
