@@ -40,7 +40,7 @@ with sync_playwright() as pw:
       }}
       const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><script>window.svgExecuted=1</script><circle r="4" cx="6" cy="6"/></svg>';
       window.mockWiki=dir('Wiki',[
-        file('Main.md','## Media\\n\\n![[voice.mp3]]\\n\\n![[movie.mp4]]\\n\\n![[paper.pdf]]\\n\\n![[drawing.svg]]\\n\\n[Open canvas](board.canvas)\\n\\n[Open PDF](paper.pdf)'),
+        file('Main.md','## Media\\n\\n![[voice.mp3]]\\n\\n![[movie.mp4]]\\n\\n![[paper.pdf]]\\n\\n![[drawing.svg]]\\n\\n[Open canvas](board.canvas)\\n\\n![[board.canvas]]\\n\\n![[query.base]]\\n\\n[Open PDF](paper.pdf)'),
         file('drawing.svg',svg,'image/svg+xml'),
         file('voice.mp3',new Uint8Array([1,3,2,4,255]),'audio/mpeg'),
         file('movie.mp4',new Uint8Array([0,0,0,20,102,116,121,112]),'video/mp4'),
@@ -65,12 +65,23 @@ with sync_playwright() as pw:
     assert '![[Assets/voice.mp3]]' in page.evaluate("window.mockWiki.entries.get('Main.md').body")
     page.locator('.tree-row[aria-label="Main.md"]').click()
     page.wait_for_function("document.querySelector('#filename').textContent === 'Main.md'")
-    page.wait_for_function("document.querySelectorAll('#preview .wiki-attachment-embed').length === 3")
+    page.wait_for_function("document.querySelectorAll('#preview .wiki-attachment-embed').length === 5")
     page.wait_for_function("document.querySelector('#preview audio')?.src.startsWith('blob:')")
     assert page.locator('#preview video[src^="blob:"]').count()==1
     assert page.locator('#preview object[type="application/pdf"]').count()==1
     assert page.locator('#preview img[src^="blob:"]').count()==1
     assert not page.evaluate('Boolean(window.svgExecuted)'), 'SVG script executed in image context'
+    # Embedded Canvas and Bases are real inline viewers, not open-preview links.
+    page.wait_for_function("document.querySelector('#preview .wiki-structured-embed .wiki-canvas-viewer .canvas-node')!==null")
+    page.wait_for_function("document.querySelector('#preview .wiki-structured-embed .bases-table tbody tr')!==null")
+    assert page.locator('#preview .wiki-structured-embed').count()==2
+    assert page.locator('#preview .wiki-structured-embed .structured-embed-open').count()==2
+    assert page.locator('#preview .canvas-inert-link').count()==2
+    assert not page.locator('#preview .canvas-node[data-kind="text"] a, #preview .canvas-node[data-kind="text"] img').count()
+    page.locator('#preview .wiki-structured-embed .structured-embed-open').first.click()
+    page.wait_for_function("document.querySelector('#attachment-dialog').open")
+    page.wait_for_function("document.querySelector('#attachment-dialog-viewer .canvas-node')!==null")
+    page.locator('#attachment-close').click()
     page.locator('.tree-row[aria-label="board.canvas"]').click()
     page.wait_for_function("document.querySelector('#attachment-dialog').open")
     page.wait_for_function("document.querySelector('#attachment-dialog-viewer').textContent.includes('3 nodes, 1 edges')")
@@ -98,7 +109,7 @@ with sync_playwright() as pw:
     assert 'Obsidian Bases' in page.locator('#attachment-dialog-viewer').inner_text()
     assert page.locator('#attachment-dialog-viewer .bases-table tbody tr').count()==1
     page.locator('#attachment-insert').click()
-    assert '[[query.base]]' in page.locator('.CodeMirror-code').inner_text()
+    assert '![[query.base]]' in page.locator('.CodeMirror-code').inner_text()
     # The view-only dialog must not edit the .base content.
     assert 'file.ext == "md"' in page.evaluate("window.mockWiki.entries.get('query.base').body")
     # Reopen note from disk to remove unsaved insertion before moving attachment.

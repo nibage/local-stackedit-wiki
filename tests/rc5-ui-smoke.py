@@ -91,6 +91,13 @@ with sync_playwright() as pw:
     page.evaluate("document.documentElement.style.setProperty('--sidebar-width','190px')")
     assert page.locator('.file-actions').evaluate('el=>el.scrollWidth <= el.clientWidth')
     assert page.locator('.file-actions button').evaluate_all('els=>els.every(el=>el.scrollWidth <= el.clientWidth)')
+    # All four actions are truly on the SAME row, even at 190 px.
+    points=page.locator('.file-actions button').evaluate_all("""els=>els.map(e=>({
+      x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y,
+      width:e.getBoundingClientRect().width
+    }))""")
+    assert len(points)==4 and all(abs(p['y']-points[0]['y'])<1 for p in points),points
+    assert all(points[i+1]['x']>points[i]['x'] for i in range(3)),points
     page.locator('#rename-file').click()
     assert page.locator('#rename-file').get_attribute('aria-pressed')=='true'
     assert page.locator('#rename-file').evaluate('(el)=>getComputedStyle(el).borderTopColor')=='rgb(84, 178, 115)'

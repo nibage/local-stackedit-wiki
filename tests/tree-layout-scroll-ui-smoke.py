@@ -56,6 +56,9 @@ with sync_playwright() as pw:
             action:rect('.file-actions')};
         }""")
     before=geometry()
+    assert abs(before['note'][1]-before['folder'][1])<1
+    assert abs(before['folder'][1]-before['move'][1])<1
+    assert before['note'][0] < before['folder'][0] < before['move'][0]
     page.locator('#rename-file').click()
     assert page.locator('#rename-file').get_attribute('aria-pressed')=='true'
     assert page.locator('#rename-file').evaluate("(el)=>getComputedStyle(el).borderTopWidth")=='1px'
