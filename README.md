@@ -92,3 +92,5 @@ For details, see [attachment compatibility](docs/OBSIDIAN_ATTACHMENTS.md), [rend
 ---
 
 **Local StackEdit Wiki is an independent offline Markdown application.** It is not affiliated with Obsidian, StackEdit or diagrams.net. Third-party rendering libraries retain their own upstream licenses.
+
+The application includes a local SVG favicon matching its amber **W** identity, without external image requests.
