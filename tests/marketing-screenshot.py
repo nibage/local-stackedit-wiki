@@ -24,21 +24,21 @@ Create and connect ideas with **local Markdown**, rich diagrams and instant navi
 
 ## Idea to insight
 
-\`\`\`mermaid
+```mermaid
 graph LR
   A[Capture] --> B[Organize]
   B --> C[Connect]
   C --> D[Discover]
-\`\`\`
+```
 
 ## From source to preview
 
-\`\`\`mermaid
+```mermaid
 graph LR
   M[Markdown] --> R[Live renderer]
   R --> D[Diagrams]
   R --> K[Math & links]
-\`\`\`
+```
 
 Mathematics is selectable, too: $E=mc^2$.
 
@@ -159,7 +159,7 @@ def capture(root, output, chromium=None):
           document.querySelectorAll('#preview .visualization-mermaid svg').length===2
         """, timeout=30000)
         page.wait_for_function("document.querySelector('#notice').hidden",timeout=10000)
-        assert page.evaluate("document.documentElement.dataset.theme")==="dark"
+        assert page.evaluate("document.documentElement.dataset.theme")=="dark"
         assert page.locator("#preview .visualization-mermaid svg").count()==2
         assert page.locator("#preview .visualization-mermaid .diagram-export").count()==2
         assert page.locator(".tree-row[aria-label='Knowledge-dashboard.md'] .glyph-note").inner_text()=="📝"
