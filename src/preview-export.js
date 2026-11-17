@@ -75,7 +75,7 @@
     const frame=document.createElement('iframe');
     frame.setAttribute('aria-hidden','true');
     frame.tabIndex=-1;
-    frame.style.cssText='position:fixed;left:-200vw;top:0;visibility:hidden;'+
+    frame.style.cssText='position:fixed;left:-200vw;top:0;opacity:0;'+
       'pointer-events:none;border:0;height:30px;width:'+
       Math.max(320,preview.clientWidth||780)+'px;';
     document.body.append(frame);
