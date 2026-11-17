@@ -38,14 +38,38 @@
       });
       cm.focus();
     }
+    function orderedLines() {
+      cm.operation(() => {
+        const from=cm.getCursor('from'),to=cm.getCursor('to');
+        const last=to.ch===0 && to.line>from.line ? to.line-1 : to.line;
+        for(let line=last;line>=from.line;line--)
+          cm.replaceRange((line-from.line+1)+'. ',{line,ch:0});
+      });
+      cm.focus();
+    }
+    function insertBlock(text) {
+      const from=cm.getCursor('from'),to=cm.getCursor('to');
+      const before=cm.getLine(from.line).slice(0,from.ch);
+      const after=cm.getLine(to.line).slice(to.ch);
+      const lead=before.trim()?'\n\n':'';
+      const tail=after.trim()?'\n\n':'\n';
+      cm.replaceSelection(lead+text+tail,'end');
+      cm.focus();
+    }
     function format(type) {
       if (cm.getOption('readOnly')) return;
       if (type === 'bold') wrap('**', '**', 'bold text');
       else if (type === 'italic') wrap('*', '*', 'italic text');
+      else if (type === 'strike') wrap('~~', '~~', 'strikethrough');
       else if (type === 'code') wrap('`', '`', 'code');
-      else if (type === 'link') wrap('[', '](cesta.md)', 'odkaz');
+      else if (type === 'link') wrap('[', '](path/to/note.md)', 'link text');
       else if (type === 'heading') prefixLine('## ');
       else if (type === 'list') prefixLine('- ');
+      else if (type === 'ordered') orderedLines();
+      else if (type === 'checklist') prefixLine('- [ ] ');
+      else if (type === 'quote') prefixLine('> ');
+      else if (type === 'code-block') insertBlock('```text\n'+(cm.getSelection()||'code')+'\n```');
+      else if (type === 'table') insertBlock('| Column 1 | Column 2 |\n| --- | --- |\n| Value 1 | Value 2 |');
       else if (type === 'undo') cm.undo();
       else if (type === 'redo') cm.redo();
     }
