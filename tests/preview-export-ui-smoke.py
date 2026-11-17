@@ -112,7 +112,8 @@ with sync_playwright() as pw:
     printable.wait_for_load_state('domcontentloaded')
     printable.wait_for_function("document.querySelector('h1')?.textContent==='Preview export heading'")
     printable.wait_for_function("window.__wikiPrintInvoked===true")
-    assert printable.locator('main').evaluate('(el)=>getComputedStyle(el).backgroundColor')=='rgb(255, 255, 255)'
+    pdf_background=printable.locator('main').evaluate('(el)=>getComputedStyle(el).backgroundColor')
+    assert pdf_background=='rgb(255, 255, 255)',(pdf_background,printable.locator('main').get_attribute('style'))
     assert page.locator('html').get_attribute('data-theme')=='dark'
     assert printable.locator('img').count()==1
     assert printable.locator('img').first.get_attribute('src').startswith('data:image/png;base64,')
