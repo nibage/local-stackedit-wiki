@@ -85,6 +85,17 @@
       const pending=[];
       for(const original of document.querySelectorAll('link[rel="stylesheet"],style')) {
         if (original.localName==='link') {
+          // Mirror existing loaded CSSOM rules first. This is synchronous and
+          // also works when the app is opened via file:// or setContent().
+          try {
+            const rules=Array.from(original.sheet?.cssRules||[]);
+            if (rules.length) {
+              const inline=doc.createElement('style');
+              inline.textContent=rules.map(rule=>rule.cssText).join('\n');
+              doc.head.append(inline);
+              continue;
+            }
+          } catch (_) { /* Fall back to the original bundle-relative CSS link. */ }
           const relative=original.getAttribute('href')||'';
           // Only bundle-local relative stylesheets: never follow external URLs.
           if (!relative || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(relative))continue;
@@ -106,6 +117,15 @@
           doc.head.append(style);
         }
       }
+      // The print copy must be light even if a stylesheet cannot be cloned.
+      // Force only the main preview palette, leaving light-theme typography,
+      // diagrams and syntax styles inherited from the copied offline CSS.
+      const lightPalette=doc.createElement('style');
+      lightPalette.textContent=':root[data-theme="light"]{color-scheme:light;'+
+        '--panel:#fff;--panel-alt:#f7f8fa;--text:#252c34;--muted:#677182;--line:#d9dde2;}'+
+        '[data-theme="light"] .markdown-preview{background:#fff!important;'+
+        'color:#252c34!important;}';
+      doc.head.append(lightPalette);
       const wrapper=doc.createElement('section');
       wrapper.className='pane preview-pane';
       const light=doc.importNode(preview,true);
