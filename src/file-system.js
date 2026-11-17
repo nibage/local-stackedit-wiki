@@ -216,6 +216,34 @@
       if (!handle) throw new Error(`Attachment not found: ${path}`);
       return typeof handle.getFile === 'function' ? handle.getFile() : handle;
     }
+    // Structured Canvas writes are explicitly opt-in. Unknown attachment types stay read-only.
+    async function readAssetSnapshot(path) {
+      if (!/\.canvas$/i.test(path)) throw new Error('Only JSON Canvas assets can be edited here.');
+      const handle = assetHandles.get(path);
+      if (!handle) throw new Error('Canvas not found in the selected wiki.');
+      const file = typeof handle.getFile === 'function' ? await handle.getFile() : handle;
+      if (file.size > 2 * 1024 * 1024) throw new Error('Canvas is larger than the 2 MB editing limit.');
+      const {text,hasBOM,fingerprint} = await fileSnapshot(file);
+      return {text,hasBOM,fingerprint};
+    }
+    async function writeAsset(path, text, expectedFingerprint) {
+      if (mode !== 'readwrite') throw new Error('The folder is open read-only.');
+      if (!/\.canvas$/i.test(path)) throw new Error('This editor only writes .canvas files.');
+      if (typeof text !== 'string' || new TextEncoder().encode(text).length > 2 * 1024 * 1024)
+        throw new Error('Canvas exceeds the 2 MB write limit.');
+      const handle = assetHandles.get(path);
+      if (!handle || typeof handle.createWritable !== 'function') throw new Error('Canvas write permission is missing.');
+      const current = await handle.getFile();
+      if (expectedFingerprint !== (await fileSnapshot(current)).fingerprint) {
+        const error = new Error('The Canvas file changed outside the wiki. Nothing was overwritten.');
+        error.code = 'EXTERNAL_CHANGE';
+        throw error;
+      }
+      const writer = await handle.createWritable();
+      try { await writer.write(text); await writer.close(); }
+      catch (error) { try { await writer.abort(); } catch (_) {} throw error; }
+      return {fingerprint:(await fileSnapshot(await handle.getFile())).fingerprint};
+    }
     async function write(path, text, expectedFingerprint) {
       if (mode !== 'readwrite') throw new Error('The folder is open read-only.');
       const handle = fileHandles.get(path);
@@ -621,7 +649,7 @@
       return applyScanned(await scan(rootHandle, onProgress));
     }
     return {
-      openWritable, openExisting, openReadOnly, read, readRaw, write, readAsset, refresh, createFile, createDirectory, missingParents, renameFile, moveAsset, moveDirectory, assetFingerprint, deletionSnapshot, deleteEntry,
+      openWritable, openExisting, openReadOnly, read, readRaw, write, readAsset, readAssetSnapshot, writeAsset, refresh, createFile, createDirectory, missingParents, renameFile, moveAsset, moveDirectory, assetFingerprint, deletionSnapshot, deleteEntry,
       normalizeDestination: raw => creationSegments(raw, 'file').join('/'),
       normalizeAssetDestination: raw => creationSegments(raw, 'asset').join('/'),
       normalizeDirectoryDestination: raw => creationSegments(raw, 'directory').join('/'),

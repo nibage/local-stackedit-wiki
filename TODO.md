@@ -52,7 +52,7 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 1. [x] **Canvas read-only viewer (first stage)**: graph cards, groups, edges, labels/colors, pan and zoom, vault-local image thumbnails, no remote content. Sanitized Markdown is displayed in text cards. Next: richer note-file content previews.
 2. [x] **Bases read-only table (first stage)**: safe subset YAML, local Markdown/frontmatter, table views, columns, limits, supported filters and sorting; unsupported formulas and expressions identified.
 3. [x] **draw.io/diagrams.net read-only first stage**: local `.drawio` graph with pages, compressed/uncompressed mxfile support and no remote/script loading; compatibility of advanced stencils is limited and tracked above.
-4. [ ] **Canvas editing** (optional, after the viewers): manipulate cards and edges and save JSON Canvas safely with conflict checks and undo/redo.
+4. [x] **Canvas editing (first stage)**: large-dialog draft editor, cards/connectors, move/resize, metadata-preserving JSON, Undo/Redo, guarded Save/Discard. [ ] Further polish: snap/alignment, keyboard accessibility, advanced source compatibility and comprehensive manual file:// acceptance.
 5. [ ] **Bases editing** (optional): modify table views/properties without unsafe bulk rewrites, preserving Markdown/frontmatter and migration semantics.
 
 **Explicit non-goal:** do not build a `.drawio` editor; keep authoring in the official diagrams.net desktop/web application. Do not implement editors just because the read-only format is supported.
@@ -110,3 +110,13 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Darken the light-mode header banner to a calmer burgundy tone.
 - [x] Replace 10 old docs screenshots with one genuine current dark-mode screenshot including two real offline Mermaid diagrams. Capture script verifies rendering in Chromium.
 - [x] Keep only `docs/app-dark-diagrams.jpg` in README and the lean offline ZIP.
+
+## Canvas editor first-stage implementation (November 2026)
+
+- [x] Writable-only **Edit canvas** in Open larger; Markdown inline embeds remain read-only.
+- [x] Add/edit/delete text, file, link and group cards; move/resize; connect/remove edges.
+- [x] Undo/Redo, Save/Discard, dirty indicator and confirmation before closing an unsaved draft.
+- [x] Keep unknown JSON fields in the source document and protect against external file edits using a content fingerprint.
+- [x] Add unit tests and Chromium regression coverage for editor state and guarded writes.
+- [ ] Next Canvas refinement: coordinate-preserving zoom during edits, touch/keyboard navigation, richer connector routing and alignment/grid tools.
+- [ ] Bases editor remains the next independent stage; draw.io authoring stays external.

@@ -52,3 +52,29 @@ test('read-only fallback nemůže zapisovat',async()=>{
   assert.equal((await api.read('One.md')).text,'abc');
   await assert.rejects(()=>api.write('One.md','new','3:1'),/read-only/);
 });
+
+test('Canvas asset snapshot writes only with a current fingerprint and permission',async()=>{
+  const original='{"nodes":[],"edges":[],"future":true}';
+  const canvas=new MockFile('draft.canvas',original);
+  const other=new MockFile('diagram.drawio','untouched');
+  const api=setup(new MockDir('Wiki',[canvas,other]));
+  await api.openWritable();
+  const snapshot=await api.readAssetSnapshot('draft.canvas');
+  assert.equal(snapshot.text,original);
+  const saved=await api.writeAsset('draft.canvas','{"nodes":[],"edges":[],"future":true,"draft":1}',snapshot.fingerprint);
+  assert.equal(JSON.parse(canvas.contents).draft,1);
+  assert.notEqual(saved.fingerprint,snapshot.fingerprint);
+  await assert.rejects(()=>api.writeAsset('draft.canvas','overwrite',snapshot.fingerprint),e=>e.code==='EXTERNAL_CHANGE');
+  assert.equal(JSON.parse(canvas.contents).draft,1);
+  await assert.rejects(()=>api.writeAsset('diagram.drawio','X','anything'),/only writes .canvas/);
+  assert.equal(other.contents,'untouched');
+});
+test('read-only Canvas snapshot cannot be committed',async()=>{
+  const text='{"nodes":[],"edges":[]}';
+  const canvas=new MockFile('draft.canvas',text);
+  const api=setup(new MockDir('Wiki',[canvas]));
+  await api.openExisting(new MockDir('Wiki',[canvas]),()=>{},true);
+  const snap=await api.readAssetSnapshot('draft.canvas');
+  await assert.rejects(()=>api.writeAsset('draft.canvas','not allowed',snap.fingerprint),/read-only/);
+  assert.equal(canvas.contents,text);
+});

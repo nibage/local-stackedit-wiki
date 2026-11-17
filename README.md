@@ -16,7 +16,7 @@ A fully offline, portable Markdown knowledge base for Chrome and Edge. Write in 
 
 | Write in Markdown | Connect your ideas | Explore visually |
 |---|---|---|
-| Syntax highlighting, formatting toolbar, live preview and safe autosave | Full-text search, in-links, out-links, Back and separate heading outline | Local Canvas graphs, read-only Bases tables, draw.io diagrams, Mermaid and MathJax |
+| Syntax highlighting, formatting toolbar, live preview and safe autosave | Full-text search, in-links, out-links, Back and separate heading outline | Editable Canvas graphs, read-only Bases tables, draw.io diagrams, Mermaid and MathJax |
 
 ### Designed for your files
 
@@ -42,6 +42,8 @@ A fully offline, portable Markdown knowledge base for Chrome and Edge. Write in 
 
 **→ Move** enables dragging notes, attachments and folders to an existing directory. Folder moves copy and verify the complete subtree, require confirmation, and conservatively migrate local Markdown/wikilinks and common attachment references. The browser filesystem does not offer atomic multi-file transactions, so maintain backups. **- Delete** starts **off**: turn it on to reveal trash icons on hover or focus; permanent removal still requires confirmation.
 
+**Canvas editing:** Open a `.canvas` attachment, choose **Open larger** if it was embedded, then **Edit canvas**. Select or drag a card, resize using its ↘ corner, modify fields below the graph, add new cards, or use **Connect →** followed by a target card. Undo/Redo and **Save canvas** work only in this large dialog; the save refuses external changes and the folder must be writable. **Preview** returns to the read-only graph. Save first, or explicitly discard your draft before leaving.
+
 **Refresh** rescans disk contents and keeps expanded branches. **Status** displays the bundled renderer status and diagnostic tools. On a complete release, all four renderer dependencies should report ready; developer checkouts may need separate installation.
 
 ## Technical guide
@@ -54,14 +56,14 @@ A fully offline, portable Markdown knowledge base for Chrome and Edge. Write in 
 | File access | Chromium File System Access API, with read-only fallback where available |
 | Markdown editing | CodeMirror, marked, Prism; offline sanitization |
 | Mathematics and notation | MathJax MathML, Mermaid and ABCjs (pinned, verified offline bundles) |
-| Structured files | JSON Canvas read-only graph with local note excerpts; Bases read-only table with limited YAML/filter syntax; draw.io read-only basic SVG viewer |
+| Structured files | JSON Canvas visual editor in Open larger (writable mode only), read-only inline Canvas excerpts; Bases read-only table with limited YAML/filter syntax; draw.io read-only basic SVG viewer |
 | Storage | Your chosen wiki folder; preferences scoped to this `index.html` installation |
 | Distribution | GitHub Actions verified offline ZIP; no tests, build tools or demo vault in the download |
 
 ### Known limitations
 
 - Only supported Chrome/Edge environments offer writable directory access. A source checkout may have placeholder renderer assets; use the verified ZIP for offline use.
-- Canvas and Bases viewers do not provide full Obsidian editor compatibility. Canvas file cards can display bounded local Markdown excerpts; external links and arbitrary HTML remain inert. Bases intentionally supports only a safe subset of view/filter expressions.
+- Canvas editing is a first-stage implementation, not full Obsidian parity. In **Open larger**, writable folders offer **Edit canvas** with move/resize, node property edits, adding cards and connections, Undo/Redo and guarded Save/Discard. Inline embeds remain read-only, and unsupported JSON Canvas constructs must not be silently rewritten. Canvas file cards can display bounded local Markdown excerpts; external links and arbitrary HTML remain inert. Bases currently supports read-only tables and only a safe subset of view/filter expressions.
 - The `.drawio` viewer approximates complex/custom shapes; use [diagrams.net](https://www.diagrams.net/) for full-fidelity editing. Audio/video playback and PDFs depend on browser codecs and support.
 - Rewriting references inside structured Canvas and Bases files is not yet automatic when moving referenced attachments. For advanced features see [TODO.md](TODO.md).
 - Deleting a folder is permanent, and no browser API can make a multi-file move fully atomic. Back up important information.

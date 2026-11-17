@@ -15,6 +15,7 @@
   let activePath = null, originalText = '', fingerprint = null, lineEnding = '\n', hasBOM = false;
   let expanded = new Set(['']), renderTimer = null, renderSequence = 0;
   let inlineDraft = null, imageDialogURL = null, attachmentDialogURL = null, pendingMovePath = null;
+  let activeCanvasEditor = null;
   let selectedFolder = '', treeClickTimer = null, lastTreeSelection = null;
   let moveEnabled = false, deleteEnabled = false, draggedPath = null, draggedKind = null;
   let noticeTimer = null, autosaveBlocked = null;
@@ -708,6 +709,8 @@
   }
   async function showAttachment(path) {
     if (types.isImage(path)) { showImage(path); return; }
+    activeCanvasEditor?.dispose?.();
+    activeCanvasEditor = null;
     const dialog = $('attachment-dialog');
     const viewer = $('attachment-dialog-viewer');
     viewer.querySelector('.wiki-canvas-viewer')?.dispose?.();
@@ -722,6 +725,53 @@
     $('attachment-dialog-path').textContent = path;
     $('attachment-insert').disabled = bridge.getMode() !== 'readwrite' || !activePath || operations.isBusy();
     $('attachment-insert').onclick = () => { if (insertAttachment(path)) dialog.close(); };
+    const editCanvas = $('attachment-edit-canvas');
+    editCanvas.hidden = types.kind(path) !== 'canvas' || bridge.getMode() !== 'readwrite';
+    editCanvas.disabled = operations.isBusy();
+    editCanvas.onclick = async () => {
+      if (activeCanvasEditor || bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
+      editCanvas.disabled = true;
+      try {
+        const snapshot = await bridge.readAssetSnapshot(path);
+        if (!dialog.open || $('attachment-dialog-path').textContent !== path) return;
+        const raw = JSON.parse(snapshot.text.replace(/^\uFEFF/,''));
+        const canvasEditor = window.LocalWikiCanvasEditor.mount(raw, {
+          fingerprint:snapshot.fingerprint,
+          readImage:async target => {
+            if (!bridge.hasAsset(target) || !types.isImage(target)) return null;
+            const image=await bridge.readAsset(target);
+            return image.size <= 8*1024*1024 ? image : null;
+          },
+          readNote:async target => {
+            if (!bridge.hasFile(target) || !(/\.md$|\.markdown$/i.test(target))) return null;
+            const note=await bridge.read(target);
+            return note.text.slice(0,160000);
+          },
+          onSave:async (data,expected) => {
+            if (operations.isBusy()) throw new Error('Finish the current wiki file operation before saving Canvas.');
+            const content=(snapshot.hasBOM ? '\uFEFF' : '')+JSON.stringify(data,null,2)+'\n';
+            return bridge.writeAsset(path,content,expected);
+          },
+          onPreview:async () => {
+            activeCanvasEditor?.dispose?.();
+            activeCanvasEditor=null;
+            const file=await bridge.readAsset(path);
+            const display=await attachmentTextPreview(file,path);
+            if (dialog.open && $('attachment-dialog-path').textContent===path) {
+              viewer.replaceChildren(display);
+              editCanvas.hidden=false;
+            } else display.querySelector('.wiki-canvas-viewer')?.dispose?.();
+          },
+          onClose:() => dialog.close()
+        });
+        viewer.querySelector('.wiki-canvas-viewer')?.dispose?.();
+        activeCanvasEditor=canvasEditor;
+        viewer.replaceChildren(canvasEditor.root);
+        editCanvas.hidden=true;
+      } catch (error) {
+        viewer.textContent='Cannot edit Canvas: '+error.message+' The file has not been changed.';
+      } finally { editCanvas.disabled=false; }
+    };
     dialog.showModal();
     try {
       const file = await bridge.readAsset(path);
@@ -746,8 +796,17 @@
       if (dialog.open) viewer.textContent = 'Unable to open attachment: ' + error.message;
     }
   }
-  $('attachment-close').addEventListener('click', () => $('attachment-dialog').close());
+  $('attachment-close').addEventListener('click', () => {
+    if (activeCanvasEditor && !activeCanvasEditor.requestClose()) return;
+    $('attachment-dialog').close();
+  });
+  $('attachment-dialog').addEventListener('cancel', event => {
+    if (activeCanvasEditor && !activeCanvasEditor.requestClose()) event.preventDefault();
+  });
   $('attachment-dialog').addEventListener('close', () => {
+    activeCanvasEditor?.dispose?.();
+    activeCanvasEditor = null;
+    $('attachment-edit-canvas').hidden = true;
     $('attachment-dialog-viewer').querySelector('.wiki-canvas-viewer')?.dispose?.();
     $('attachment-dialog-viewer').querySelector('.wiki-bases-viewer')?.dispose?.();
     $('attachment-dialog-viewer').querySelector('.wiki-drawio-viewer')?.dispose?.();
