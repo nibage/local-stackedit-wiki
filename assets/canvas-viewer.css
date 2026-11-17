@@ -223,7 +223,7 @@
 .canvas-editor .canvas-editor-field textarea {
   flex:1 1 0;width:100%;min-width:0;height:27px;
   box-sizing:border-box;padding:3px 5px;border:1px solid var(--line);
-  border-radius:5px;font:11px/1.25 inherit;
+  border-radius:5px;font-family:inherit;font-size:11px;line-height:1.25;
   background:var(--panel);color:var(--text);
 }
 .canvas-editor .canvas-editor-field textarea {
