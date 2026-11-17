@@ -1434,7 +1434,7 @@
   $('preview-export-pdf').addEventListener('click',()=>startPreviewExport('pdf'));
   function setView(mode) {
     selectedMode = mode; ui.grid.dataset.layout = mode;
-    for (const button of document.querySelectorAll('.view-switch button')) {
+    for (const button of document.querySelectorAll('.view-switch button[data-view]')) {
       const active=button.dataset.view===mode;
       button.classList.toggle('active',active);
       button.setAttribute('aria-pressed',String(active));
@@ -1713,7 +1713,7 @@
   ui.search.addEventListener('input', renderTree);
   $('expand-all').addEventListener('click', () => setExpandedAll(true));
   $('collapse-all').addEventListener('click', () => setExpandedAll(false));
-  document.querySelectorAll('.view-switch button').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+  document.querySelectorAll('.view-switch button[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
   async function saveCurrent(automatic = false, force = false) {
     if (!activePath || !isDirty()) return true;
     if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return false;
