@@ -92,7 +92,7 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 - [x] Add an original, local SVG favicon matching the Wiki app branding.
 - [x] Preserve preview scroll during live Markdown rendering, following the ending paragraphs when the cursor is near the end, and respect manual preview scrolling.
 - [x] After **Expand all**, scroll the tree to the currently selected note or folder.
-- [x] Bases interactive table stage: adjustable widths, temporary AND/OR/NOT filter builder, and header sorting. [ ] Guarded YAML/view editing and frontmatter updates.
+- [x] Bases interactive table stage: adjustable widths, temporary AND/OR/NOT filter builder, and header sorting. [x] Guarded source YAML editing in the large dialog; [ ] graphical persistence of view configuration and frontmatter updates.
 
 The future Canvas/Bases editing design and the draw.io non-goal are explained in [docs/EDITING_ROADMAP.md](docs/EDITING_ROADMAP.md).
 
@@ -127,4 +127,5 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Temporary property/operator/value filters combined by AND/OR/NOT; Reset filters and sort.
 - [x] Sort by clicking table headers without modifying source .base YAML or Markdown notes.
 - [x] Chromium smoke and unit tests for filtering, resizing and source immutability.
-- [ ] Next: source-preserving `.base` YAML edit mode with explicit Save/Discard and fingerprint checks, then per-note frontmatter editing. No automatic bulk rewriting.
+- [x] Source-preserving `.base` YAML edit mode with explicit Save/Discard, safe subset validation and fingerprint checks.
+- [ ] Next: GUI persistence of view configuration and filters; separately guarded per-note Markdown frontmatter property editing. No automatic bulk rewriting.
