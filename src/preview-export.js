@@ -209,6 +209,12 @@
       if (copy.localName!=='style') copyStyle(original,copy);
       await inlineMedia(original,copy,budget,cache);
     }
+    if (theme==='light') {
+      // Explicit final guarantee for the native PDF document, independent of
+      // the source theme or any user-configured stylesheet load delays.
+      cloned.style.setProperty('background-color','#fff','important');
+      cloned.style.setProperty('color','#252c34','important');
+    }
     cloned.querySelectorAll(REMOVE).forEach(node=>node.remove());
     // Reject remaining references that would require an external resource, while
     // preserving anchors, gradient markers and SVG clip-path IDs.
