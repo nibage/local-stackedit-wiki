@@ -29,3 +29,13 @@
 .drawio-error { color:#b14e32; }
 @media(max-width:620px) { .drawio-viewport { min-height:260px; height:45vh; }
   .drawio-hint { margin:0; width:100%; } }
+
+/* Advisory text overlays the diagram instead of inserting/removing a row and
+   resizing the attachment dialog as pages decode or are switched. */
+.wiki-drawio-viewer .drawio-warning {
+  position:absolute;z-index:5;top:10px;right:10px;
+  box-sizing:border-box;max-width:min(410px,calc(100% - 20px));
+  margin:0;border-radius:5px;box-shadow:0 3px 12px #0002;
+  pointer-events:none;
+}
+.wiki-drawio-viewer .drawio-warning[hidden] {display:none;}
