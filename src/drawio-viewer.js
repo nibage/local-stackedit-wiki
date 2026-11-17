@@ -181,7 +181,7 @@
     nodes.forEach(n=>absolute(n));
     for(const n of nodes) {
       const shape=n.style.shape||'rectangle';
-      if(!SHAPES.has(shape) || HEAVY.has(shape) || n.style.image || /^(?:mxgraph|stencil)/.test(shape)) complex++;
+      if(!['rectangle','ellipse','rhombus','diamond','hexagon','triangle','parallelogram','text'].includes(shape) || n.style.image || /^(?:mxgraph|stencil)/.test(shape)) complex++;
     }
     const bounds = nodes.length ? {
       left:Math.min(...nodes.map(n=>n.ax)),
