@@ -107,6 +107,7 @@ with sync_playwright() as pw:
     page.locator('#delete-toggle').click()
     page.locator('.tree-row[aria-label="B.md"]').hover()
     page.locator('#tree-delete-overlay').click()
+    page.wait_for_function("document.querySelector('#delete-dialog').open")
     assert page.locator('#delete-dialog').is_visible()
     assert 'B.md' in page.locator('#delete-dialog-path').inner_text()
     assert page.locator('#delete-dialog').evaluate("""e=>{
@@ -121,6 +122,7 @@ with sync_playwright() as pw:
     # Delete note only after explicit confirmation.
     page.locator('.tree-row[aria-label="B.md"]').hover()
     page.locator('#tree-delete-overlay').click()
+    page.wait_for_function("document.querySelector('#delete-dialog').open")
     page.locator('#delete-dialog-confirm').click()
     page.wait_for_function("!window.mockWiki.entries.has('B.md')")
     assert not page.locator('#delete-dialog').is_visible()
@@ -128,6 +130,7 @@ with sync_playwright() as pw:
     # A nonempty folder requires a second acknowledgement in the same dialog.
     page.locator('.tree-row[aria-label="Folder"]').hover()
     page.locator('#tree-delete-overlay').click()
+    page.wait_for_function("document.querySelector('#delete-dialog').open")
     assert page.locator('#delete-dialog-confirm').is_disabled()
     assert page.locator('#delete-dialog-ack-group').is_visible()
     page.locator('#delete-dialog-ack').check()
