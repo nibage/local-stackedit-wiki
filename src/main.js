@@ -1724,7 +1724,7 @@
     const query=assetSearch.value.trim().toLocaleLowerCase();
     assetResults.replaceChildren();
     if (!assetKind) return;
-    const all=bridge.getFilePaths().filter(path=>types.kind(path)===assetKind);
+    const all=bridge.getAssetPaths().filter(path=>types.kind(path)===assetKind);
     const matches=all.filter(path=>path.toLocaleLowerCase().includes(query)).sort((a,b)=>a.localeCompare(b));
     for (const path of matches.slice(0,160)) {
       const button=document.createElement('button');
