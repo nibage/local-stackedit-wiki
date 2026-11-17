@@ -781,6 +781,7 @@
     $('fulltext-status').textContent = 'The full-text index will be rebuilt on the next search.';
     $('fulltext-results').replaceChildren();
     $('backlinks-results').replaceChildren();
+    backlinksForPath = null;
   }
   async function createNew(kind) {
     if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
@@ -1020,8 +1021,10 @@
   }
   async function doBacklinks() {
     const path = activePath, request = ++backlinkRequest;
-    const area = $('backlinks-results'); area.replaceChildren();
-    if (!path || backlinksForPath === path) return;
+    const area = $('backlinks-results');
+    if (!path) { area.replaceChildren(); return; }
+    if (backlinksForPath === path) return;
+    area.replaceChildren();
     backlinksForPath = path;
     try {
       if (!await ensureIndex() || path !== activePath || request !== backlinkRequest) return;
