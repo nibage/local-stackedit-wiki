@@ -175,9 +175,30 @@
       '.wiki-export-preview .visualization{break-inside:avoid;page-break-inside:avoid;}'+
       '.wiki-export-preview img,.wiki-export-preview svg{max-width:100%!important;}}'+
       '</style></head><body>\n'+
-      '<main class="wiki-export-preview markdown-preview">'+cloned.innerHTML+
+      '<main class="wiki-export-preview markdown-preview" style="'+escapeHtml(cloned.style.cssText)+'">'+cloned.innerHTML+
       '</main>\n</body></html>';
     return html;
+  }
+  function waitForReady(preview,isPending=()=>false) {
+    return new Promise((resolve,reject)=>{
+      let quietSince=Date.now(),done=false;
+      const observer=new MutationObserver(()=>{quietSince=Date.now();});
+      const cleanup=()=>{if(done)return;done=true;observer.disconnect();clearInterval(timer);};
+      const timer=setInterval(()=>{
+        if (!preview.isConnected){cleanup();reject(new Error('The preview was closed during export.'));return;}
+        const images=Array.from(preview.querySelectorAll('img'));
+        const loading=images.some(image=>image.getAttribute('src') && !image.complete);
+        if (!loading && !isPending() && Date.now()-quietSince>=400) {
+          cleanup();resolve();return;
+        }
+        if (Date.now()-start>=10000){
+          cleanup();reject(new Error('The preview is still rendering. Wait for diagrams and images to finish, then try again.'));
+        }
+      },100);
+      const start=Date.now();
+      observer.observe(preview,{subtree:true,childList:true,attributes:true,
+        attributeFilter:['src','style','width','height']});
+    });
   }
   function downloadHtml(html,filename) {
     const blob=new Blob([html],{type:'text/html;charset=utf-8'});
@@ -213,5 +234,5 @@
     try {await popup.document.fonts.ready;} catch(_){}
     if (!popup.closed){popup.focus();popup.print();}
   }
-  global.LocalWikiPreviewExport={build,downloadHtml,openPrintWindow,printHtml,fileName,escapeHtml};
+  global.LocalWikiPreviewExport={build,downloadHtml,openPrintWindow,printHtml,waitForReady,fileName,escapeHtml};
 })(window);
