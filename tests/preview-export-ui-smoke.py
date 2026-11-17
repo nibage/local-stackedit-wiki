@@ -69,14 +69,14 @@ with sync_playwright() as pw:
     page.locator('#theme-select').select_option('dark')
     assert page.locator('html').get_attribute('data-theme')=='dark'
     # Export popup opening/closing may not change the preview pane height.
-    pane_height_before=page.locator('.preview-pane .pane-title').bounding_box()['height']
+    pane_height_before=page.locator('.preview-pane').bounding_box()['height']
     # Export arrow is in the view switch, not the right preview header.
     page.locator('#preview-export-toggle').click()
     assert page.locator('#preview-export-options').is_visible()
     assert page.locator('#preview-export-toggle').get_attribute('aria-expanded')=='true'
     page.locator('#preview-export-html').press('Escape')
     assert not page.locator('#preview-export-options').is_visible()
-    assert page.locator('.preview-pane .pane-title').bounding_box()['height']==pane_height_before
+    assert page.locator('.preview-pane').bounding_box()['height']==pane_height_before
 
     page.locator('#preview-export-toggle').click()
     with page.expect_download() as capture:
