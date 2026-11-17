@@ -8,6 +8,8 @@ Before adding editors, complete the preview scrolling and tree-navigation fixes 
 
 ## Stage 1 — Canvas editor inside Open larger
 
+**First stage implemented on `feature/canvas-editor-stage1`:** independent JSON draft with unknown-field preservation, writable-only large-dialog editing, card move/resize and property fields, new cards and connections, Undo/Redo, Save/Discard, and content-fingerprint conflict blocking. The inline viewer stays read-only. Further keyboard, touch, connector and interaction polish remains open; manual `file://` acceptance is still required.
+
 A separate **Edit canvas** action becomes available only in writable mode, not inside a Markdown inline embed.
 
 1. **Lossless document model:** parse the raw JSON Canvas 1.0 object and preserve unknown top-level, node and edge fields. The current `LocalWikiCanvas.cleanGraph` intentionally normalizes/skips unsupported items for display; **do not serialize that display model over the original**.
