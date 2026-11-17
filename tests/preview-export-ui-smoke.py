@@ -114,6 +114,9 @@ with sync_playwright() as pw:
     printable.wait_for_function("window.__wikiPrintInvoked===true")
     pdf_background=printable.locator('main').evaluate('(el)=>getComputedStyle(el).backgroundColor')
     assert pdf_background=='rgb(255, 255, 255)',(pdf_background,printable.locator('main').get_attribute('style'))
+    assert 'background-color' in printable.locator('main').get_attribute('style')
+    assert printable.locator('main').evaluate('(el)=>getComputedStyle(el).visibility')=='visible'
+    assert printable.locator('h1').first.evaluate('(el)=>el.getAttribute("style")?.includes("color")')
     assert page.locator('html').get_attribute('data-theme')=='dark'
     assert printable.locator('img').count()==1
     assert printable.locator('img').first.get_attribute('src').startswith('data:image/png;base64,')
