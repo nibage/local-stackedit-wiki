@@ -106,3 +106,9 @@ An ordinary `file://` `index.html` cannot register itself as the operating syste
 ## Visual read-only JSON Canvas viewer
 
 Open `demo-wiki/Attachments/example.canvas` from the file tree to explore a safe, entirely offline graph viewer. It supports sanitized Markdown in text cards, file/link/group cards, colored connections, edge labels and arrows, Fit/100%/zoom buttons, pointer panning and Ctrl+wheel zoom. Markdown links within Canvas cards are shown but intentionally not navigable. Local image file nodes may show isolated thumbnails, but external links are rendered as inert text. Editing Canvas is not enabled and viewing never writes back to a file. Graph preview is capped at 400 nodes / 1000 edges and 2 MB per Canvas file.
+
+## Obsidian Bases: read-only tables
+
+Open `demo-wiki/Attachments/example.base` to browse local Markdown notes as table rows, with columns selected by the Bases `views[].order`. Supported are a **restricted offline YAML subset**, scalar note frontmatter, file metadata, common comparison filters, `file.inFolder` and `file.hasTag`, multiple table views and row limits. Click a note name to navigate to it. Complex filters and formulas are **not evaluated**: unsupported filters show a warning and withhold results rather than silently displaying an incorrect table. The first 500 Markdown notes are scanned (up to 300 rows per view). Viewing never modifies the `.base` file or note properties.
+
+The Links panel now loads backlinks automatically, shows a **Back** button beside Table of contents after following an internal link, and uses the top status notice for empty backlink results. **Refresh** remains distinct from F5: it rescans the selected folder for external disk changes, preserving expanded branches, current note and filename filter. The former file-access diagnostic footer is accessible under **Renderers** instead.

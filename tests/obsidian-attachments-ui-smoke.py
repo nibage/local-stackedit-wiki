@@ -46,7 +46,7 @@ with sync_playwright() as pw:
         file('movie.mp4',new Uint8Array([0,0,0,20,102,116,121,112]),'video/mp4'),
         file('paper.pdf',new Uint8Array([37,80,68,70,45,49,46,52]),'application/pdf'),
         file('board.canvas',JSON.stringify({nodes:[{id:'n1',type:'text',text:'Hello <img src=x onerror=alert(1)> **strong** [link](https://example.org)',x:0,y:0,width:260,height:140},{id:'n2',type:'file',file:'drawing.svg',x:350,y:0,width:250,height:160}],edges:[{id:'e1',fromNode:'n1',toNode:'n2',fromSide:'right',toSide:'left',label:'safe'}]}), 'application/json'),
-        file('query.base','filters:\\n  - color: orange\\n','text/yaml'),
+        file('query.base','filters:\\n  and:\\n    - file.ext == "md"\\nviews:\\n  - type: table\\n    name: All notes\\n    order:\\n      - file.name\\n','text/yaml'),
         dir('Assets')
       ]);
       window.showDirectoryPicker=async()=>window.mockWiki;
@@ -91,12 +91,13 @@ with sync_playwright() as pw:
     page.locator('#attachment-close').click()
     page.locator('.tree-row[aria-label="query.base"]').click()
     page.wait_for_function("document.querySelector('#attachment-dialog').open")
-    page.wait_for_function("document.querySelector('#attachment-dialog-viewer').textContent.includes('read-only YAML')")
-    assert 'read-only YAML' in page.locator('#attachment-dialog-viewer').inner_text()
+    page.wait_for_function("document.querySelector('#attachment-dialog-viewer .bases-table tbody tr') !== null")
+    assert 'Obsidian Bases' in page.locator('#attachment-dialog-viewer').inner_text()
+    assert page.locator('#attachment-dialog-viewer .bases-table tbody tr').count()==1
     page.locator('#attachment-insert').click()
     assert '[[query.base]]' in page.locator('.CodeMirror-code').inner_text()
     # The view-only dialog must not edit the .base content.
-    assert page.evaluate("window.mockWiki.entries.get('query.base').body")=='filters:\n  - color: orange\n'
+    assert 'file.ext == "md"' in page.evaluate("window.mockWiki.entries.get('query.base').body")
     # Reopen note from disk to remove unsaved insertion before moving attachment.
     page.reload(wait_until='domcontentloaded') if False else None
     # New session: no edits may be dropped. Check read-only mode independently.
