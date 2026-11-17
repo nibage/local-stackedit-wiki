@@ -23,6 +23,8 @@ Follow-up: snap-to-grid, align/distribute, copy/paste, keyboard navigation, rich
 
 ## Stage 2 — Bases interaction, then editor
 
+**Stage 2a implemented in `feature/bases-table-interactions`:** per-view temporary widths (drag, keyboard or auto-fit), safe in-memory filter builder, AND/OR/NOT, header sorting and Reset; source YAML and note frontmatter are never modified. A dedicated guarded YAML editor is still a separate stage.
+
 Remember: `.base` describes **views**, while the **rows are Markdown notes with YAML frontmatter**. Saving a table property therefore modifies the corresponding `.md` file, not a database table inside the `.base`.
 
 **Stage 2a: non-destructive interaction**

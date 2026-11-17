@@ -29,3 +29,25 @@ test('parse literal frontmatter but never execute code or YAML features',()=>{
  assert.throws(()=>a.parseYaml('constructor: nope'),/Unsafe/);
  assert.throws(()=>a.parseYaml('bad:\n\tvalue: 4'),/indentation/);
 });
+
+test('temporary Bases filters handle text, numeric and tags without mutating rows',()=>{
+ const a=api();
+ const rows=[
+  a.fileData('Notes/First.md',{status:'done',score:9,tags:['work']}),
+  a.fileData('Notes/Second.md',{status:'todo',score:2,tags:['home']}),
+  a.fileData('Notes/Third.md',{status:'done',score:4,tags:['home']})
+ ];
+ const rules=[{key:'status',op:'equals',value:'done'},{key:'score',op:'greater',value:'5'}];
+ assert.equal(a.applyTemporary(rows,rules,'and',false).length,1);
+ assert.equal(a.applyTemporary(rows,rules,'or',false).length,2);
+ assert.equal(a.applyTemporary(rows,rules,'and',true).length,2);
+ assert.equal(a.applyTemporary(rows,[{key:'file.tags',op:'tag',value:'#work'}]).length,1);
+ assert.equal(a.applyTemporary(rows,[{key:'file.name',op:'contains',value:'second'}]).length,1);
+ assert.equal(rows.length,3);
+});
+test('unsupported temporary filters cannot evaluate expressions',()=>{
+ const a=api(),rows=[a.fileData('A.md',{value:'x'})];
+ assert.equal(a.applyTemporary(rows,[{key:'formula.hidden',op:'equals',value:'x'}]).length,0);
+ assert.equal(a.applyTemporary(rows,[{key:'value',op:'badOperator',value:'x'}]).length,0);
+ assert.throws(()=>a.applyTemporary(rows,Array.from({length:9},()=>({key:'value',op:'equals',value:'x'}))),/eight/);
+});
