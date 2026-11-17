@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="assets/bases-viewer.css">
   <link rel="stylesheet" href="assets/drawio-viewer.css">
   <link rel="stylesheet" href="assets/preview-export.css">
+  <link rel="stylesheet" href="assets/stackedit-mode.css">
   <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css">
   <link rel="stylesheet" href="vendor/codemirror/addon/dialog/dialog.css">
   <script>
@@ -38,7 +39,7 @@
       <label class="readonly-option" title="Open the selected folder without write permission"><input id="read-only-toggle" type="checkbox"> Open read-only</label>
       <button id="open-folder" class="primary" type="button">Open folder</button>
       <input id="directory-input" type="file" webkitdirectory directory multiple hidden>
-      <label class="theme-label" for="theme-select">Theme <select id="theme-select" aria-label="Color theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+      <label class="theme-label" for="theme-select">Theme <select id="theme-select" aria-label="Color theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option><option value="stackedit">StackEdit</option></select></label>
     </div>
   </header>
   <div class="workspace">
@@ -103,16 +104,31 @@
         </div>
       </div>
       <div class="editor-grid" id="editor-grid" data-layout="split">
-        <section class="pane edit-pane" aria-label="Markdown source"><div class="pane-title"><span>Markdown · Ctrl+F search</span><span>Autosave every 5s · Ctrl+S</span></div><div class="format-toolbar" role="toolbar" aria-label="Markdown formatting">
-          <button type="button" data-format="bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
-          <button type="button" data-format="italic" title="Italic (Ctrl+I)"><em>I</em></button>
-          <button type="button" data-format="heading" title="Heading">H2</button>
-          <button type="button" data-format="list" title="List">☷</button>
-          <button type="button" data-format="link" title="Link">🔗</button>
-          <button type="button" data-format="code" title="Code">&lt;/&gt;</button>
-          <span class="toolbar-divider"></span>
-          <button type="button" data-format="undo" title="Undo (Ctrl+Z)">↶</button>
-          <button type="button" data-format="redo" title="Redo (Ctrl+Y)">↷</button>
+        <section class="pane edit-pane" aria-label="Markdown source"><div class="pane-title"><span>Markdown · Ctrl+F search</span><span>Autosave every 5s · Ctrl+S</span></div><div class="format-toolbar" role="toolbar" aria-label="Markdown formatting and local attachments">
+          <button type="button" data-format="undo" aria-label="Undo" title="Undo (Ctrl+Z)">↶</button>
+          <button type="button" data-format="redo" aria-label="Redo" title="Redo (Ctrl+Y)">↷</button>
+          <span class="toolbar-divider" aria-hidden="true"></span>
+          <button type="button" data-format="bold" aria-label="Bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
+          <button type="button" data-format="italic" aria-label="Italic" title="Italic (Ctrl+I)"><em>I</em></button>
+          <button type="button" data-format="strike" aria-label="Strikethrough" title="Strikethrough"><s>S</s></button>
+          <button type="button" data-format="heading" aria-label="Heading" title="Heading 2">H2</button>
+          <span class="toolbar-divider" aria-hidden="true"></span>
+          <button type="button" data-format="list" aria-label="Bulleted list" title="Unordered list">☷</button>
+          <button type="button" data-format="ordered" aria-label="Numbered list" title="Ordered list">1.</button>
+          <button type="button" data-format="checklist" aria-label="Checklist" title="Task checklist">☑</button>
+          <button type="button" data-format="quote" aria-label="Blockquote" title="Blockquote">❝</button>
+          <button type="button" data-format="code" aria-label="Inline code" title="Inline code">&lt;/&gt;</button>
+          <button type="button" data-format="code-block" aria-label="Code block" title="Fenced code block">{ }</button>
+          <button type="button" data-format="table" aria-label="Table" title="Insert Markdown table">▦</button>
+          <button type="button" data-format="link" aria-label="Link" title="Insert Markdown link">🔗</button>
+          <span class="toolbar-divider" aria-hidden="true"></span>
+          <button type="button" data-asset-kind="image" aria-label="Insert image" title="Insert a local image">▧</button>
+          <button type="button" data-asset-kind="video" aria-label="Insert video" title="Insert local video">▶</button>
+          <button type="button" data-asset-kind="audio" aria-label="Insert audio" title="Insert local audio">♫</button>
+          <button type="button" data-asset-kind="pdf" aria-label="Insert PDF" title="Embed a local PDF">PDF</button>
+          <button type="button" data-asset-kind="canvas" aria-label="Insert Canvas" title="Embed JSON Canvas">◇</button>
+          <button type="button" data-asset-kind="base" aria-label="Insert Base" title="Embed Obsidian Base">▤</button>
+          <button type="button" data-asset-kind="drawio" aria-label="Insert draw.io" title="Embed draw.io diagram">⬡</button>
         </div><textarea id="editor" spellcheck="false" disabled placeholder="Choose a note on the left.&#10;&#10;Saved changes are written to its original .md file."></textarea></section>
         <section class="pane preview-pane" aria-label="Live Markdown preview"><div class="pane-title"><span>Live preview</span><span id="render-status">Offline</span></div><div id="preview" class="markdown-preview"><div class="preview-placeholder"><h2>Welcome to your local wiki</h2><p>Markdown and math will appear here when you open a note.</p><p>Mermaid and ABC notation work offline when the libraries are bundled.</p></div></div></section>
       </div>
@@ -153,6 +169,14 @@
   <p id="attachment-dialog-path" class="dialog-hint"></p>
   <div id="attachment-dialog-viewer" class="attachment-dialog-viewer" aria-live="polite"></div>
   <div class="dialog-actions"><button id="attachment-edit-canvas" type="button" hidden>Edit canvas</button><button id="attachment-edit-base" type="button" hidden>Edit Base YAML</button><button id="attachment-insert" type="button">Insert into note</button><button id="attachment-close" type="button">Close</button></div>
+</dialog>
+<dialog id="toolbar-asset-dialog" class="wiki-dialog toolbar-asset-dialog" aria-labelledby="toolbar-asset-title">
+  <h2 id="toolbar-asset-title">Insert local attachment</h2>
+  <p id="toolbar-asset-description" class="dialog-hint">Choose a file already inside your wiki. Nothing is uploaded.</p>
+  <label for="toolbar-asset-search">Filter attachments</label>
+  <input id="toolbar-asset-search" type="search" placeholder="File name or path…" autocomplete="off">
+  <div id="toolbar-asset-results" class="toolbar-asset-results" role="listbox" aria-label="Matching local attachments"></div>
+  <div class="dialog-actions"><button id="toolbar-asset-close" type="button">Cancel</button></div>
 </dialog>
 <dialog id="renderer-dialog" aria-labelledby="renderer-dialog-title" class="renderer-dialog">
   <h2 id="renderer-dialog-title">Offline libraries and diagnostics</h2>
