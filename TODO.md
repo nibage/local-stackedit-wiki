@@ -161,7 +161,7 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 ## Compact editor workspace follow-up (November 2026)
 
 - [x] Center Markdown editor and rendered preview in System, Light, Dark and StackEdit themes without changing document file contents.
-- [x] Make StackEdit-style editor and preview closer to the supplied screenshots with ~900 px reading width, 18 px typography and visible line numbers.
+- [x] Make StackEdit-style editor and preview closer to the supplied screenshots with ~990 px reading width, 18 px typography and visible line numbers.
 - [x] Move current file, mode, view switch, export, Status, Refresh and Save beside the application name in the top header.
 - [x] Remove both editor and preview titles to reclaim vertical space; relocate search/save help and renderer status to the footer.
 - [x] Stretch a single formatting toolbar across both panes, with independently scrollable icons and always-visible **Scroll sync On/Off** button.
