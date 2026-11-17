@@ -113,3 +113,17 @@
 .canvas-editor-board .canvas-node-selected .canvas-editor-resize {
   opacity:1;pointer-events:auto;
 }
+
+/* Inspector changes from empty to multiple property fields on pointerdown.
+   Reserve its height so dialog centering cannot translate the entire canvas
+   under the pointer when selecting or dragging a card. */
+.canvas-editor .canvas-editor-inspector {
+  box-sizing:border-box;height:132px;min-height:132px;max-height:132px;
+  flex:0 0 132px;align-content:flex-start;overflow-y:auto;
+  overflow-x:hidden;scrollbar-width:thin;
+}
+@media(max-width:650px) {
+  .canvas-editor .canvas-editor-inspector {
+    height:156px;min-height:156px;max-height:156px;flex-basis:156px;
+  }
+}
