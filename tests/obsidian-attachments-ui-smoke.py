@@ -69,7 +69,7 @@ with sync_playwright() as pw:
     page.wait_for_function("document.querySelector('#preview audio')?.src.startsWith('blob:')")
     assert page.locator('#preview video[src^="blob:"]').count()==1
     assert page.locator('#preview object[type="application/pdf"]').count()==1
-    assert page.locator('#preview img[src^="blob:"]').count()==1
+    assert page.locator('#preview img[data-local-source][src^="blob:"]').count()==1
     assert not page.evaluate('Boolean(window.svgExecuted)'), 'SVG script executed in image context'
     # Embedded Canvas and Bases are real inline viewers, not open-preview links.
     page.wait_for_function("document.querySelector('#preview .wiki-structured-embed .wiki-canvas-viewer .canvas-node')!==null")
