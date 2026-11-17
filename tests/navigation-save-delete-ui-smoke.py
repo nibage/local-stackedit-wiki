@@ -65,7 +65,7 @@ with sync_playwright() as pw:
     page.locator('.tree-row[aria-label="A.md"]').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='A.md'")
     page.evaluate("""() => window.LocalWikiDebug.editor.cm.replaceRange(
-      '\n\nA modification that must be saved on navigation',
+      '\\n\\nA modification that must be saved on navigation',
       {line:0,ch:12})""")
     page.locator('.tree-row[aria-label="B.md"]').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='B.md'")
@@ -76,7 +76,7 @@ with sync_playwright() as pw:
     # A write conflict/error must block navigation instead of losing text.
     page.evaluate("""() => {
       window.mockWiki.entries.get('B.md').failWrite=true;
-      window.LocalWikiDebug.editor.cm.replaceRange('\n\nNot yet saved', {line:0,ch:13});
+      window.LocalWikiDebug.editor.cm.replaceRange('\\n\\nNot yet saved', {line:0,ch:13});
     }""")
     page.locator('.tree-row[aria-label="A.md"]').click()
     page.wait_for_function("document.querySelector('#notice').textContent.includes('Cannot switch notes')")
