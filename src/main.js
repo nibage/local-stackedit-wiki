@@ -266,11 +266,43 @@
     const dirty = isDirty();
     ui.dirty.textContent = dirty ? '● Unsaved' : '';
     ui.save.disabled = operations.isBusy() || bridge.getMode() !== 'readwrite' || !dirty;
-    const toolsEnabled=Boolean(activePath) && bridge.getMode()==='readwrite' && !operations.isBusy();
-    document.querySelectorAll('.format-toolbar button').forEach(button=>{button.disabled=!toolsEnabled;});
+    const toolsEnabled=Boolean(activePath) && bridge.getMode()==='readwrite' && !operations.isBusy() && selectedMode!=='preview';
+    document.querySelectorAll('.format-toolbar .format-tools button').forEach(button=>{button.disabled=!toolsEnabled;});
     $('save-status').textContent = dirty ? (bridge.getMode() === 'readwrite' ? 'Unsaved changes · autosave every 5s' : 'Unsaved changes') : activePath ? 'No unsaved changes' : 'No file';
-    $('stats').textContent = `${editor.getValue().length} characters · ${editor.getValue() ? editor.getValue().split('\n').length : 0} lines`;
+    updateSourceStats();
   }
+  function wordCount(text) {
+    const match=String(text||'').trim().match(/\S+/gu);
+    return match?match.length:0;
+  }
+  function updateSourceStats() {
+    const source=activePath?editor.getValue():'';
+    const cursor=editor.cm.getCursor();
+    const bytes=new Blob([source]).size; // UTF-8 byte count, not JS string length.
+    const lines=activePath?editor.cm.lineCount():0;
+    $('stats').textContent='Markdown '+bytes+' bytes · '+wordCount(source)+' words · '+
+      lines+' lines · Ln '+(cursor.line+1)+', Col '+cursor.ch+
+      ' · '+source.length+' characters';
+  }
+  function updateHtmlStats() {
+    if (!activePath) {
+      $('html-stats').textContent='HTML 0 characters · 0 words · 0 paragraphs';
+      return;
+    }
+    const source=ui.preview.innerHTML||'';
+    const visibleText=ui.preview.innerText||ui.preview.textContent||'';
+    const paras=ui.preview.querySelectorAll('p').length;
+    $('html-stats').textContent='HTML '+source.length+' characters · '+
+      wordCount(visibleText)+' words · '+paras+' paragraphs';
+  }
+  let htmlStatsQueued=false;
+  // Renderers, images and nested media may finish after the Markdown pass.
+  const htmlStatsObserver=new MutationObserver(()=>{
+    if (htmlStatsQueued) return;
+    htmlStatsQueued=true;
+    requestAnimationFrame(()=>{htmlStatsQueued=false;updateHtmlStats();});
+  });
+  htmlStatsObserver.observe(ui.preview,{subtree:true,childList:true,attributes:true,characterData:true});
   function disposeStructured(root) {
     root.querySelectorAll('.wiki-canvas-viewer,.wiki-bases-viewer,.wiki-drawio-viewer')
       .forEach(node => node.dispose?.());
@@ -293,7 +325,7 @@
     ui.filename.textContent = 'No note open';
     updateMoveModeUI();
     ui.preview.replaceChildren();
-    releaseImages(); redrawDirty();
+    releaseImages(); redrawDirty(); updateHtmlStats(); updateScrollSyncButton();
     $('toc').replaceChildren(); $('backlinks-results').replaceChildren();
     $('outlinks-results').replaceChildren();
     backlinksForPath = null;
@@ -570,7 +602,7 @@
       $('backlinks-results').replaceChildren();
       $('outlinks-results').replaceChildren();
       backlinksForPath = null;
-      redrawDirty(); renderTree(); renderPreview(); updatePreviewExportEnabled();
+      redrawDirty(); renderTree(); renderPreview(); updatePreviewExportEnabled(); updateScrollSyncButton();
       if (!$('side-links').hidden) { buildOutlinks(); void doBacklinks(); }
       ui.preview.scrollTop = 0;
       return true;
@@ -1434,6 +1466,41 @@
   }
   $('preview-export-html').addEventListener('click',()=>startPreviewExport('html'));
   $('preview-export-pdf').addEventListener('click',()=>startPreviewExport('pdf'));
+  let scrollSyncEnabled=safeStored('local-wiki-scroll-sync','off')==='on';
+  let scrollSyncLock=false;
+  function updateScrollSyncButton() {
+    const toggle=$('scroll-sync-toggle');
+    toggle.textContent='Scroll sync: '+(scrollSyncEnabled?'On':'Off');
+    toggle.setAttribute('aria-pressed',String(scrollSyncEnabled));
+    toggle.disabled=selectedMode!=='split'||!activePath;
+    toggle.title='Synchronize scrolling in Side by side mode ('+
+      (scrollSyncEnabled?'on':'off')+'). It does not move your cursor or edit the note.';
+  }
+  function synchronizeScroll(origin) {
+    if (!scrollSyncEnabled||scrollSyncLock||!activePath||selectedMode!=='split')return;
+    // Scrolls triggered by caret-preserving preview refresh are not user input.
+    if(origin==='preview'&&previewPosition&&!previewPosition.userMoved)return;
+    const info=editor.cm.getScrollInfo();
+    const maxEditor=Math.max(0,info.height-info.clientHeight);
+    const maxPreview=Math.max(0,ui.preview.scrollHeight-ui.preview.clientHeight);
+    scrollSyncLock=true;
+    if(origin==='editor') {
+      const fraction=maxEditor>0?info.top/maxEditor:0;
+      ui.preview.scrollTop=fraction*maxPreview;
+    } else {
+      const fraction=maxPreview>0?ui.preview.scrollTop/maxPreview:0;
+      editor.cm.scrollTo(null,fraction*maxEditor);
+    }
+    requestAnimationFrame(()=>{scrollSyncLock=false;});
+  }
+  editor.cm.on('scroll',()=>synchronizeScroll('editor'));
+  ui.preview.addEventListener('scroll',()=>synchronizeScroll('preview'),{passive:true});
+  $('scroll-sync-toggle').addEventListener('click',()=>{
+    if($('scroll-sync-toggle').disabled)return;
+    scrollSyncEnabled=!scrollSyncEnabled;
+    safeStore('local-wiki-scroll-sync',scrollSyncEnabled?'on':'off');
+    updateScrollSyncButton();
+  });
   function setView(mode) {
     selectedMode = mode; ui.grid.dataset.layout = mode;
     for (const button of document.querySelectorAll('.view-switch button[data-view]')) {
@@ -1442,6 +1509,8 @@
       button.setAttribute('aria-pressed',String(active));
     }
     closePreviewExportMenu();
+    updateScrollSyncButton();
+    redrawDirty();
     if (mode !== 'preview') requestAnimationFrame(() => editor.refresh());
   }
   function setSideTab(tab) {
@@ -1711,6 +1780,7 @@
   $('new-file').addEventListener('click', () => startDraft('file'));
   $('new-folder').addEventListener('click', () => startDraft('directory'));
   editor.onChange(() => { redrawDirty(); scheduleRender(); });
+  editor.cm.on('cursorActivity',updateSourceStats);
   document.querySelectorAll('[data-format]').forEach(button => button.addEventListener('click', () => editor.format(button.dataset.format)));
   // Local vault chooser for image, media, PDF, Canvas, Base and draw.io
   // toolbar buttons. Paths originate only from the scanned local file tree.
