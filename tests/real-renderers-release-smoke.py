@@ -138,6 +138,13 @@ def run(root, browser_path=None):
             if kind == 'abc':
                 assert root_svg.get('width') and root_svg.get('height'), 'ABC SVG musí mít samostatné rozměry'
                 assert any(element.tag.endswith('path') for element in root_svg.iter()), 'ABC SVG neobsahuje notové glyfy'
+        # The MathJax right-click source menu must actually open, not just load.
+        page.evaluate("window.getSelection().removeAllRanges()")
+        page.locator('#release-preview .MathJax_MathML').first.click(button='right')
+        page.wait_for_function("""() => {
+            const menu=document.querySelector('.MathJax_ContextMenu');
+            return menu && getComputedStyle(menu).display !== 'none';
+        }""",timeout=5000)
         assert not failures, json.dumps(failures, ensure_ascii=False)
         browser.close()
     return result

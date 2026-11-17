@@ -43,3 +43,15 @@
   .canvas-viewport { height:45vh; min-height:270px; }
   .canvas-hint { width:100%; margin-left:0; }
 }
+
+/* Markdown inside read-only cards uses the same sanitized fragment as wiki notes. */
+.canvas-node-content > :first-child { margin-top:0; }
+.canvas-node-content > :last-child { margin-bottom:0; }
+.canvas-node-content p,.canvas-node-content ul,.canvas-node-content ol { margin:.2em 0 .6em; }
+.canvas-node-content h1,.canvas-node-content h2,.canvas-node-content h3 {
+  font-size:1.12em; line-height:1.2; margin:.2em 0 .6em;
+}
+.canvas-node-content pre { max-width:100%; overflow:auto; font-size:11px; }
+.canvas-node-content code { white-space:pre-wrap; overflow-wrap:anywhere; }
+.canvas-node-content img { display:none; }
+.canvas-inert-link { color:var(--accent); text-decoration:underline dotted; cursor:default; }

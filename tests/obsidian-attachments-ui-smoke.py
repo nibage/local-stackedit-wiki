@@ -45,7 +45,7 @@ with sync_playwright() as pw:
         file('voice.mp3',new Uint8Array([1,3,2,4,255]),'audio/mpeg'),
         file('movie.mp4',new Uint8Array([0,0,0,20,102,116,121,112]),'video/mp4'),
         file('paper.pdf',new Uint8Array([37,80,68,70,45,49,46,52]),'application/pdf'),
-        file('board.canvas',JSON.stringify({nodes:[{id:'n1',type:'text',text:'Hello <img src=x onerror=alert(1)>',x:0,y:0,width:260,height:140},{id:'n2',type:'file',file:'drawing.svg',x:350,y:0,width:250,height:160}],edges:[{id:'e1',fromNode:'n1',toNode:'n2',fromSide:'right',toSide:'left',label:'safe'}]}), 'application/json'),
+        file('board.canvas',JSON.stringify({nodes:[{id:'n1',type:'text',text:'Hello <img src=x onerror=alert(1)> **strong** [link](https://example.org)',x:0,y:0,width:260,height:140},{id:'n2',type:'file',file:'drawing.svg',x:350,y:0,width:250,height:160}],edges:[{id:'e1',fromNode:'n1',toNode:'n2',fromSide:'right',toSide:'left',label:'safe'}]}), 'application/json'),
         file('query.base','filters:\\n  - color: orange\\n','text/yaml'),
         dir('Assets')
       ]);
@@ -77,7 +77,10 @@ with sync_playwright() as pw:
     assert '2 nodes, 1 edges' in page.locator('#attachment-dialog-viewer').inner_text()
     assert page.locator('#attachment-dialog-viewer .canvas-node').count()==2
     assert page.locator('#attachment-dialog-viewer .canvas-connections path').count()>=2
-    assert page.locator('#attachment-dialog-viewer .canvas-node[data-kind="text"] .canvas-node-content').inner_text()=='Hello <img src=x onerror=alert(1)>'
+    assert 'Hello' in page.locator('#attachment-dialog-viewer .canvas-node[data-kind="text"] .canvas-node-content').inner_text()
+    assert page.locator('#attachment-dialog-viewer .canvas-node[data-kind="text"] strong').count()==1
+    assert page.locator('#attachment-dialog-viewer .canvas-node[data-kind="text"] .canvas-inert-link').count()==2
+    assert page.locator('#attachment-dialog-viewer .canvas-node[data-kind="text"] a, #attachment-dialog-viewer .canvas-node[data-kind="text"] img').count()==0
     page.locator('#attachment-dialog-viewer .canvas-node-image[src^="blob:"]').wait_for(timeout=10000)
     assert not page.locator('#attachment-dialog-viewer script, #attachment-dialog-viewer [onerror]').count(), 'Canvas injected unsafe markup'
     assert not page.evaluate('Boolean(window.svgExecuted)'), 'Canvas image executed SVG script'

@@ -97,6 +97,28 @@
     }
   }
 
+  function renderSafeMarkdown(target, markdown) {
+    if (!global.marked || !global.LocalWikiRender?.sanitize) {
+      target.textContent = markdown;
+      return;
+    }
+    try {
+      // Reuse the wiki's conservative Markdown sanitizer. Canvas cards are inert
+      // previews: links do not navigate and embedded images never load remotely.
+      const html = global.marked.parse(markdown,{gfm:true,breaks:true,headerIds:false,mangle:false});
+      const fragment = global.LocalWikiRender.sanitize(html);
+      fragment.querySelectorAll('a').forEach(link=>{
+        const label = create('span','canvas-inert-link');
+        while (link.firstChild) label.append(link.firstChild);
+        link.replaceWith(label);
+      });
+      fragment.querySelectorAll('img').forEach(image=>{
+        image.replaceWith(create('span','canvas-inert-link','[image reference]'));
+      });
+      target.append(fragment);
+    } catch (_) { target.textContent = markdown; }
+  }
+
   function render(input, options = {}) {
     const model = cleanGraph(input);
     const root = create('div','wiki-canvas-viewer');
@@ -175,7 +197,9 @@
       card.style.width=p.width+'px'; card.style.height=p.height+'px';
       card.style.setProperty('--canvas-accent',node.color);
       if (node.type === 'text') {
-        card.append(create('div','canvas-node-content',node.text));
+        const body = create('div','canvas-node-content');
+        renderSafeMarkdown(body,node.text);
+        card.append(body);
       } else if (node.type === 'group') {
         card.append(create('div','canvas-node-group-title',node.label || 'Group'));
       } else if (node.type === 'link') {
