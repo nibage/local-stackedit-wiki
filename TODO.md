@@ -157,3 +157,15 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Print PDF in light mode in a centred ~470pt column with larger body/headings, page margins and print-friendly wrapping.
 - [x] Preserve clickable external links and map within-note heading links to exported anchors.
 - [ ] Consider richer keyboard shortcuts, visual toolbar icons and a comprehensive export typography/accessibility review on large mixed-media documents.
+
+## Compact editor workspace follow-up (November 2026)
+
+- [x] Center Markdown editor and rendered preview in System, Light, Dark and StackEdit themes without changing document file contents.
+- [x] Make StackEdit-style editor and preview closer to the supplied screenshots with ~990 px reading width, 18 px typography and visible line numbers.
+- [x] Move current file, mode, view switch, export, Status, Refresh and Save beside the application name in the top header.
+- [x] Remove both editor and preview titles to reclaim vertical space; relocate search/save help and renderer status to the footer.
+- [x] Stretch a single formatting toolbar across both panes, with independently scrollable icons and always-visible **Scroll sync On/Off** button.
+- [x] Add opt-in per-instance persistent two-way scroll syncing in Side by side mode, guarded against preview re-render scroll restoration.
+- [x] Add live Markdown source bytes/words/lines/cursor and HTML markup characters/rendered text words/paragraphs to compact bottom status bar.
+- [ ] Review very narrow-screen top-header wrapping and visually verify typography against an actual exported StackEdit HTML stylesheet when available (not present with current screenshots/PDF).
+- [ ] Canvas editor spacing to be reviewed later after user collects examples.
