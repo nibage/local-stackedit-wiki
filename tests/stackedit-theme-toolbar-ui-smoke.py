@@ -104,29 +104,7 @@ with sync_playwright() as pw:
       cm.setSelection({line:0,ch:0},{line:0,ch:6});
     }""")
     page.locator('[data-format="math"]').click()
-    assert page.evaluate('window.LocalWikiDebug.editor.getValue()')=='$E=mc^2
-
-    for kind,filename in [('image','photo.png'),('video','movie.mp4'),('audio','sound.wav'),
-                          ('pdf','paper.pdf'),('canvas','board.canvas'),('base','example.base'),
-                          ('drawio','flow.drawio')]:
-        page.locator(f'.format-toolbar button[data-asset-kind="{kind}"]').click()
-        assert page.locator('#toolbar-asset-dialog').is_visible(),kind
-        assert page.locator('#toolbar-asset-results button').count()==1,kind
-        assert page.locator('#toolbar-asset-results button').inner_text()==filename
-        page.locator('#toolbar-asset-results button').click()
-        assert not page.locator('#toolbar-asset-dialog').is_visible()
-        source=page.evaluate('window.LocalWikiDebug.editor.getValue()')
-        if kind=='image':assert '![photo](photo.png)' in source,source
-        else:assert '![[{}]]'.format(filename) in source,source
-    page.locator('.format-toolbar button[data-asset-kind="audio"]').click()
-    page.locator('#toolbar-asset-search').fill('nonexistent')
-    assert page.locator('#toolbar-asset-results button').count()==0
-    assert 'No matching' in page.locator('#toolbar-asset-results').inner_text()
-    page.locator('#toolbar-asset-close').click()
-    assert not errors,errors
-    print('PASS: StackEdit theme, single-row toolbar, Markdown formatting and seven safe attachment pickers')
-    browser.close()
-
+    assert page.evaluate('window.LocalWikiDebug.editor.getValue()')=='$E=mc^2$'
 
     for kind,filename in [('image','photo.png'),('video','movie.mp4'),('audio','sound.wav'),
                           ('pdf','paper.pdf'),('canvas','board.canvas'),('base','example.base'),
