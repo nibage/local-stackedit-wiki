@@ -39,6 +39,10 @@
 .tree-expand-controls button { flex:1;min-width:0;padding:6px 4px;font-size:11px;white-space:nowrap; }
 [data-theme] .tree-expand-controls button:focus-visible { outline:2px solid var(--accent);outline-offset:2px; }
 
+/* Reserve enough header height for a two-line notice, so changing messages
+   never shifts the workspace/tree buttons by a line. */
+.topbar { min-height:78px; }
+
 /* Notices share the logo/header row instead of covering the editor action buttons.
    The brand expands into available flex space; messages truncate in narrow windows. */
 .topbar .brand { flex:1 1 230px; min-width:0; }
@@ -46,11 +50,14 @@
 .topbar .actions { flex:0 0 auto; }
 #notice[hidden] { display:none !important; }
 .topbar #notice.notice {
-  position:static; flex:1 1 0; min-width:0; max-width:500px;
+  position:static; flex:1 1 0; min-width:0; max-width:none;
   margin-left:10px; padding:7px 10px;
-  overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+  overflow:hidden; white-space:normal; text-align:center;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+  line-clamp:2; overflow-wrap:anywhere;
   border:1px solid var(--line); border-radius:7px; box-shadow:none;
-  font-size:12px; line-height:1.25; pointer-events:auto;
+  font-size:12px; line-height:1.35; pointer-events:auto;
+  align-self:center;
 }
 /* Allow the existing topbar flex-wrap to keep controls separate on small screens;
    no status message is ever layered over a button. */
@@ -73,3 +80,10 @@
    the export control. Keep the notation visual-only and the button clickable. */
 .visualization-abc svg { pointer-events:none; }
 .visualization-abc .diagram-export { position:relative; z-index:2; }
+
+/* Outline navigation and source-level status do not occupy tree height. */
+.toc-title-row { display:flex; align-items:center; justify-content:space-between;
+  gap:6px; margin:2px 11px 9px; }
+.toc-title-row h3 { margin:0; }
+.toc-title-row .toc-back { font-size:11px; padding:4px 7px; flex:none; }
+.toc-title-row .toc-back[hidden] { display:none !important; }

@@ -12,7 +12,7 @@ Reference: [Obsidian accepted file formats](https://obsidian.md/help/file-format
 | Video | `.mkv`, `.mov`, `.mp4`, `.ogv`, `.webm` | Tree, HTML5 controls, embeds, insert, move; codec dependent |
 | PDF | `.pdf` | Tree, browser PDF preview/embed, insert and move |
 | JSON Canvas | `.canvas` | Tree and read-only node/edge summary (not an editor) |
-| Bases | `.base` | Tree and read-only YAML preview (not Bases queries) |
+| Bases | `.base` | Tree and read-only Markdown/frontmatter tables with restricted filters |
 
 ## Implemented
 
@@ -43,13 +43,13 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 ## Future: richer structured diagrams and database views
 
 - [x] **Canvas (.canvas):** read-only visual graph with cards, connections, groups and zoom/pan. [x] Safe Markdown card formatting; [ ] note-file content previews. Editing/link updates require separate design and regression tests.
-- [ ] **Bases (.base):** the current preview only shows the YAML source. Consider a read-only table backed by local Markdown frontmatter first; implement filtering/formulas/views and property editing only with explicit compatibility and data-safety tests. Do not treat a .base file as a database that stores note rows.
+- [x] **Bases (.base):** read-only tables backed by local Markdown frontmatter, multiple table views and basic filters. [ ] Full expression/formula compatibility, alternative view layouts and property editing. A .base file is not a database storing note rows.
 - [ ] **draw.io/diagrams.net:** consider an **offline, read-only .drawio viewer** with page support and robust handling of compressed/uncompressed mxfile XML; likely bundle the official viewer rather than invent a partial SVG converter. Verify its licensing, size and external-resource restrictions. Optionally support already-renderable `.drawio.svg` exports as images. Editing can be a separate feature.
 
 ## Ordered implementation roadmap — advance in these stages when requested
 
 1. [x] **Canvas read-only viewer (first stage)**: graph cards, groups, edges, labels/colors, pan and zoom, vault-local image thumbnails, no remote content. Sanitized Markdown is displayed in text cards. Next: richer note-file content previews.
-2. [ ] **Bases read-only table**: parse local `.base` YAML, select local Markdown/frontmatter rows, handle columns, filters and sorting conservatively; explicit unsupported indicators for incompatible expressions.
+2. [x] **Bases read-only table (first stage)**: safe subset YAML, local Markdown/frontmatter, table views, columns, limits, supported filters and sorting; unsupported formulas and expressions identified.
 3. [ ] **draw.io/diagrams.net read-only**: local standalone `.drawio` previews including multiple pages, compressed and uncompressed diagrams; use reviewed offline components and no remote image/script loading.
 4. [ ] **Canvas editing** (optional, after the viewers): manipulate cards and edges and save JSON Canvas safely with conflict checks and undo/redo.
 5. [ ] **Bases editing** (optional): modify table views/properties without unsafe bulk rewrites, preserving Markdown/frontmatter and migration semantics.

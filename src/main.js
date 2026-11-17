@@ -18,6 +18,8 @@
   let selectedFolder = '', treeClickTimer = null;
   let moveEnabled = false, draggedPath = null;
   let noticeTimer = null, autosaveBlocked = null;
+  const navigationHistory = [];
+  let backlinkRequest = 0, backlinksForPath = null;
   const AUTOSAVE_INTERVAL_MS = 5000;
   let blobURLs = [], selectedMode = 'split';
   const SIDEBAR_MIN = 190, SIDEBAR_DEFAULT = 255;
@@ -163,7 +165,29 @@
     ui.preview.replaceChildren();
     releaseImages(); redrawDirty();
     $('toc').replaceChildren(); $('backlinks-results').replaceChildren();
+    backlinksForPath = null;
   }
+  function updateBackButton() {
+    $('nav-back').hidden = !navigationHistory.length;
+    $('nav-back').disabled = !navigationHistory.length;
+  }
+  async function navigateTo(path, options = {}) {
+    const previous = activePath;
+    const opened = await selectFile(path);
+    if (opened && previous && previous !== path && !options.history) {
+      navigationHistory.push(previous);
+      if (navigationHistory.length > 60) navigationHistory.shift();
+      updateBackButton();
+    }
+    return opened;
+  }
+  $('nav-back').addEventListener('click', async () => {
+    const target = navigationHistory.at(-1);
+    if (!target) return;
+    if (await navigateTo(target, { history: true })) {
+      navigationHistory.pop(); updateBackButton();
+    }
+  });
   function resolvePathFrom(source, path) {
     try { path = decodeURIComponent(path); } catch (_) { /* Preserve unescaped path. */ }
     return window.LocalWikiFS.relativePath(source, path);
@@ -325,8 +349,10 @@
       editor.setReadOnly(bridge.getMode() !== 'readwrite');
       ui.filename.textContent = path;
       updateMoveModeUI();
-      $('backlinks-results').textContent = 'Click Find incoming links.'; 
+      $('backlinks-results').replaceChildren();
+      backlinksForPath = null;
       redrawDirty(); renderTree(); renderPreview();
+      if (!$('side-links').hidden) void doBacklinks();
       ui.preview.scrollTop = 0;
       return true;
     } catch (err) {
@@ -425,9 +451,32 @@
         output.textContent = 'Invalid JSON Canvas: ' + error.message + ' The file was not modified.';
       }
     } else {
-      const info = document.createElement('p'); info.textContent = 'Obsidian Bases (read-only YAML preview). Full Bases queries and editing are not implemented.';
-      const pre = document.createElement('pre'); pre.className = 'attachment-plain-text'; pre.textContent = text.slice(0, 100000);
-      output.append(info, pre);
+      try {
+        const allPaths = bridge.getFilePaths();
+        const paths = allPaths.slice(0, 500), rows = new Array(paths.length);
+        let next = 0, failed = 0;
+        await Promise.all(Array.from({ length: Math.min(6, paths.length) }, async () => {
+          while (next < paths.length) {
+            const i = next++;
+            try {
+              const note = await bridge.read(paths[i]);
+              const properties = window.LocalWikiBases.readFrontmatter(note.text);
+              rows[i] = window.LocalWikiBases.fileData(paths[i], properties, note.text.slice(0, 100000));
+            } catch (_) { failed++; }
+          }
+        }));
+        const table = window.LocalWikiBases.render(text, rows.filter(Boolean), {
+          totalFiles: allPaths.length, failedFiles: failed,
+          onOpen: notePath => {
+            const dialog = $('attachment-dialog');
+            if (dialog.open) dialog.close();
+            void navigateTo(notePath);
+          }
+        });
+        output.append(table);
+      } catch (error) {
+        output.textContent = 'Cannot show Bases table: ' + error.message + ' The file was not modified.';
+      }
     }
     return output;
   }
@@ -436,9 +485,11 @@
     const dialog = $('attachment-dialog');
     const viewer = $('attachment-dialog-viewer');
     viewer.querySelector('.wiki-canvas-viewer')?.dispose?.();
+    viewer.querySelector('.wiki-bases-viewer')?.dispose?.();
     if (attachmentDialogURL) { URL.revokeObjectURL(attachmentDialogURL); attachmentDialogURL = null; }
     viewer.replaceChildren();
     dialog.classList.toggle('canvas-dialog-open', types.kind(path) === 'canvas');
+    dialog.classList.toggle('bases-dialog-open', types.kind(path) === 'base');
     $('attachment-dialog-title').textContent = basename(path);
     $('attachment-dialog-path').textContent = path;
     $('attachment-insert').disabled = bridge.getMode() !== 'readwrite' || !activePath || operations.isBusy();
@@ -450,7 +501,10 @@
       if (types.kind(path) === 'canvas' || types.kind(path) === 'base') {
         const node = await attachmentTextPreview(file, path);
         if (dialog.open && $('attachment-dialog-path').textContent === path) viewer.replaceChildren(node);
-        else node.querySelector('.wiki-canvas-viewer')?.dispose?.();
+        else {
+          node.querySelector('.wiki-canvas-viewer')?.dispose?.();
+          node.querySelector('.wiki-bases-viewer')?.dispose?.();
+        }
         return;
       }
       const url = URL.createObjectURL(file);
@@ -466,8 +520,9 @@
   $('attachment-close').addEventListener('click', () => $('attachment-dialog').close());
   $('attachment-dialog').addEventListener('close', () => {
     $('attachment-dialog-viewer').querySelector('.wiki-canvas-viewer')?.dispose?.();
+    $('attachment-dialog-viewer').querySelector('.wiki-bases-viewer')?.dispose?.();
     $('attachment-dialog-viewer').replaceChildren();
-    $('attachment-dialog').classList.remove('canvas-dialog-open');
+    $('attachment-dialog').classList.remove('canvas-dialog-open', 'bases-dialog-open');
     if (attachmentDialogURL) { URL.revokeObjectURL(attachmentDialogURL); attachmentDialogURL = null; }
   });
   function showImage(path) {
@@ -688,10 +743,15 @@
     notice(`Scanning folders… ${progress.directories} folders, ${progress.files} notes` +
       (progress.skipped ? ` · inaccessible folders: ${progress.skipped}` : '') + ' (please wait)');
   }
-  function applyOpen(result) {
+  function applyOpen(result, options = {}) {
     operations.invalidateReads();
     if ($('image-dialog').open) $('image-dialog').close();
-    clearEditor(); inlineDraft = null; selectedFolder = ''; expanded = new Set(['']); ui.search.value = '';
+    const savedExpanded = options.preserveTree ? new Set(expanded) : new Set(['']);
+    const savedFolder = options.preserveTree ? selectedFolder : '';
+    const savedFilter = options.preserveTree ? ui.search.value : '';
+    clearEditor(); inlineDraft = null;
+    selectedFolder = savedFolder; expanded = savedExpanded; ui.search.value = savedFilter;
+    if (!options.preserveTree) { navigationHistory.length = 0; updateBackButton(); }
     ui.mode.textContent = result.mode === 'readwrite' ? 'Read/write' : 'Read-only';
     ui.refresh.disabled = !bridge.getRootHandle();
     $('expand-all').disabled = false;
@@ -702,6 +762,7 @@
     draggedPath = null; moveEnabled = false; updateMoveModeUI();
     wikiIndex.invalidate(); indexPromise = null;
     $('fulltext-results').replaceChildren(); $('backlinks-results').replaceChildren();
+    backlinksForPath = null;
     $('fulltext-status').textContent = 'The search index will be built on first use. No content leaves your computer.';
     renderTree();
     const skipped = result.scanInfo?.skipped || 0;
@@ -720,6 +781,7 @@
     $('fulltext-status').textContent = 'The full-text index will be rebuilt on the next search.';
     $('fulltext-results').replaceChildren();
     $('backlinks-results').replaceChildren();
+    backlinksForPath = null;
   }
   async function createNew(kind) {
     if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
@@ -859,7 +921,7 @@
   function setSideTab(tab) {
     for (const b of document.querySelectorAll('[data-side]')) b.classList.toggle('active', b.dataset.side === tab);
     for (const id of ['files', 'search', 'links']) $(`side-${id}`).hidden = id !== tab;
-    if (tab === 'links') buildToc();
+    if (tab === 'links') { buildToc(); void doBacklinks(); }
   }
   function addResult(parent, path, detail, click) {
     const row = document.createElement('button'); row.type = 'button'; row.className = 'result-item';
@@ -928,7 +990,7 @@
     return false;
   }
   async function openResult(path, line, query = '') {
-    const opened = await selectFile(path);
+    const opened = await navigateTo(path);
     if (!opened || activePath !== path) return;
     if (selectedMode === 'preview') {
       if (!highlightPreviewQuery(query)) {
@@ -958,23 +1020,24 @@
     } finally { $('fulltext-run').disabled = false; }
   }
   async function doBacklinks() {
-    if (!activePath) { $('backlinks-results').textContent = 'Open a note first.'; return; }
-    const path = activePath;
-    $('backlinks-run').disabled = true;
-    $('backlinks-results').textContent = 'Loading links…';
+    const path = activePath, request = ++backlinkRequest;
+    const area = $('backlinks-results');
+    if (!path) { area.replaceChildren(); return; }
+    if (backlinksForPath === path) return;
+    area.replaceChildren();
+    backlinksForPath = path;
     try {
-      if (!await ensureIndex()) return;
-      if (path !== activePath) return;
+      if (!await ensureIndex() || path !== activePath || request !== backlinkRequest) return;
       const refs = wikiIndex.backlinks(path);
-      const area = $('backlinks-results'); area.replaceChildren();
-      if (!refs.length) area.textContent = 'No other notes link to this document.';
-      else refs.forEach(from => addResult(area, from, 'Odkazuje na tento file', () => void openResult(from)));
-    } finally { $('backlinks-run').disabled = false; }
+      if (!refs.length) notice('No other notes link to this document.');
+      else refs.forEach(from => addResult(area, from, 'Links to this note', () => void openResult(from)));
+    } catch (error) {
+      if (request === backlinkRequest) notice('Backlink lookup failed: '+error.message,'error');
+    }
   }
   document.querySelectorAll('[data-side]').forEach(b => b.addEventListener('click', () => setSideTab(b.dataset.side)));
   $('fulltext-run').addEventListener('click', () => void doFulltext());
   $('fulltext-query').addEventListener('keydown', e => { if (e.key === 'Enter') void doFulltext(); });
-  $('backlinks-run').addEventListener('click', () => void doBacklinks());
   // Remember the last folder automatically, but never prompt for permission
   // during page load. Chrome remains in full control of the permission grant.
   const recent = window.LocalWikiRecent;
@@ -1022,7 +1085,7 @@
     if (!confirmDiscard() || !beginOperation('refresh')) return;
     const old = activePath;
     let refreshed = false;
-    try { applyOpen(await bridge.refresh(showScanProgress)); refreshed = true; }
+    try { applyOpen(await bridge.refresh(showScanProgress), { preserveTree: true }); refreshed = true; }
     catch (err) { notice(`Refresh failed: ${err.message}`, 'error'); }
     finally { endOperation('refresh'); }
     if (refreshed && old && bridge.hasFile(old)) await selectFile(old);
@@ -1084,7 +1147,7 @@
     if (doc) {
       evt.preventDefault();
       // Do not scroll if switching documents was cancelled due to unsaved text.
-      void selectFile(doc).then(opened => { if (opened) jumpToHeading(parsed.anchor); });
+      void navigateTo(doc).then(opened => { if (opened) jumpToHeading(parsed.anchor); });
       return;
     }
     if (attachment) { evt.preventDefault(); void showAttachment(attachment); return; }
@@ -1105,9 +1168,7 @@
   $('diag-api').textContent = `${location.protocol} · ${typeof window.showDirectoryPicker === 'function' ? 'File System API ✓' : 'File System API unavailable'}`;
   setView(selectedMode);
 
-  // A complete offline release already has both libraries; no installer button is needed.
-  const bundledRenderers = window.LocalWikiDiagrams.capabilities();
-  if (bundledRenderers.mermaid && bundledRenderers.abc) $('renderer-check').hidden = true;
+  // Renderer diagnostics stay accessible even in the complete offline release.
 
   // Diagnostics reflect actual loaded UMD objects, not the existence of placeholder files.
   $('renderer-check').addEventListener('click', () => {

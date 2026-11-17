@@ -1,0 +1,15 @@
+/* Offline read-only Bases table; CSS and DOM content never originate in Base files. */
+.attachment-dialog.bases-dialog-open { width:min(1130px,calc(100vw - 32px)); }
+.attachment-dialog.bases-dialog-open .attachment-dialog-viewer { overflow:auto; max-height:min(72vh,760px); }
+.wiki-bases-viewer { min-width:0; width:100%; color:var(--text); }
+.bases-intro,.bases-status { font-size:12px; color:var(--muted); margin:5px 0 12px; }
+.bases-tabs { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:9px; }
+.bases-tabs button { font-size:12px; border:1px solid var(--line); border-radius:6px; padding:6px 10px; }
+.bases-tabs button[aria-pressed="true"] { color:var(--accent); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 10%,var(--panel)); }
+.bases-warning { border-left:3px solid #c78b2d; background:color-mix(in srgb,#c78b2d 10%,var(--panel)); padding:6px 9px; margin:6px 0; font-size:12px; overflow-wrap:anywhere; }
+.bases-table-scroll { max-width:100%; overflow:auto; border:1px solid var(--line); border-radius:8px; }
+.bases-table { width:100%; border-collapse:collapse; font-size:12px; background:var(--panel); }
+.bases-table th,.bases-table td { padding:9px 12px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; max-width:420px; overflow:hidden; text-overflow:ellipsis; }
+.bases-table th { position:sticky; top:0; z-index:1; color:var(--text); background:var(--panel-alt); font-weight:650; }
+.bases-table tr:hover td { background:color-mix(in srgb,var(--accent) 5%,var(--panel)); }
+.bases-open-note { padding:2px 4px !important; font-size:12px; border:0 !important; background:transparent !important; color:var(--accent) !important; text-align:left; text-decoration:underline; cursor:pointer; }

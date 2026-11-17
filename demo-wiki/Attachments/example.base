@@ -3,4 +3,19 @@ filters:
     - file.ext == "md"
 views:
   - type: table
-    name: Markdown files
+    name: All Markdown
+    limit: 40
+    order:
+      - file.name
+      - note.status
+      - note.category
+      - file.folder
+  - type: table
+    name: Attachments notes
+    filters:
+      and:
+        - file.inFolder("Attachments")
+    order:
+      - file.name
+      - note.status
+      - note.category
