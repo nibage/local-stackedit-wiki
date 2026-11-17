@@ -148,3 +148,12 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Draw.io: approximation warning shown as a stable overlay without changing the dialog height.
 - [ ] Consider React Flow / Svelte Flow (xyflow, MIT license) as future canvas interaction engines. They require a React/Svelte build and extra dependencies unlike this current vanilla JS, offline `file://` app; evaluate bundled size, accessibility, JSON Canvas 1.0 import/export, security and maintenance before any adoption.
 - [ ] Compare alternate lightweight SVG/DOM canvas engines and evaluate Obsidian Canvas parity for multi-select, keyboard move, edge routing, group interactions and editing shortcuts.
+
+## StackEdit-style reading and composition (November 2026)
+
+- [x] Add independent StackEdit-inspired theme with wide centred reading column, larger comfortable editor and preview fonts and minimalist light/dark contrast, while keeping System/Light/Dark.
+- [x] Expand the one-row Markdown toolbar with task, ordered/unordered, quote, fenced code, table and link controls.
+- [x] Add safe searchable local attachment insertion for image, audio, video, PDF, JSON Canvas, Obsidian Bases and draw.io; no upload/network or fabricated paths.
+- [x] Print PDF in light mode in a centred ~470pt column with larger body/headings, page margins and print-friendly wrapping.
+- [x] Preserve clickable external links and map within-note heading links to exported anchors.
+- [ ] Consider richer keyboard shortcuts, visual toolbar icons and a comprehensive export typography/accessibility review on large mixed-media documents.
