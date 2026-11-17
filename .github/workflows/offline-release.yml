@@ -54,6 +54,8 @@ jobs:
         run: python tests/drawio-ui-smoke.py
       - name: Verify Canvas editor Save, Undo/Redo, discard and external conflict
         run: python tests/canvas-editor-ui-smoke.py
+      - name: Verify Canvas pointer dragging, live arrows and resize handles
+        run: python tests/canvas-drag-ui-smoke.py
       - name: Verify temporary Bases filters, sorting and column resizing
         run: python tests/bases-interaction-ui-smoke.py
       - name: Verify guarded Base YAML editor and conflict handling
