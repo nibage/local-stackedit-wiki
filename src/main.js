@@ -286,6 +286,7 @@
     stopPreviewPositionTracking();
     renderSequence++; clearTimeout(renderTimer); // Cancel delayed render/image updates.
     activePath = null; originalText = ''; fingerprint = null; hasBOM = false;
+    updatePreviewExportEnabled();
     editor.setValue(''); editor.setReadOnly(true);
     ui.filename.textContent = 'No note open';
     updateMoveModeUI();
@@ -1367,9 +1368,78 @@
     if (source && target) void renamePath(source, target);
   });
   $('move-dialog').addEventListener('close', () => { pendingMovePath = null; });
+  let previewExporting=false;
+  function closePreviewExportMenu() {
+    $('preview-export-options').hidden=true;
+    $('preview-export-toggle').setAttribute('aria-expanded','false');
+  }
+  function updatePreviewExportEnabled() {
+    const toggle=$('preview-export-toggle');
+    toggle.disabled=!activePath || previewExporting;
+    if (toggle.disabled) closePreviewExportMenu();
+  }
+  $('preview-export-toggle').addEventListener('click',()=>{
+    if (previewExporting || !activePath) return;
+    const menu=$('preview-export-options');
+    menu.hidden=!menu.hidden;
+    $('preview-export-toggle').setAttribute('aria-expanded',String(!menu.hidden));
+    if (!menu.hidden) $('preview-export-html').focus();
+  });
+  document.addEventListener('pointerdown',event=>{
+    if (!event.target.closest('.preview-export-menu')) closePreviewExportMenu();
+  });
+  $('preview-export-options').addEventListener('keydown',event=>{
+    if (event.key==='Escape'){
+      event.preventDefault();closePreviewExportMenu();$('preview-export-toggle').focus();
+    }
+    if (event.key==='ArrowDown' || event.key==='ArrowUp') {
+      event.preventDefault();
+      const buttons=Array.from($('preview-export-options').querySelectorAll('button'));
+      const index=buttons.indexOf(document.activeElement);
+      buttons[(index+(event.key==='ArrowDown'?1:buttons.length-1))%buttons.length].focus();
+    }
+  });
+  async function exportRenderedPreview(kind,popup,path) {
+    const exporter=window.LocalWikiPreviewExport;
+    // A pending 3-second debounce must never produce an outdated export.
+    if (renderTimer) renderPreview(true);
+    await exporter.waitForReady(ui.preview,()=>$('render-status').textContent.includes('Rendering:'));
+    if (!activePath || activePath!==path)
+      throw new Error('The selected note changed during export. Please retry.');
+    const html=await exporter.build(ui.preview,{title:basename(path)});
+    if (kind==='html') {
+      exporter.downloadHtml(html,exporter.fileName(path,'html'));
+      notice('Standalone HTML downloaded with inline styles and local preview assets.','success');
+    } else {
+      await exporter.printHtml(html,popup);
+      notice('In the print dialog, choose Save as PDF. The document uses the current preview theme.','success');
+    }
+  }
+  function startPreviewExport(kind) {
+    closePreviewExportMenu();
+    if (!activePath || previewExporting) return;
+    const path=activePath;
+    let popup=null;
+    if (kind==='pdf') {
+      try {popup=window.LocalWikiPreviewExport.openPrintWindow();}
+      catch(error){notice('Cannot open PDF preview: '+error.message,'error');return;}
+    }
+    previewExporting=true;updatePreviewExportEnabled();
+    void exportRenderedPreview(kind,popup,path).catch(error=>{
+      if (popup && !popup.closed) popup.close();
+      notice('Preview export failed: '+error.message,'error');
+    }).finally(()=>{previewExporting=false;updatePreviewExportEnabled();});
+  }
+  $('preview-export-html').addEventListener('click',()=>startPreviewExport('html'));
+  $('preview-export-pdf').addEventListener('click',()=>startPreviewExport('pdf'));
   function setView(mode) {
     selectedMode = mode; ui.grid.dataset.layout = mode;
-    for (const button of document.querySelectorAll('.view-switch button')) button.classList.toggle('active', button.dataset.view === mode);
+    for (const button of document.querySelectorAll('.view-switch button')) {
+      const active=button.dataset.view===mode;
+      button.classList.toggle('active',active);
+      button.setAttribute('aria-pressed',String(active));
+    }
+    closePreviewExportMenu();
     if (mode !== 'preview') requestAnimationFrame(() => editor.refresh());
   }
   function setSideTab(tab) {
