@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="assets/drawio-viewer.css">
   <link rel="stylesheet" href="assets/preview-export.css">
   <link rel="stylesheet" href="assets/stackedit-mode.css">
+  <link rel="stylesheet" href="assets/compact-workspace.css">
   <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css">
   <link rel="stylesheet" href="vendor/codemirror/addon/dialog/dialog.css">
   <script>
@@ -41,6 +42,29 @@
       <input id="directory-input" type="file" webkitdirectory directory multiple hidden>
       <label class="theme-label" for="theme-select">Theme <select id="theme-select" aria-label="Color theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option><option value="stackedit">StackEdit</option></select></label>
     </div>
+    <div class="editor-bar">
+            <div class="file-title"><strong id="filename">No note open</strong><span id="dirty" aria-live="polite"></span></div>
+            <div class="editor-actions">
+              <span id="mode" class="mode">Waiting for folder</span>
+              <div class="view-switch" role="group" aria-label="Editor layout">
+                <button id="view-edit" type="button" data-view="edit" aria-pressed="false">Editor</button>
+                <button id="view-split" type="button" data-view="split" class="active" aria-pressed="true">Side by side</button>
+                <div class="preview-view-action">
+                  <button id="view-preview" type="button" data-view="preview" aria-pressed="false">Preview</button>
+                  <div class="preview-export-menu">
+                    <button id="preview-export-toggle" type="button" class="preview-export-toggle" aria-haspopup="menu" aria-expanded="false" aria-controls="preview-export-options" aria-label="Export preview" title="Export the currently rendered preview" disabled><span aria-hidden="true">▾</span></button>
+                    <div id="preview-export-options" class="preview-export-options" role="menu" aria-label="Export preview" hidden>
+                      <button id="preview-export-pdf" type="button" role="menuitem">PDF…</button>
+                      <button id="preview-export-html" type="button" role="menuitem">HTML</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <button id="renderer-check" type="button" title="Offline library status and diagnostics">Status</button>
+              <button id="refresh" type="button" disabled title="Refresh folder tree and current note from disk; unsaved changes require confirmation">Refresh</button>
+              <button id="save" class="primary" type="button" disabled>Save</button>
+            </div>
+          </div>
   </header>
   <div class="workspace">
     <aside class="sidebar">
@@ -80,31 +104,7 @@
     </aside>
     <div class="sidebar-resizer" id="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" tabindex="0" aria-valuemin="190" aria-valuemax="520" aria-valuenow="255" title="Drag to resize; double-click to reset"></div>
     <main class="main-area">
-      <div class="editor-bar">
-        <div class="file-title"><strong id="filename">No note open</strong><span id="dirty" aria-live="polite"></span></div>
-        <div class="editor-actions">
-          <span id="mode" class="mode">Waiting for folder</span>
-          <div class="view-switch" role="group" aria-label="Editor layout">
-            <button id="view-edit" type="button" data-view="edit" aria-pressed="false">Editor</button>
-            <button id="view-split" type="button" data-view="split" class="active" aria-pressed="true">Side by side</button>
-            <div class="preview-view-action">
-              <button id="view-preview" type="button" data-view="preview" aria-pressed="false">Preview</button>
-              <div class="preview-export-menu">
-                <button id="preview-export-toggle" type="button" class="preview-export-toggle" aria-haspopup="menu" aria-expanded="false" aria-controls="preview-export-options" aria-label="Export preview" title="Export the currently rendered preview" disabled><span aria-hidden="true">▾</span></button>
-                <div id="preview-export-options" class="preview-export-options" role="menu" aria-label="Export preview" hidden>
-                  <button id="preview-export-pdf" type="button" role="menuitem">PDF…</button>
-                  <button id="preview-export-html" type="button" role="menuitem">HTML</button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <button id="renderer-check" type="button" title="Offline library status and diagnostics">Status</button>
-          <button id="refresh" type="button" disabled title="Refresh folder tree and current note from disk; unsaved changes require confirmation">Refresh</button>
-          <button id="save" class="primary" type="button" disabled>Save</button>
-        </div>
-      </div>
-      <div class="editor-grid" id="editor-grid" data-layout="split">
-        <section class="pane edit-pane" aria-label="Markdown source"><div class="pane-title"><span>Markdown · Ctrl+F search</span><span>Autosave every 5s · Ctrl+S</span></div><div class="format-toolbar" role="toolbar" aria-label="Markdown formatting and local attachments">
+      <div class="format-toolbar" role="toolbar" aria-label="Markdown formatting and local attachments">
           <button type="button" data-format="undo" aria-label="Undo" title="Undo (Ctrl+Z)">↶</button>
           <button type="button" data-format="redo" aria-label="Redo" title="Redo (Ctrl+Y)">↷</button>
           <span class="toolbar-divider" aria-hidden="true"></span>
@@ -132,10 +132,24 @@
           <button type="button" data-asset-kind="canvas" aria-label="Insert Canvas" title="Embed JSON Canvas">◇</button>
           <button type="button" data-asset-kind="base" aria-label="Insert Base" title="Embed Obsidian Base">▤</button>
           <button type="button" data-asset-kind="drawio" aria-label="Insert draw.io" title="Embed draw.io diagram">⬡</button>
-        </div><textarea id="editor" spellcheck="false" disabled placeholder="Choose a note on the left.&#10;&#10;Saved changes are written to its original .md file."></textarea></section>
-        <section class="pane preview-pane" aria-label="Live Markdown preview"><div class="pane-title"><span>Live preview</span><span id="render-status">Offline</span></div><div id="preview" class="markdown-preview"><div class="preview-placeholder"><h2>Welcome to your local wiki</h2><p>Markdown and math will appear here when you open a note.</p><p>Mermaid and ABC notation work offline when the libraries are bundled.</p></div></div></section>
+          <span class="toolbar-spacer" aria-hidden="true"></span>
+          <button id="scroll-sync-toggle" class="scroll-sync-toggle" type="button" aria-pressed="false" title="Synchronize scrolling between editor and preview in Side by side mode">Scroll sync: Off</button>
+        </div>
+      <div class="editor-grid" id="editor-grid" data-layout="split">
+        <section class="pane edit-pane" aria-label="Markdown source"><textarea id="editor" spellcheck="false" disabled placeholder="Choose a note on the left.&#10;&#10;Saved changes are written to its original .md file."></textarea></section>
+        <section class="pane preview-pane" aria-label="Live Markdown preview"><div id="preview" class="markdown-preview"><div class="preview-placeholder"><h2>Welcome to your local wiki</h2><p>Markdown and math will appear here when you open a note.</p><p>Mermaid and ABC notation work offline when the libraries are bundled.</p></div></div></section>
       </div>
-      <footer class="statusbar"><span id="save-status">No file</span><span id="stats">0 characters</span></footer>
+      <footer class="statusbar" aria-label="Document and rendering statistics">
+        <div class="statusbar-group statusbar-left">
+          <span id="save-status">No file</span>
+          <span id="editor-shortcuts" title="Ctrl+F search · Ctrl+S save · Autosave every 5 seconds">Ctrl+F search · Ctrl+S save · Autosave 5s</span>
+          <span id="stats" aria-label="Markdown source statistics">Markdown 0 bytes · 0 words · 0 lines · Ln 1, Col 0</span>
+        </div>
+        <div class="statusbar-group statusbar-right">
+          <span id="render-status" title="Offline preview renderer status">Offline</span>
+          <span id="html-stats" aria-label="Rendered HTML statistics">HTML 0 characters · 0 words · 0 paragraphs</span>
+        </div>
+      </footer>
     </main>
   </div>
 </div>
