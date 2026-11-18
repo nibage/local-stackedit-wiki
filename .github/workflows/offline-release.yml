@@ -38,6 +38,8 @@ jobs:
         run: python tests/rc52-image-ui-smoke.py
       - name: Verify Obsidian attachments, previews, SVG isolation and binary media moves
         run: python tests/obsidian-attachments-ui-smoke.py
+      - name: Verify quick root-note creation, responsive sidebar/footer and StackEdit HTML fidelity
+        run: python tests/quick-note-sidebar-stackedit-ui-smoke.py
       - name: Verify tree controls, status layout and 5-second autosave
         run: python tests/tree-autosave-ui-smoke.py
       - name: Verify live preview scroll, selected tree reveal and favicon
