@@ -8,7 +8,25 @@
   // Deliberately do not migrate legacy global bookmark data from another installation.
   const DB_NAME = global.LocalWikiScope.databaseName('local-stackedit-wiki-local-folders');
   const STORE_NAME = 'bookmarks';
-  const ENTRY = 'last-directory';
+  // One browser tab may browse an entirely different wiki than another,
+  // even if both use the same index.html. Give each tab its own bookmark key.
+  // sessionStorage survives refresh / tab restoration, but is not shared
+  // between independently opened tabs. The DB holds handles, not note text.
+  function tabBookmarkKey(){
+    const key=global.LocalWikiScope.storageKey('tab-bookmark-identity');
+    try {
+      if(!global.sessionStorage)return 'last-directory'; // Old test/browser fallback
+      let id=global.sessionStorage.getItem(key);
+      if(!id){
+        id=typeof global.crypto?.randomUUID==='function'?
+          global.crypto.randomUUID():
+          String(Date.now())+'-'+String(Math.random()).slice(2);
+        global.sessionStorage.setItem(key,id);
+      }
+      return 'last-directory@'+id;
+    }catch(_){return 'last-directory';}
+  }
+  const ENTRY = tabBookmarkKey();
 
   function openDb() {
     return new Promise((resolve, reject) => {
