@@ -72,7 +72,11 @@
     return transaction('readwrite', store => store.put(handle, ENTRY));
   }
   async function restoreHandle() {
-    const h = await transaction('readonly', store => store.get(ENTRY));
+    let h = await transaction('readonly', store => store.get(ENTRY));
+    // One-way compatibility read from the old single-tab bookmark. Never
+    // write to that record: after choosing a folder, each tab keeps its own.
+    if(!h && ENTRY!=='last-directory')
+      h=await transaction('readonly',store=>store.get('last-directory'));
     if (!h) return null;
     if (!isDirectory(h)) throw new Error('Saved folder is invalid. Choose it again.');
     return h;
