@@ -90,6 +90,23 @@ with sync_playwright() as pw:
     page.locator('#attachment-dialog .bases-tab').nth(1).click()
     assert page.locator('#attachment-dialog .bases-table tbody tr').count()==3
     assert page.evaluate("window.mockWiki.entries.get('example.base').body") == original
+    # Header stays glued to the *vertical table scroller*, including in
+    # StackEdit mode. A second outer dialog scroller used to break sticky.
+    page.locator('#theme-select').select_option('stackedit')
+    area=page.locator('#attachment-dialog .bases-table-scroll')
+    area.evaluate("(el)=>el.style.maxHeight='72px'")
+    assert area.evaluate('(el)=>el.scrollHeight>el.clientHeight')
+    header=page.locator('#attachment-dialog .bases-sortable-heading').first
+    start=header.bounding_box()
+    first_row=page.locator('#attachment-dialog .bases-table tbody tr').first.bounding_box()
+    area.evaluate("(el)=>el.scrollTop=56")
+    page.wait_for_timeout(120)
+    now=header.bounding_box()
+    moved_row=page.locator('#attachment-dialog .bases-table tbody tr').first.bounding_box()
+    assert abs(start['y']-now['y'])<=2,(start,now)
+    assert moved_row['y']<first_row['y']-10,(first_row,moved_row)
+    assert header.evaluate('(el)=>getComputedStyle(el).position')=='sticky'
+    assert header.evaluate('(el)=>getComputedStyle(el).backgroundColor')!='rgba(0, 0, 0, 0)'
     assert not errors,errors
     browser.close()
     print('PASS: Bases temporary filters, sort, widths, multi-view and no source writes')
