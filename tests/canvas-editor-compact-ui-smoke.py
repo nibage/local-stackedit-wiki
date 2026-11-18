@@ -66,7 +66,7 @@ with sync_playwright() as pw:
     assert meta.bounding_box()['y']>page.locator('.canvas-editor-inspector').bounding_box()['y']
     assert meta.locator('.canvas-editor-info-hint').evaluate('(e)=>getComputedStyle(e).borderLeftWidth')=='1px'
     assert 'Canvas: saved' in save.inner_text()
-    assert 'select a card to edit' in save.inner_text()
+    assert 'select a card to edit' in meta.inner_text()
     assert save.bounding_box()['x']>zoom.bounding_box()['x']
     assert page.locator('.canvas-editor-board>.wiki-canvas-viewer>.canvas-summary').count()==0
     assert page.locator('.canvas-editor-board>.wiki-canvas-viewer>.canvas-controls').count()==0
