@@ -71,7 +71,7 @@ Do not execute scripts from attachments, automatically upload media, or rewrite 
 
 ## Release and usability cleanup (November 2026)
 
-- [x] Lean GitHub Actions release ZIP: app runtime, renderer licenses, README and selected real screenshots only; no tests, dev tooling, demo vault or historic reports.
+- [x] Lean GitHub Actions release ZIP: app runtime and renderer licenses only; no tests, dev tooling, demo vault or historic reports.
 - [x] README marketing overview with authentic project screenshots, followed by install/technical documentation.
 - [x] Renderer status/diagnostics are concise when all dependencies are already bundled.
 - [x] Contents jumps to the editor cursor even from Preview-only, without relying on the previous clicked heading.
@@ -109,7 +109,7 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Use Unicode 📁 closed folder / 📂 expanded folder, 📄 other Markdown notes and 📝 active Markdown note; preserve other attachment icons.
 - [x] Darken the light-mode header banner to a calmer burgundy tone.
 - [x] Replace 10 old docs screenshots with one genuine current dark-mode screenshot including two real offline Mermaid diagrams. Capture script verifies rendering in Chromium.
-- [x] Keep only `docs/app-dark-diagrams.jpg` in README and the lean offline ZIP.
+- [x] Keep only `docs/app-dark-diagrams.jpg` in the source README; exclude screenshots from the lean ZIP.
 
 ## Canvas editor first-stage implementation (November 2026)
 
@@ -207,3 +207,14 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Fit Mermaid/ABC/draw.io SVG to document width/height and unclip copied paragraph/code/table widths in A4 PDF print.
 - [x] Add browser tests for Canvas inspector geometry, inline SVG/Canvas printing, sticky Bases, settings availability and fixed-width PDF overflow.
 - [ ] Consider an optional desktop-only local wkhtmltopdf renderer *only if* there is a clean, safe offline integration with no server, installation or upload requirement. The native Chrome/Edge PDF path remains the default.
+
+## Cross-note navigation, demo translation and per-tab release hardening (November 2026)
+
+- [x] Add contextual ← Back action directly before Center in the shared toolbar; hide it outside cross-file navigation history.
+- [x] When a link opens a Markdown note, expand its directory ancestors, switch to Files and scroll the selected file into view without changing the editor/reader layout.
+- [x] Provide a persistent Auto re-render checkbox with 3-second debounce; when off, let Render manually refresh from in-memory editor text (never disk).
+- [x] Indicate auto re-render 3s/Off in the footer; retain original Refresh as guarded on-disk rescan.
+- [x] Translate every demo Markdown note/path including 45 test notes, Canvas, Base target paths and compressed draw.io contents; validate links and Windows path lengths.
+- [x] Store IndexedDB recent-directory bookmarks per browser tab to avoid two same-app wiki tabs overwriting one another; do not store note contents.
+- [x] Remove README/screenshots and all support/dev files from release ZIP; keep runtime and upstream licenses. Publish on successful main builds, and on v* tags as permanent Releases.
+- [x] Retain Status diagnostics for offline renderer troubleshooting rather than remove access.
