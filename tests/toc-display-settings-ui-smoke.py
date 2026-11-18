@@ -83,13 +83,14 @@ with sync_playwright() as pw:
     assert positions['center']<positions['lines']<positions['size']<positions['sync'],positions
     for theme in ['light','dark','stackedit']:
         page.locator('#theme-select').select_option(theme)
-        page.locator('#view-split').click()
+        page.locator('#view-preview').click()
         page.locator('#center-content-toggle').check()
         centered=page.locator('#preview').evaluate('(el)=>parseFloat(getComputedStyle(el).paddingLeft)')
-        assert centered>20,centered
+        assert centered>50,(theme,centered)
         page.locator('#center-content-toggle').uncheck()
         left=page.locator('#preview').evaluate('(el)=>parseFloat(getComputedStyle(el).paddingLeft)')
         assert left==24,(theme,left)
+        page.locator('#view-split').click()
         assert page.locator('.edit-pane .CodeMirror-lines').evaluate(
           '(el)=>getComputedStyle(el).maxWidth')=='none'
         page.locator('#center-content-toggle').check()
