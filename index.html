@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="assets/preview-export.css">
   <link rel="stylesheet" href="assets/stackedit-mode.css">
   <link rel="stylesheet" href="assets/compact-workspace.css">
+  <link rel="stylesheet" href="assets/workspace-display-controls.css">
   <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css">
   <link rel="stylesheet" href="vendor/codemirror/addon/dialog/dialog.css">
   <script>
@@ -133,6 +134,19 @@
           <button type="button" data-asset-kind="canvas" aria-label="Insert Canvas" title="Embed JSON Canvas">◇</button>
           <button type="button" data-asset-kind="base" aria-label="Insert Base" title="Embed Obsidian Base">▤</button>
           <button type="button" data-asset-kind="drawio" aria-label="Insert draw.io" title="Embed draw.io diagram">⬡</button>
+          </div>
+          <div class="workspace-display-controls" role="group" aria-label="Editor and preview display settings">
+            <label class="workspace-display-check" title="Center editor and preview text in the available pane"><input id="center-content-toggle" type="checkbox" checked> Center</label>
+            <label class="workspace-display-check" title="Show or hide editor line numbers"><input id="line-numbers-toggle" type="checkbox" checked> Line numbers</label>
+            <label class="workspace-display-size" title="Font size for editor and preview">Text size
+              <select id="workspace-text-size" aria-label="Editor and preview text size">
+                <option value="default">Default</option>
+                <option value="12">12 px</option><option value="14">14 px</option>
+                <option value="16">16 px</option><option value="18">18 px</option>
+                <option value="20">20 px</option><option value="22">22 px</option>
+                <option value="24">24 px</option><option value="26">26 px</option>
+              </select>
+            </label>
           </div>
           <button id="scroll-sync-toggle" class="scroll-sync-toggle" type="button" aria-pressed="false" title="Synchronize scrolling between editor and preview in Side by side mode">Scroll sync: Off</button>
         </div>
