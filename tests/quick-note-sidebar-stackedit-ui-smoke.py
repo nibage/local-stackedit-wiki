@@ -28,7 +28,7 @@ with sync_playwright() as pw:
         async createWritable(){let data;return{
           write:async value=>data=value,
           close:async()=>{this.body=data;this.lastModified++},abort:async()=>{}
-        }}}
+        }}}}
       function dir(name,children=[]){const entries=new Map(children.map(c=>[c.name,c]));
         return {kind:'directory',name,entries,
           async *values(){yield* entries.values()},
