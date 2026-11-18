@@ -103,7 +103,10 @@ with sync_playwright() as pw:
     assert not page.locator('#fulltext-results').inner_text().strip()
 
     page.locator('[data-side="files"]').click()
-    page.locator('.tree-row[aria-label="Docs"]').click()
+    # Cross-note navigation already expanded Docs. Only click if it is still
+    # collapsed; clicking an expanded folder would deliberately collapse it.
+    if not page.locator('.tree-row[aria-label="Docs/Other.md"]').count():
+        page.locator('.tree-row[aria-label="Docs"]').click()
     assert page.locator('.tree-row[aria-label="Docs/Other.md"]').count()==1
     page.locator('#refresh').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Orphan.md'")
