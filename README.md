@@ -4,7 +4,7 @@
 
 A fully offline, portable Markdown knowledge base for Chrome and Edge. Write in a familiar editor, browse your own folder tree, and preview diagrams, math, media and connected notes — **without creating an account or uploading your wiki**.
 
-[**Get the latest tested offline ZIP**](https://github.com/nibage/local-stackedit-wiki/actions/workflows/offline-release.yml) · [**Source code**](https://github.com/nibage/local-stackedit-wiki) · [**Roadmap**](TODO.md)
+[**Download latest tested ZIP (Actions)**](https://github.com/nibage/local-stackedit-wiki/actions/workflows/offline-release.yml) · [**Versioned ZIP releases**](https://github.com/nibage/local-stackedit-wiki/releases) · [**Source code**](https://github.com/nibage/local-stackedit-wiki) · [**Roadmap**](TODO.md)
 
 > **Offline first:** Unzip the completed GitHub Actions artifact, open `index.html` in Chrome/Edge, then use **Open folder** to choose the wiki directory. No server, cloud storage or external runtime dependencies.
 
@@ -29,7 +29,7 @@ A fully offline, portable Markdown knowledge base for Chrome and Edge. Write in 
 ## Getting started
 
 1. Open [GitHub Actions — Build complete offline wiki ZIP](https://github.com/nibage/local-stackedit-wiki/actions/workflows/offline-release.yml), choose the latest **successful** run and download the `local-stackedit-wiki-offline` artifact. GitHub may require sign-in to access workflow artifacts.
-2. Extract the ZIP to a permanent application folder. The ZIP contains the offline runtime and essential documentation, not the development tests.
+2. Extract the ZIP to a permanent application folder. The ZIP contains **only the offline application runtime** (index.html, assets, src, vendor) and legally required upstream library licenses; it excludes documentation, screenshots, demo data, tests and build tools.
 3. Open **`index.html`** directly in a current version of Chrome or Edge (preferably on desktop).
 4. Select **Open folder** and grant the browser access to a folder you own. Keep a backup of your original data before writing or moving files.
 5. Choose **Side by side**, **Editor** or **Preview**. Edits autosave after approximately five seconds when permitted; **Ctrl+S** saves immediately. The Markdown preview refreshes after three seconds without further typing, to avoid images flashing during rapid edits.
@@ -123,3 +123,19 @@ The opt-in trash button opens a centered, themed confirmation dialog rather than
 **Reliable visual exports (November 2026):** HTML and PDF export now render from a measurable offscreen copy of the current preview, including when the user is in Editor-only mode. Interactive JSON Canvas viewers export as fitted, static DOM/SVG graphs; draw.io exports its native current-page SVG; Mermaid/ABC SVGs are sized for the document; raster HTML canvases are captured as data images where permitted. Embedded local images remain self-contained. A4 print rules reset copied fixed widths on paragraphs/headings/code and wrap wide tables, preventing right-edge PDF clipping. PDF remains the browser's native local **Save as PDF** flow. Original StackEdit uses a remote `wkhtmltopdf` service for server PDF downloads; it is intentionally **not** used because the wiki must remain offline and private. Chrome/Edge also preserve clickable within-document/external links in print.
 
 **Toolbar and Bases fixes:** Center is disabled in Side by side; Show line numbers is disabled in Preview. Both retain their saved preference for other modes. The remembered-wiki notification now wraps in the space after the active filename instead of clipping to 190px. Bases tables use an internal, bounded vertical scroll region to keep their header sticky in all themes, including StackEdit.
+
+## Cross-note navigation and preview updates
+
+Opening another Markdown note by clicking an internal link reveals its folder path in the file tree and adds a compact **← Back** button immediately before **Center** in the shared toolbar. This back control disappears when there is no navigation history. The Editor / Side by side / Preview layout is unchanged by link navigation.
+
+**Auto re-render** defaults to on and updates the Markdown preview after three seconds without typing. When off, edits remain in CodeMirror but the preview is intentionally left as-is until you press the separate **Render** toolbar button; it never reads the file from disk. **Refresh** is different: it rescans the folder and rereads the current file, and still protects unsaved edits. The bottom bar shows **Auto re-render 3s** or **Auto re-render: Off**. **Status** remains available for offline renderer checks and diagnostics, so missing/blocked Mermaid, ABC, and MathJax libraries can be diagnosed.
+
+## Two browser tabs and independent wikis
+
+The Markdown documents, binaries, and metadata live directly in each chosen local folder; they are **not saved into a common application database**. Each tab creates its own in-memory fulltext index and file-system bridge. The remembered-directory handle is stored in IndexedDB under a per-tab key (preserved across reload in that browser tab); older bookmarks may be read once for compatibility. Global UI preferences such as theme are still scoped to the application's index.html location and can be shared by tabs that launch the exact same application path. Open separate copies of the application for fully independent preferences. If the same *physical file* is opened for editing in multiple tabs, guarded saves detect changed disk fingerprints instead of silently overwriting it.
+
+## English demo and clean ZIP distribution
+
+The repository's complete `demo-wiki/` example has been translated into English, including deeply nested directory names, all 45 tree-scrolling notes, Obsidian link targets and anchors, JSON Canvas node labels and file references, and both compressed and uncompressed draw.io diagram pages. The sample folder is in the source repository, **not** in the minimal end-user ZIP.
+
+On every successful `main` build, the archive appears as a GitHub Actions download named **local-stackedit-wiki-offline**. Versioned `v*` tags additionally publish the verified ZIP as a permanent GitHub Release asset. The archive contains only the necessary runtime and third-party license files; unzip and open `index.html` directly in Chrome/Edge.
