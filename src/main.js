@@ -872,7 +872,7 @@
         viewer.replaceChildren(canvasEditor.root);
         canvasInfo.replaceChildren();
         canvasInfo.hidden=true;
-        $('attachment-insert').after(canvasEditor.previewButton);
+        $('attachment-insert').before(canvasEditor.previewButton);
         editCanvas.hidden=true;
       } catch (error) {
         viewer.textContent='Cannot edit Canvas: '+error.message+' The file has not been changed.';
