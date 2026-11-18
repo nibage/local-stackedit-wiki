@@ -865,8 +865,9 @@
         viewer.querySelector('.wiki-canvas-viewer')?.dispose?.();
         activeCanvasEditor=canvasEditor;
         viewer.replaceChildren(canvasEditor.root);
-        canvasInfo.replaceChildren(canvasEditor.meta);
-        canvasInfo.hidden=false;
+        canvasInfo.replaceChildren();
+        canvasInfo.hidden=true;
+        $('attachment-insert').after(canvasEditor.previewButton);
         editCanvas.hidden=true;
       } catch (error) {
         viewer.textContent='Cannot edit Canvas: '+error.message+' The file has not been changed.';
