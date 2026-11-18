@@ -37,7 +37,7 @@
 <body>
 <div class="app-shell">
   <header class="topbar">
-    <div class="brand"><span class="brand-icon">W</span><div class="brand-title"><strong>Local StackEdit Wiki</strong><small>Offline Markdown wiki</small></div><div id="notice" class="notice" role="status" aria-live="polite" hidden></div></div>
+    <div class="brand"><span class="brand-icon">W</span><div class="brand-title"><strong>Local StackEdit Wiki</strong><small>Offline Markdown wiki</small></div><div class="file-title" title="No note open"><strong id="filename" title="No note open">No note open</strong><span id="dirty" aria-live="polite"></span></div><div id="notice" class="notice" role="status" aria-live="polite" hidden></div></div>
     <div class="actions">
       <label class="readonly-option" title="Open the selected folder without write permission"><input id="read-only-toggle" type="checkbox"> Open read-only</label>
       <button id="open-folder" class="primary" type="button">Open folder</button>
@@ -45,9 +45,7 @@
       <label class="theme-label" for="theme-select">Theme <select id="theme-select" aria-label="Color theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option><option value="stackedit">StackEdit</option></select></label>
     </div>
     <div class="editor-bar">
-            <div class="file-title"><strong id="filename">No note open</strong><span id="dirty" aria-live="polite"></span></div>
             <div class="editor-actions">
-              <span id="mode" class="mode">Waiting for folder</span>
               <div class="view-switch" role="group" aria-label="Editor layout">
                 <button id="view-edit" type="button" data-view="edit" aria-pressed="false">Editor</button>
                 <button id="view-split" type="button" data-view="split" class="active" aria-pressed="true">Side by side</button>
@@ -158,6 +156,7 @@
       <footer class="statusbar" aria-label="Document and rendering statistics">
         <div class="statusbar-group statusbar-left">
           <span id="save-status">No file</span>
+          <span id="mode" class="mode" aria-label="Folder access mode">Waiting for folder</span>
           <span id="count" aria-label="Wiki file counts">0 .md · 0 attachments</span>
           <span id="editor-shortcuts" title="Ctrl+F search · Ctrl+S save · Autosave every 5 seconds">Ctrl+F search · Ctrl+S save · Autosave 5s</span>
           <span id="stats" aria-label="Markdown source statistics">Markdown 0 bytes · 0 words · 0 lines · Ln 1, Col 0</span>
