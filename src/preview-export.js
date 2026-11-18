@@ -394,6 +394,13 @@
       'background:#fff!important;color:#333!important;'+
       'font-family:Arial,"Helvetica Neue",sans-serif!important;'+
       'font-size:16px!important;line-height:1.72!important;}'+
+      '.wiki-export-preview p,.wiki-export-preview h1,.wiki-export-preview h2,'+
+      '.wiki-export-preview h3,.wiki-export-preview h4,.wiki-export-preview h5,'+
+      '.wiki-export-preview h6,.wiki-export-preview ul,.wiki-export-preview ol,'+
+      '.wiki-export-preview li,.wiki-export-preview blockquote,'+
+      '.wiki-export-preview pre,.wiki-export-preview details{'+
+      'box-sizing:border-box!important;width:auto!important;'+
+      'min-width:0!important;max-width:100%!important;}'+
       '.wiki-export-preview p,.wiki-export-preview li,.wiki-export-preview blockquote{'+
       'font-size:16px!important;line-height:1.72!important;letter-spacing:normal!important;}'+
       '.wiki-export-preview p{margin:0 0 1.25em!important;}'+
