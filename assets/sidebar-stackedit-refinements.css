@@ -180,3 +180,19 @@
   .topbar .brand #notice.notice {display:block;min-width:0;flex:1 1 100%;}
   .topbar .brand {flex-wrap:wrap;}
 }
+
+
+/* Keep the notice's flex slot reserved even when the message expires.
+   Otherwise "previous wiki remembered" -> "select a note" changes the topbar
+   height and physically shifts the tree buttons under a pointer. */
+.topbar .brand #notice.notice {
+  height:58px;min-height:58px;max-height:none;
+  align-self:center;display:block!important;
+  white-space:normal;overflow:visible!important;
+}
+.topbar .brand #notice.notice[hidden] {
+  display:block!important;visibility:hidden!important;pointer-events:none!important;
+}
+@media(max-width:650px){
+  .topbar .brand #notice.notice {height:auto;min-height:50px;}
+}
