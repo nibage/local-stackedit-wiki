@@ -66,7 +66,7 @@ with sync_playwright() as pw:
     assert len(updated['nodes'])==2
     assert updated['future']['keep']=='yes'
     assert updated['nodes'][0]['unknown']['keep']==42
-    page.locator('.canvas-editor-toolbar button',has_text='Preview').click()
+    page.locator('#attachment-dialog .dialog-actions .canvas-preview-exit').click()
     page.wait_for_function("document.querySelector('.canvas-editor')===null")
     assert page.locator('#attachment-edit-canvas').is_visible()
     page.locator('#attachment-close').click()
