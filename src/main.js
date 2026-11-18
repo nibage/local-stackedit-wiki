@@ -149,6 +149,16 @@
   const initialSize=safeStored('local-wiki-text-size','default');
   sizeSelect.value=['default','12','14','16','18','20','22','24','26'].includes(initialSize)
     ?initialSize:'default';
+  function updateDisplayControlAvailability() {
+    // Center is a full-pane reading preference, not a split-pane control.
+    // Line numbers apply to source editing and have no role in Preview-only.
+    centerToggle.disabled=selectedMode==='split';
+    linesToggle.disabled=selectedMode==='preview';
+    centerToggle.parentElement.title=centerToggle.disabled
+      ?'Center is available in Editor and Preview modes.':'Center or left-align the document';
+    linesToggle.parentElement.title=linesToggle.disabled
+      ?'Line numbers are available in Editor and Side by side modes.':'Show or hide source line numbers';
+  }
   function applyDisplaySettings() {
     document.documentElement.dataset.centered=String(centerToggle.checked);
     document.documentElement.dataset.lineNumbers=String(linesToggle.checked);
@@ -1640,6 +1650,7 @@
     }
     closePreviewExportMenu();
     updateScrollSyncButton();
+    updateDisplayControlAvailability();
     redrawDirty();
     if (mode !== 'preview') requestAnimationFrame(() => editor.refresh());
   }
