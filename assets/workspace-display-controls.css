@@ -47,3 +47,11 @@
     overflow-x:auto;max-width:55%;scrollbar-width:thin;
   }
 }
+
+
+.main-area>.format-toolbar .workspace-display-check:has(input:disabled) {
+  opacity:.4;cursor:not-allowed;
+}
+.main-area>.format-toolbar .workspace-display-check input:disabled {
+  cursor:not-allowed;
+}
