@@ -108,6 +108,18 @@ with sync_playwright() as pw:
     assert layout['rootEllipsis']=='ellipsis' and layout['tocEllipsis']=='ellipsis',layout
     assert layout['rootScroll']>layout['rootClient'],layout
     assert page.locator('#root-name').get_attribute('title')=='demo-wiki-with-a-very-long-root-folder-name'
+    # Closing and reopening in read-only mode must NOT offer automatic note creation.
+    page.locator('#read-only-toggle').check()
+    page.locator('#open-folder').click()
+    page.wait_for_function("window.LocalWikiDebug.bridge.getMode()==='readonly'")
+    assert page.locator('#mode').inner_text()=='Read-only'
+    assert page.locator('#save-status').inner_text()=='No note open'
+    assert page.evaluate("window.LocalWikiDebug.editor.cm.getOption('readOnly')===true")
+    page.locator('#view-edit').click()
+    page.locator('.CodeMirror').click()
+    page.keyboard.type('No new note')
+    assert page.locator('#filename').inner_text()=='No note open'
+    assert page.evaluate("window.mockWiki.entries.has('Untitled 3.md')===false")
     assert not errors,errors
     print('PASS: quick root note, no overwrite, footer mode/count, ellipsized sidebar/title and StackEdit CSS fidelity')
     browser.close()
