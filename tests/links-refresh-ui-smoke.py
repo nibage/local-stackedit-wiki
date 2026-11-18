@@ -68,10 +68,14 @@ with sync_playwright() as pw:
     page.wait_for_function("document.querySelector('#filename').textContent==='Docs/Other.md'")
     assert page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line")==2
     assert page.locator('#preview a.wiki-link-location').count()==1
-    assert page.locator('#nav-back').is_visible()
-    page.locator('#nav-back').click()
+    # Navigating an incoming link exposes its full path in the file tree.
+    assert page.locator('#side-files').is_visible()
+    assert page.locator('.tree-row[aria-label="Docs/Other.md"]').is_visible()
+    assert page.locator('.tree-row[aria-label="Docs/Other.md"]').get_attribute('class').find('selected')>=0
+    assert page.locator('#toolbar-back').is_visible()
+    page.locator('#toolbar-back').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Home.md'")
-    assert not page.locator('#nav-back').is_visible()
+    assert not page.locator('#toolbar-back').is_visible()
     page.locator('[data-side="files"]').click()
     page.locator('.tree-row[aria-label="Orphan.md"]').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Orphan.md'")
