@@ -279,6 +279,13 @@
           change(doc=>{doc.nodes.find(n=>n.id===node.id)[property]=value;});
         },property==='text');
         content.classList.add('canvas-prop-content');
+        if (node.type!=='text') {
+          // The FILE:/LINK:/GROUP: heading already identifies this field.
+          // Avoid a second redundant lowercase label but keep its input named.
+          content.firstChild.textContent='';
+          content.querySelector('input')?.setAttribute('aria-label',
+            {file:'Canvas file path',link:'Canvas link URL',group:'Canvas group label'}[node.type]);
+        }
         const color=field(top,'color',node.color||'',value=>{
           if (value && !/^(?:[1-6]|#[0-9a-f]{3}|#[0-9a-f]{6})$/i.test(value)) {
             status('Use preset 1–6 or a hex color.'); return;
