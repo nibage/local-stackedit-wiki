@@ -151,6 +151,7 @@
     ?initialSize:'default';
   function applyDisplaySettings() {
     document.documentElement.dataset.centered=String(centerToggle.checked);
+    document.documentElement.dataset.lineNumbers=String(linesToggle.checked);
     document.documentElement.dataset.wikiTextSize=sizeSelect.value;
     if(sizeSelect.value==='default')
       document.documentElement.style.removeProperty('--wiki-user-text-size');
