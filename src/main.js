@@ -301,7 +301,7 @@
     ui.save.disabled = operations.isBusy() || bridge.getMode() !== 'readwrite' || !dirty;
     const toolsEnabled=bridge.getMode()==='readwrite' && !operations.isBusy() && selectedMode!=='preview';
     document.querySelectorAll('.format-toolbar .format-tools button').forEach(button=>{button.disabled=!toolsEnabled;});
-    $('save-status').textContent = !activePath ? (dirty ? 'Creating a new note…' : 'No note · type to create') : dirty ? (bridge.getMode() === 'readwrite' ? 'Unsaved changes · autosave every 5s' : 'Unsaved changes') : 'No unsaved changes';
+    $('save-status').textContent = !activePath ? (dirty ? 'Creating a new note…' : (bridge.getMode()==='readwrite' ? 'No note · type to create' : 'No note open')) : dirty ? (bridge.getMode() === 'readwrite' ? 'Unsaved changes · autosave every 5s' : 'Unsaved changes') : 'No unsaved changes';
     updateSourceStats();
   }
   function wordCount(text) {
