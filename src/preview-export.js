@@ -68,7 +68,7 @@
       reader.readAsDataURL(blob);
     });
   }
-  async function lightThemeSnapshot(preview) {
+  async function themeSnapshot(preview,theme) {
     // Create an off-screen same-origin document with the actual light-theme
     // stylesheets. Never change the application's selected theme or print dark
     // inline CSS values. No scripts are copied, no external hosts are allowed.
@@ -76,12 +76,18 @@
     frame.setAttribute('aria-hidden','true');
     frame.tabIndex=-1;
     frame.style.cssText='position:fixed;left:-200vw;top:0;opacity:0;'+
-      'pointer-events:none;border:0;height:30px;width:'+
-      Math.max(320,preview.clientWidth||780)+'px;';
+      'pointer-events:none;border:0;height:950px;width:'+
+      Math.max(760,preview.clientWidth||900)+'px;';
     document.body.append(frame);
     try {
       const doc=frame.contentDocument;
-      doc.documentElement.dataset.theme='light';
+      doc.documentElement.dataset.theme=theme==='light'?'light':
+        (document.documentElement.dataset.theme||'light');
+      for(const key of ['centered','wikiTextSize','lineNumbers'])
+        if(document.documentElement.dataset[key]!==undefined)
+          doc.documentElement.dataset[key]=document.documentElement.dataset[key];
+      const size=document.documentElement.style.getPropertyValue('--wiki-user-text-size');
+      if(size)doc.documentElement.style.setProperty('--wiki-user-text-size',size);
       const pending=[];
       for(const original of document.querySelectorAll('link[rel="stylesheet"],style')) {
         if (original.localName==='link') {
@@ -120,12 +126,14 @@
       // The print copy must be light even if a stylesheet cannot be cloned.
       // Force only the main preview palette, leaving light-theme typography,
       // diagrams and syntax styles inherited from the copied offline CSS.
-      const lightPalette=doc.createElement('style');
-      lightPalette.textContent=':root[data-theme="light"]{color-scheme:light;'+
-        '--panel:#fff;--panel-alt:#f7f8fa;--text:#252c34;--muted:#677182;--line:#d9dde2;}'+
-        '[data-theme="light"] .markdown-preview{background:#fff!important;'+
-        'color:#252c34!important;}';
-      doc.head.append(lightPalette);
+      if(theme==='light'){
+        const lightPalette=doc.createElement('style');
+        lightPalette.textContent=':root[data-theme="light"]{color-scheme:light;'+
+          '--panel:#fff;--panel-alt:#f7f8fa;--text:#252c34;--muted:#677182;--line:#d9dde2;}'+
+          '[data-theme="light"] .markdown-preview{background:#fff!important;'+
+          'color:#252c34!important;}';
+        doc.head.append(lightPalette);
+      }
       const wrapper=doc.createElement('section');
       wrapper.className='pane preview-pane';
       const light=doc.importNode(preview,true);
@@ -226,8 +234,11 @@
   }
   async function build(preview,{title='Wiki preview',theme='current'}={}) {
     if (!preview || !preview.isConnected) throw new Error('No rendered preview is available.');
-    const light=theme==='light'?await lightThemeSnapshot(preview):null;
-    const source=light?.node||preview;
+    // Always copy from a genuinely laid-out offscreen document, even in
+    // Editor-only mode where the onscreen preview's width/height are zero.
+    // This also avoids inheriting clipped scroll/viewport geometry.
+    const snapshot=await themeSnapshot(preview,theme);
+    const source=snapshot.node;
     try {
     const cloned=source.cloneNode(true);
     normalizeDocumentLinks(cloned,title);
@@ -331,7 +342,7 @@
       '<main class="wiki-export-preview markdown-preview" style="'+escapeHtml(cloned.style.cssText)+'">'+cloned.innerHTML+
       '</main>\n</body></html>';
     return html;
-    } finally {if (light) light.frame.remove();}
+    } finally {snapshot.frame.remove();}
   }
   function waitForReady(preview,isPending=()=>false) {
     return new Promise((resolve,reject)=>{
