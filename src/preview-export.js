@@ -365,7 +365,7 @@
     const renderedStyle=source.ownerDocument.defaultView.getComputedStyle(source);
     const color=renderedStyle.color || '#222';
     const background=renderedStyle.backgroundColor || '#fff';
-    const width=Math.max(320,Math.round(preview.clientWidth || preview.getBoundingClientRect().width || 780));
+    const width=Math.max(760,Math.round(source.clientWidth || source.getBoundingClientRect().width || 900));
     const name=validTitle(title);
     // Inline style snapshot is self-contained; no libraries, fonts, network or
     // scripts are referenced. Print-specific rules only remove viewport clipping.
@@ -426,6 +426,28 @@
       'break-inside:avoid;page-break-inside:avoid;}'+
       '.wiki-export-preview img,.wiki-export-preview svg{max-width:100%!important;'+
       'height:auto;break-inside:avoid;page-break-inside:avoid;}'+
+      '.wiki-export-preview .wiki-export-static-graph,'+
+      '.wiki-export-preview .visualization,'+
+      '.wiki-export-preview .wiki-drawio-viewer{'+
+      'box-sizing:border-box!important;max-width:100%!important;'+
+      'overflow:visible!important;break-inside:avoid-page!important;}'+
+      '.wiki-export-preview .bases-table-scroll{max-height:none!important;'+
+      'height:auto!important;overflow:visible!important;}'+
+      '.wiki-export-preview table{min-width:0!important;'+
+      'table-layout:auto!important;width:100%!important;}'+
+      '.wiki-export-preview table th,.wiki-export-preview table td{'+
+      'position:static!important;white-space:normal!important;'+
+      'overflow:visible!important;overflow-wrap:anywhere!important;'+
+      'word-break:break-word!important;max-width:none!important;'+
+      'font-size:11px!important;line-height:1.4!important;'+
+      'padding:5px 7px!important;}'+
+      '.wiki-export-preview pre,.wiki-export-preview pre code{'+
+      'max-width:100%!important;white-space:pre-wrap!important;'+
+      'overflow-wrap:anywhere!important;overflow:visible!important;}'+
+      '.wiki-export-preview .wiki-drawio-viewer svg,'+
+      '.wiki-export-preview .visualization svg{max-width:100%!important;'+
+      'overflow:visible!important;}'+
+      '.wiki-export-preview .canvas-node{box-sizing:border-box!important;}'+
       '.wiki-export-preview .MathJax_MathML{max-width:100%!important;}'+
       '}'+
       '</style></head><body>\n'+
@@ -487,6 +509,10 @@
         img.addEventListener('error',resolve,{once:true});
       })));
     try {await popup.document.fonts.ready;} catch(_){}
+    // Chrome captures print layout at the start of print(); allow two layout
+    // frames for intrinsic SVG dimensions and static Canvas graph sizing.
+    await new Promise(resolve=>popup.requestAnimationFrame(()=>
+      popup.requestAnimationFrame(resolve)));
     if (!popup.closed){popup.focus();popup.print();}
   }
   global.LocalWikiPreviewExport={build,downloadHtml,openPrintWindow,printHtml,waitForReady,fileName,escapeHtml};
