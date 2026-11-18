@@ -158,3 +158,23 @@
 :root[data-theme="stackedit"] #preview.markdown-preview img {
   border-radius:0;
 }
+
+
+/* Restore complete saved-wiki notices. They sit after the filename and
+   consume the remaining space before the Editor layout controls. */
+.topbar .brand {overflow:visible;flex:1 1 540px;}
+.topbar .brand .file-title {flex:0 1 350px;min-width:115px;max-width:390px;}
+.topbar .brand #notice.notice {
+  flex:1 1 295px;min-width:190px;max-width:none;
+  box-sizing:border-box;overflow:visible;text-overflow:clip;white-space:normal;
+  line-height:1.3;padding:5px 9px;min-height:0;
+  border-radius:5px;overflow-wrap:break-word;
+}
+@media(max-width:1300px){
+  .topbar .brand {flex:1 1 100%;}
+  .topbar .brand #notice.notice {flex:1 1 auto;}
+}
+@media(max-width:650px){
+  .topbar .brand #notice.notice {display:block;min-width:0;flex:1 1 100%;}
+  .topbar .brand {flex-wrap:wrap;}
+}
