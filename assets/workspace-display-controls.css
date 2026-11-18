@@ -55,3 +55,31 @@
 .main-area>.format-toolbar .workspace-display-check input:disabled {
   cursor:not-allowed;
 }
+
+
+/* Back navigation and manual rendering live alongside reader preferences. */
+.main-area>.format-toolbar .toolbar-history-back,
+.main-area>.format-toolbar .workspace-render-now {
+  flex:none;width:auto;min-width:0;height:27px;
+  white-space:nowrap;padding:3px 7px;
+  border:1px solid var(--line);
+  border-radius:5px;background:var(--panel);color:var(--text);
+  font-size:11px;cursor:pointer;
+}
+.main-area>.format-toolbar .toolbar-history-back:hover,
+.main-area>.format-toolbar .workspace-render-now:hover {
+  border-color:var(--accent);
+}
+.main-area>.format-toolbar .toolbar-history-back[hidden],
+.main-area>.format-toolbar .workspace-render-now[hidden] {
+  display:none!important;
+}
+.main-area>.format-toolbar .workspace-render-now:disabled {opacity:.4;}
+.main-area>.format-toolbar>.workspace-display-controls {
+  gap:6px;padding-left:6px;padding-right:6px;
+}
+@media(max-width:1170px){
+  .main-area>.format-toolbar>.workspace-display-controls {
+    overflow-x:auto;scrollbar-width:thin;max-width:64%;
+  }
+}
