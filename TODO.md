@@ -196,3 +196,14 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Clip root folder name and Contents tab with ellipses at minimum sidebar width.
 - [x] Match additional StackEdit HTML styling for neutral paper, preview headings, links, code, tables, blockquotes and CodeMirror syntax while retaining offline operation and other themes.
 - [x] Verify through new Chromium UI regression and full offline build tests.
+
+## Canvas screenshot / visual export follow-up (November 2026)
+
+- [x] Arrange Canvas controls and property inspector like supplied `new.png`, with zoom group before creation tools, Preview before Insert into note, and text-only editor for text nodes.
+- [x] Use remaining header space after filename for complete remembered-wiki notices.
+- [x] Keep Obsidian Bases sticky table headings visible while scrolling, including StackEdit mode.
+- [x] Disable Center in split and line numbers in preview, retaining settings across modes.
+- [x] Build HTML/PDF from a correctly-sized offscreen preview and flatten interactive Canvas/draw.io into printable, entirely local representations.
+- [x] Fit Mermaid/ABC/draw.io SVG to document width/height and unclip copied paragraph/code/table widths in A4 PDF print.
+- [x] Add browser tests for Canvas inspector geometry, inline SVG/Canvas printing, sticky Bases, settings availability and fixed-width PDF overflow.
+- [ ] Consider an optional desktop-only local wkhtmltopdf renderer *only if* there is a clean, safe offline integration with no server, installation or upload requirement. The native Chrome/Edge PDF path remains the default.
