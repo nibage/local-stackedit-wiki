@@ -22,6 +22,7 @@ jobs:
           node --test tests/*.test.cjs
           python tests/offline-release-build.test.py
           python tests/windows-path-portability.test.py
+          python tests/demo-english-paths.test.py
       - name: Download and validate pinned renderers; build complete ZIP
         run: python tools/build-offline-release.py --output local-stackedit-wiki-offline.zip
       - name: Install Chromium for actual renderer smoke tests
@@ -52,6 +53,8 @@ jobs:
         run: python tests/navigation-save-delete-ui-smoke.py
       - name: Verify scrollable tree, stable Move button and responsive sidebar
         run: python tests/tree-layout-scroll-ui-smoke.py
+      - name: Verify Back navigation, expanded tree paths and manual/auto 3-second preview refresh
+        run: python tests/auto-rerender-navigation-ui-smoke.py
       - name: Verify Links navigation, Refresh tree state, status popups and diagnostics
         run: python tests/links-refresh-ui-smoke.py
       - name: Verify folder moves and opt-in trash button
