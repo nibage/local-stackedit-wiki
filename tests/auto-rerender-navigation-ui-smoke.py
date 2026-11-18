@@ -69,7 +69,7 @@ with sync_playwright() as pw:
     assert page.locator('#render-now').is_enabled()
     page.locator('#auto-rerender-toggle').uncheck()
     assert page.locator('#rerender-status').inner_text()=='Auto re-render: Off'
-    page.evaluate("""() => {
+    page.evaluate(r"""() => {
       const cm=window.LocalWikiDebug.editor.cm;
       cm.replaceRange('\n\n## Rendered manually\n\nNew paragraph.',{line:cm.lastLine(),ch:cm.getLine(cm.lastLine()).length});
     }""")
@@ -82,7 +82,7 @@ with sync_playwright() as pw:
     assert page.locator('#filename').inner_text()=='Home.md'
     # Re-enable automatic previews and exercise the actual 3s debounce.
     page.locator('#auto-rerender-toggle').check()
-    page.evaluate("""() => {
+    page.evaluate(r"""() => {
       const cm=window.LocalWikiDebug.editor.cm;
       cm.replaceRange('\n\n## Rendered automatically',{line:cm.lastLine(),ch:cm.getLine(cm.lastLine()).length});
     }""")
