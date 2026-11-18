@@ -144,6 +144,24 @@
   const centerToggle=$('center-content-toggle');
   const linesToggle=$('line-numbers-toggle');
   const sizeSelect=$('workspace-text-size');
+  const autoRerenderToggle=$('auto-rerender-toggle');
+  autoRerenderToggle.checked=safeStored('local-wiki-auto-rerender','on')!=='off';
+  function updateRerenderUI() {
+    $('rerender-status').textContent=autoRerenderToggle.checked
+      ?'Auto re-render 3s':'Auto re-render: Off';
+    $('render-now').disabled=!activePath;
+    $('render-now').title='Render Markdown preview now from the editor without re-reading disk';
+  }
+  autoRerenderToggle.addEventListener('change',()=>{
+    safeStore('local-wiki-auto-rerender',autoRerenderToggle.checked?'on':'off');
+    clearTimeout(renderTimer);renderTimer=null;
+    updateRerenderUI();
+    if(autoRerenderToggle.checked&&activePath)scheduleRender();
+    else if(activePath)$('render-status').textContent='Preview paused · press Render';
+  });
+  $('render-now').addEventListener('click',()=>{
+    if(activePath)renderPreview(false);
+  });
   centerToggle.checked=safeStored('local-wiki-centered','on')!=='off';
   linesToggle.checked=safeStored('local-wiki-line-numbers','on')!=='off';
   const initialSize=safeStored('local-wiki-text-size','default');
@@ -370,13 +388,13 @@
     ui.filename.parentElement.title='No note open';
     updateMoveModeUI();
     ui.preview.replaceChildren();
-    releaseImages(); redrawDirty(); updateHtmlStats(); updateScrollSyncButton();
+    releaseImages(); redrawDirty(); updateHtmlStats(); updateScrollSyncButton();updateRerenderUI();
     $('toc').replaceChildren(); $('backlinks-results').replaceChildren();
     $('outlinks-results').replaceChildren();
     backlinksForPath = null;
   }
   function updateBackButton() {
-    for (const id of ['nav-back','toc-back']) {
+    for (const id of ['nav-back','toc-back','toolbar-back']) {
       $(id).hidden = !navigationHistory.length;
       $(id).disabled = !navigationHistory.length;
     }
@@ -384,6 +402,16 @@
   async function navigateTo(path, options = {}) {
     const previous = activePath;
     const opened = await selectFile(path);
+    if (opened && previous !== path) {
+      // Show the selected note and all expanded ancestors even when the link
+      // originated in TOC/search/backlinks. Do not change Editor/Preview mode.
+      setSideTab('files');
+      requestAnimationFrame(()=>{
+        const row=Array.from(ui.tree.querySelectorAll('.tree-row'))
+          .find(el=>el.getAttribute('aria-label')===path);
+        row?.scrollIntoView({behavior:'instant',block:'center',inline:'nearest'});
+      });
+    }
     if (opened && previous && previous !== path && !options.history) {
       navigationHistory.push(previous);
       if (navigationHistory.length > 60) navigationHistory.shift();
@@ -398,7 +426,7 @@
       navigationHistory.pop(); updateBackButton();
     }
   }
-  for (const id of ['nav-back','toc-back']) $(id).addEventListener('click', () => void goBack());
+  for (const id of ['nav-back','toc-back','toolbar-back']) $(id).addEventListener('click', () => void goBack());
   function resolvePathFrom(source, path) {
     try { path = decodeURIComponent(path); } catch (_) { /* Preserve unescaped path. */ }
     return window.LocalWikiFS.relativePath(source, path);
@@ -638,7 +666,15 @@
       $('render-status').textContent = 'Preview error';
     }
   }
-  function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(() => { renderTimer = null; renderPreview(true); }, PREVIEW_DEBOUNCE_MS); }
+  function scheduleRender() {
+    clearTimeout(renderTimer);renderTimer=null;
+    if(!activePath)return;
+    if(!autoRerenderToggle.checked){
+      $('render-status').textContent='Preview paused · press Render';
+      return;
+    }
+    renderTimer=setTimeout(()=>{renderTimer=null;renderPreview(true);},PREVIEW_DEBOUNCE_MS);
+  }
   async function selectFile(path, options = {}) {
     if (path === activePath && !options.force) return true;
     if (operations.isBusy()) { notice('A file operation is in progress; switching notes is temporarily disabled.', 'error'); return false; }
@@ -672,7 +708,17 @@
       $('backlinks-results').replaceChildren();
       $('outlinks-results').replaceChildren();
       backlinksForPath = null;
+      // Expand every ancestor so a cross-file link exposes the note's full
+      // route; scrolling runs after the actual tree DOM is regenerated.
+      const parts=path.split('/');
+      for(let i=1;i<parts.length;i++) expanded.add(parts.slice(0,i).join('/'));
       redrawDirty(); renderTree(); renderPreview(); updatePreviewExportEnabled(); updateScrollSyncButton();
+      updateRerenderUI();
+      if(!$('side-files').hidden)requestAnimationFrame(()=>{
+        const row=Array.from(ui.tree.querySelectorAll('.tree-row'))
+          .find(el=>el.getAttribute('aria-label')===path);
+        row?.scrollIntoView({behavior:'instant',block:'nearest',inline:'nearest'});
+      });
       if (!$('side-links').hidden) { buildOutlinks(); void doBacklinks(); }
       ui.preview.scrollTop = 0;
       return true;
@@ -2051,6 +2097,8 @@
   window.addEventListener('beforeunload', evt => { if (isDirty()) { evt.preventDefault(); evt.returnValue = ''; } });
   $('diag-api').textContent = `${location.protocol} · ${typeof window.showDirectoryPicker === 'function' ? 'File System API ✓' : 'File System API unavailable'}`;
   setView(selectedMode);
+  updateBackButton();
+  updateRerenderUI();
 
   // Renderer diagnostics stay accessible even in the complete offline release.
 
