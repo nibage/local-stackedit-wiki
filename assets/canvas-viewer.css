@@ -280,3 +280,112 @@
   .canvas-editor .canvas-editor-zoom .canvas-control {padding:4px;}
   .canvas-editor-meta .canvas-editor-info-summary {display:none;}
 }
+
+
+/* Latest Canvas editing arrangement: actions | zoom | save at the right. */
+.canvas-editor .canvas-editor-toolbar {
+  height:45px;min-height:45px;max-height:45px;
+  gap:6px;overflow:visible;
+}
+.canvas-editor .canvas-editor-actions {flex:0 1 auto;min-width:0;overflow-x:auto;}
+.canvas-editor .canvas-editor-toolbar-separator {
+  display:block;width:1px;min-width:1px;height:24px;flex:none;
+  background:var(--line);margin:0 5px;
+}
+.canvas-editor .canvas-editor-zoom {flex:none;margin-left:0;}
+.canvas-editor .canvas-editor-save-stack {
+  display:flex;flex:1 0 174px;min-width:174px;max-width:230px;
+  flex-direction:column;align-items:flex-end;justify-content:center;
+  gap:2px;margin-left:auto;
+}
+.canvas-editor .canvas-editor-save-stack .canvas-editor-message {
+  box-sizing:border-box;min-width:0;max-width:100%;min-height:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:10px;line-height:12px;text-align:right;
+  color:var(--muted);padding:0;margin:0;
+}
+.canvas-editor[data-dirty="true"] .canvas-editor-save-stack .canvas-editor-message {
+  color:var(--text);
+}
+.canvas-editor .canvas-editor-save-stack .canvas-icon-button {min-height:25px;}
+.canvas-editor:has(.canvas-editor-confirm:not([hidden])) .canvas-editor-save-stack,
+.canvas-editor:has(.canvas-editor-confirm:not([hidden])) .canvas-editor-toolbar-separator {
+  display:none;
+}
+.attachment-dialog .dialog-actions .canvas-preview-exit {
+  display:inline-flex;align-items:center;gap:5px;
+  white-space:nowrap;
+}
+.attachment-dialog .dialog-actions .canvas-preview-exit svg {
+  width:15px;height:15px;display:block;flex:none;
+}
+/* Keep path at the top, but move counts/gesture help to a joined pair
+   in the lower left with only a divider between them. */
+.canvas-editor>.canvas-editor-meta {
+  display:flex;align-items:center;justify-content:flex-start;
+  width:100%;height:17px;min-height:17px;flex:none;
+  gap:0;margin:0;padding:0;
+  overflow:hidden;white-space:nowrap;
+  font-size:10px;color:var(--muted);
+}
+.canvas-editor>.canvas-editor-meta .canvas-editor-info-summary,
+.canvas-editor>.canvas-editor-meta .canvas-editor-info-hint {
+  display:block;min-width:0;flex:0 1 auto;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  padding:0;margin:0;
+}
+.canvas-editor>.canvas-editor-meta .canvas-editor-info-hint {
+  padding-left:7px;margin-left:7px;border-left:1px solid var(--line);
+}
+/* File paths should take the available long field; the color box should
+   occupy only enough space for one preset/hex value. */
+.canvas-editor .canvas-editor-properties-grid {
+  grid-template-columns:88px 94px minmax(140px,1fr) 105px;
+  grid-template-rows:28px 28px;
+  grid-template-areas:"x width content color" "y height . .";
+  gap:6px 7px;
+}
+.canvas-editor .canvas-editor-properties-grid.canvas-properties-multiline {
+  grid-template-areas:"x width content color" "y height content .";
+}
+.canvas-editor .canvas-prop-content {min-width:0;width:100%;}
+.canvas-editor .canvas-prop-content input {min-width:0;}
+.canvas-editor .canvas-prop-color {
+  min-width:0;max-width:105px;width:105px;
+}
+.canvas-editor .canvas-prop-color input {
+  min-width:0;max-width:69px;width:69px;
+}
+.canvas-editor .canvas-editor-inspector {
+  grid-template-columns:minmax(0,2.6fr) minmax(214px,.9fr);
+}
+.canvas-editor .canvas-editor-inspector-connections {
+  align-items:stretch;
+}
+.canvas-editor .canvas-editor-connection-row {height:27px;flex:none;}
+.canvas-editor .canvas-editor-connection-row .canvas-control.canvas-delete-connection,
+.canvas-editor .canvas-editor-inspector-connections>.canvas-control.canvas-editor-delete {
+  width:119px;min-width:119px;max-width:119px;
+  height:27px;min-height:27px;flex:none;
+  font-size:11px;padding:4px 5px;
+  box-sizing:border-box;white-space:nowrap;
+}
+.canvas-editor .canvas-editor-inspector-connections>.canvas-control.canvas-editor-delete {
+  align-self:flex-end;grid-area:auto;
+}
+@media(max-width:900px) {
+  .canvas-editor .canvas-editor-properties-grid {
+    grid-template-columns:85px 92px minmax(120px,1fr) 100px;
+  }
+  .canvas-editor .canvas-editor-toolbar {overflow-x:auto;overflow-y:hidden;}
+}
+@media(max-width:590px) {
+  .canvas-editor .canvas-editor-properties-grid {
+    grid-template-columns:78px 87px minmax(92px,1fr);
+    grid-template-areas:"x width content" "y height color";
+  }
+  .canvas-editor .canvas-editor-properties-grid.canvas-properties-multiline {
+    grid-template-areas:"x width content" "y height content";
+  }
+  .canvas-editor .canvas-editor-save-stack {flex-basis:150px;min-width:150px;}
+}
