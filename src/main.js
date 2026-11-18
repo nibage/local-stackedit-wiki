@@ -139,6 +139,38 @@
   themeSelect.addEventListener('change', () => { safeStore('local-wiki-theme', themeSelect.value); applyTheme(); });
   if (mediaDark.addEventListener) mediaDark.addEventListener('change', applyTheme);
   applyTheme();
+  // Reader settings are scoped to this offline wiki instance and do not
+  // rewrite the Markdown file or change the currently selected layout.
+  const centerToggle=$('center-content-toggle');
+  const linesToggle=$('line-numbers-toggle');
+  const sizeSelect=$('workspace-text-size');
+  centerToggle.checked=safeStored('local-wiki-centered','on')!=='off';
+  linesToggle.checked=safeStored('local-wiki-line-numbers','on')!=='off';
+  const initialSize=safeStored('local-wiki-text-size','default');
+  sizeSelect.value=['default','12','14','16','18','20','22','24','26'].includes(initialSize)
+    ?initialSize:'default';
+  function applyDisplaySettings() {
+    document.documentElement.dataset.centered=String(centerToggle.checked);
+    document.documentElement.dataset.wikiTextSize=sizeSelect.value;
+    if(sizeSelect.value==='default')
+      document.documentElement.style.removeProperty('--wiki-user-text-size');
+    else document.documentElement.style.setProperty('--wiki-user-text-size',sizeSelect.value+'px');
+    editor.cm.setOption('lineNumbers',linesToggle.checked);
+    requestAnimationFrame(()=>editor.refresh());
+  }
+  centerToggle.addEventListener('change',()=>{
+    safeStore('local-wiki-centered',centerToggle.checked?'on':'off');
+    applyDisplaySettings();
+  });
+  linesToggle.addEventListener('change',()=>{
+    safeStore('local-wiki-line-numbers',linesToggle.checked?'on':'off');
+    applyDisplaySettings();
+  });
+  sizeSelect.addEventListener('change',()=>{
+    safeStore('local-wiki-text-size',sizeSelect.value);
+    applyDisplaySettings();
+  });
+  applyDisplaySettings();
   const resizer = $('sidebar-resizer');
   let preferredSidebarWidth = SIDEBAR_DEFAULT;
   function maxSidebarWidth() {
