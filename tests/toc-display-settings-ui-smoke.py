@@ -90,10 +90,15 @@ with sync_playwright() as pw:
         page.locator('#center-content-toggle').uncheck()
         left=page.locator('#preview').evaluate('(el)=>parseFloat(getComputedStyle(el).paddingLeft)')
         assert left==24,(theme,left)
-        page.locator('#view-split').click()
-        assert page.locator('.edit-pane .CodeMirror-lines').evaluate(
-          '(el)=>getComputedStyle(el).maxWidth')=='none'
+        assert page.locator('#line-numbers-toggle').is_disabled()
+        assert page.locator('#center-content-toggle').is_enabled()
+        page.locator('#view-edit').click()
+        assert page.locator('#center-content-toggle').is_enabled()
+        assert page.locator('#line-numbers-toggle').is_enabled()
         page.locator('#center-content-toggle').check()
+        page.locator('#view-split').click()
+        assert page.locator('#center-content-toggle').is_disabled()
+        assert page.locator('#line-numbers-toggle').is_enabled()
         assert page.locator('html').get_attribute('data-centered')=='true'
         page.locator('#workspace-text-size').select_option('22')
         assert page.locator('#preview').evaluate('(el)=>getComputedStyle(el).fontSize')=='22px'
