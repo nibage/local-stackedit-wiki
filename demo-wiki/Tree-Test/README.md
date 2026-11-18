@@ -1,12 +1,12 @@
-# Test stromu, vodorovného a svislého posouvání
+# File-tree scrolling and long filenames
 
-Tato složka slouží výhradně k otestování uživatelského rozhraní. Není potřeba nic nastavovat.
+This folder is intended only for testing the file-tree interface. No configuration is required.
 
-1. Klikni na **Expand all** dole vlevo.
-2. Otevři `01-Deep` a projdi úrovně až k dlouhému názvu poznámky.
-3. V panelu Files posuň horizontální scrollbar doprava.
-4. Ve složce `02-Dlouhy-seznam` zkus svislé posouvání (45 poznámek).
-5. Táhni svislý oddělovač mezi panelem a editorem téměř na maximum. Pak ho vrať dvojklikem na výchozí šířku.
-6. Zapni/vypni **Move**. Ostatní tlačítka se nesmějí posunout.
+1. Click **Expand all** at the lower left.
+2. Open `01-Deep` and follow the folders to the deeply nested note with the very long filename.
+3. Scroll horizontally across the file tree in the **Files** sidebar.
+4. Open `02-Long-list` and test vertical scrolling with 45 notes.
+5. Drag the sidebar divider almost to maximum width, then double-click to restore the default.
+6. Toggle **Move** on and off. The surrounding toolbar buttons should not shift.
 
-Souborům z této složky můžeš bez obav měnit názvy nebo je přesouvat – jsou to pouze testovací Markdown poznámky.
+You can safely rename or move these demo files; they are only test notes.
