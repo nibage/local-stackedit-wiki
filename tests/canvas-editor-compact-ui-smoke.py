@@ -53,27 +53,32 @@ with sync_playwright() as pw:
     page.wait_for_timeout(270)
     assert page.locator('#attachment-dialog-path').inner_text()=='graph.canvas'
     path=page.locator('#attachment-dialog-path').bounding_box()
-    meta=page.locator('#attachment-dialog-canvas-info')
-    assert meta.is_visible()
-    assert meta.locator('.canvas-editor-message').count()==1
-    assert 'Canvas: saved' in meta.inner_text()
-    assert 'select a card to edit' in meta.inner_text()
-    assert 'JSON Canvas editor · 2 cards · 1 connections' in meta.inner_text()
-    assert 'Drag cards to move' in meta.inner_text()
-    bounds=meta.bounding_box()
-    assert abs(bounds['y']-path['y'])<10,(path,bounds)
-    assert page.locator('.canvas-editor-board>.wiki-canvas-viewer>.canvas-summary').count()==0
-    assert page.locator('.canvas-editor-board>.wiki-canvas-viewer>.canvas-controls').count()==0
-
+    assert not page.locator('#attachment-dialog-canvas-info').is_visible()
     toolbar=page.locator('.canvas-editor-toolbar')
     zoom=toolbar.locator('.canvas-editor-zoom')
     buttons=toolbar.locator('.canvas-editor-actions')
+    save=toolbar.locator('.canvas-editor-save-stack')
+    meta=page.locator('.canvas-editor>.canvas-editor-meta')
+    assert meta.is_visible()
+    assert meta.locator('.canvas-editor-info-summary').count()==1
+    assert 'JSON Canvas editor · 2 cards · 1 connections' in meta.inner_text()
+    assert 'Drag cards to move' in meta.inner_text()
+    assert meta.bounding_box()['y']>page.locator('.canvas-editor-inspector').bounding_box()['y']
+    assert meta.locator('.canvas-editor-info-hint').evaluate('(e)=>getComputedStyle(e).borderLeftWidth')=='1px'
+    assert 'Canvas: saved' in save.inner_text()
+    assert 'select a card to edit' in save.inner_text()
+    assert save.bounding_box()['x']>zoom.bounding_box()['x']
+    assert page.locator('.canvas-editor-board>.wiki-canvas-viewer>.canvas-summary').count()==0
+    assert page.locator('.canvas-editor-board>.wiki-canvas-viewer>.canvas-controls').count()==0
     assert zoom.locator('button').count()==4
     assert toolbar.locator('.canvas-zoom-status').count()==1
+    assert toolbar.locator('.canvas-editor-toolbar-separator').count()==1
     assert abs(buttons.bounding_box()['y']-zoom.bounding_box()['y'])<5
-    assert toolbar.bounding_box()['height']<43,toolbar.bounding_box()
+    assert toolbar.bounding_box()['height']<49,toolbar.bounding_box()
     assert page.locator('.canvas-icon-button svg').count()==4
-    assert toolbar.locator('button',has_text='Preview').locator('svg').count()==1
+    assert page.locator('#attachment-dialog .dialog-actions .canvas-preview-exit').count()==1
+    assert page.locator('#attachment-dialog .dialog-actions .canvas-preview-exit svg').count()==1
+    assert toolbar.locator('button',has_text='Preview').count()==0
     assert toolbar.locator('button',has_text='Undo').locator('svg').count()==1
     assert toolbar.locator('button',has_text='Redo').locator('svg').count()==1
     assert toolbar.locator('button',has_text='Save canvas').locator('svg').count()==1
@@ -93,6 +98,8 @@ with sync_playwright() as pw:
     for fld in inspector.locator('.canvas-editor-field input[type="number"]').all():
         assert fld.bounding_box()['width']<=100,fld.bounding_box()
     assert inspector.locator('.canvas-editor-edge-list option').count()==1
+    assert inspector.locator('.canvas-editor-connection-row button').bounding_box()['width']==inspector.locator('.canvas-editor-delete').bounding_box()['width']
+    assert inspector.locator('.canvas-editor-delete').bounding_box()['y']>inspector.locator('.canvas-editor-connection-row button').bounding_box()['y']
     assert 'Note' in inspector.locator('.canvas-editor-edge-list option').first.inner_text()
     assert inspector.bounding_box()['height']<=112
     assert inspector.evaluate('(el)=>getComputedStyle(el).overflowY')!='auto'
@@ -105,9 +112,23 @@ with sync_playwright() as pw:
     assert page.locator('.canvas-editor-board .canvas-node-selected').count()==1
     first.press('Enter')
     assert page.locator('.canvas-editor-board .canvas-node-selected').count()==0
+    # File paths take the flexible long field, while color is hex-sized.
+    second=page.locator('.canvas-editor-board .canvas-node[data-node-id="b"]')
+    second.click()
+    file_field=inspector.locator('.canvas-prop-content input')
+    color_field=inspector.locator('.canvas-prop-color input')
+    assert file_field.bounding_box()['width']>120,file_field.bounding_box()
+    assert color_field.bounding_box()['width']<=75,color_field.bounding_box()
+    delete_edge=inspector.locator('.canvas-delete-connection').bounding_box()
+    delete_card=inspector.locator('.canvas-editor-delete').bounding_box()
+    assert abs(delete_edge['width']-delete_card['width'])<=1,(delete_edge,delete_card)
+    assert delete_card['y']>delete_edge['y']
+    assert page.locator('.canvas-editor-save-stack').bounding_box()['x']>zoom.bounding_box()['x']
+    assert page.locator('#attachment-dialog .dialog-actions .canvas-preview-exit').count()==1
+    assert page.locator('.canvas-editor>.canvas-editor-meta').bounding_box()['y']>inspector.bounding_box()['y']
 
     toolbar.locator('button',has_text='+ Group').click()
-    assert 'unsaved changes' in meta.inner_text()
+    assert 'unsaved changes' in save.inner_text()
     page.locator('#attachment-close').click()
     assert page.locator('#attachment-dialog').evaluate('(el)=>el.open')
     warning=toolbar.locator('.canvas-editor-confirm')
@@ -117,9 +138,11 @@ with sync_playwright() as pw:
     assert warning.bounding_box()['x']>buttons.bounding_box()['x']
     assert abs(warning.bounding_box()['y']-buttons.bounding_box()['y'])<12
     assert not zoom.is_visible(),'Zoom should give room to confirmation buttons'
-    assert toolbar.bounding_box()['height']<43,'Confirmation must not add a toolbar row'
+    assert not save.is_visible(),'Save/status should give room to confirmation buttons'
+    assert toolbar.bounding_box()['height']<49,'Confirmation must not add a toolbar row'
     warning.locator('button',has_text='Keep editing').click()
     assert zoom.is_visible()
+    assert save.is_visible()
     assert not warning.is_visible()
     page.locator('#attachment-close').click()
     warning.locator('button',has_text='Discard changes').click()

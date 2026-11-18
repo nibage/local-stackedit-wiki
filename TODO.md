@@ -177,3 +177,13 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Replace tall dirty-close prompt with right-aligned **Discard changes / Keep editing** buttons on the same toolbar, maintaining save protection.
 - [x] Replace wide/tall scrolling inspector with compact x/y/width/height, property/color/delete rows and separate adjacent connections controls.
 - [x] Clicking the currently selected Canvas card again clears selection, including keyboard activation; empty-space click also deselects.
+
+## TOC, reading controls and Canvas layout (November 2026)
+
+- [x] TOC and heading links retain the active Editor / Side by side / Preview mode; navigate caret and/or reader only as visible.
+- [x] Add persistent Center, Show line numbers and Text size controls in the shared toolbar immediately left of Scroll sync for all themes.
+- [x] Move Canvas Preview/back to attachment footer beside Insert into note.
+- [x] Position Canvas actions then divider then zoom; move Save to right with status immediately above.
+- [x] Relocate Canvas card/connection count and gesture hint to a joined bottom-left info row with separator.
+- [x] Widen the Canvas file input; constrain color to hex-width; stack equal-width Delete card below Delete connection.
+- [x] Add Chromium checks for TOC modes, workspace preferences and Canvas inspector/action layout.

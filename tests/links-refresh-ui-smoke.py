@@ -78,8 +78,13 @@ with sync_playwright() as pw:
     page.locator('[data-view="preview"]').click()
     page.locator('[data-side="toc"]').click()
     assert page.locator('#toc .toc-item').count()==3
+    cursor_before=page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line")
     page.locator('#toc .toc-item').nth(2).click()
-    assert page.locator('[data-view="split"]').get_attribute('class')=='active'
+    assert page.locator('[data-view="preview"]').get_attribute('class')=='active'
+    assert page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line")==cursor_before
+    page.locator('#view-edit').click()
+    page.locator('#toc .toc-item').nth(2).click()
+    assert page.locator('[data-view="edit"]').get_attribute('class')=='active'
     assert page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line")==4
     page.locator('#toc .toc-item').nth(0).click()
     assert page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line")==0

@@ -1,0 +1,49 @@
+/* Optional centered reading, editor line numbering, and shared font sizing.
+   Use the same controls in System, Light, Dark and StackEdit themes. */
+.main-area>.format-toolbar>.workspace-display-controls {
+  box-sizing:border-box;display:flex;align-items:center;flex:0 0 auto;
+  min-width:0;gap:8px;padding:0 8px 0 9px;
+  border-left:1px solid var(--line);
+  color:var(--muted);font-size:11px;white-space:nowrap;
+}
+.workspace-display-check,.workspace-display-size {
+  display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;
+}
+.workspace-display-check input {
+  width:14px;height:14px;margin:0;accent-color:#58a36a;cursor:pointer;
+}
+.workspace-display-size select {
+  box-sizing:border-box;min-width:76px;height:26px;padding:2px 5px;
+  border:1px solid var(--line);border-radius:5px;
+  color:var(--text);background:var(--panel);font-size:11px;
+}
+:root[data-theme="stackedit"] .main-area>.format-toolbar>.workspace-display-controls {
+  color:#ececec;border-left-color:#626262;
+}
+:root[data-theme="stackedit"] .workspace-display-size select {
+  background:#414141;color:#ececec;border-color:#646464;
+}
+:root[data-centered="false"] #preview.markdown-preview {
+  padding-left:24px!important;padding-right:24px!important;
+}
+:root[data-centered="false"] .edit-pane .CodeMirror-lines {
+  max-width:none!important;margin-left:0!important;margin-right:0!important;
+  padding-left:24px!important;padding-right:24px!important;
+}
+:root[data-line-numbers="false"] .edit-pane .CodeMirror-linenumbers,
+:root[data-line-numbers="false"] .edit-pane .CodeMirror-linenumber {
+  display:none!important;visibility:hidden!important;
+}
+:root[data-wiki-text-size]:not([data-wiki-text-size="default"]) #preview.markdown-preview,
+:root[data-wiki-text-size]:not([data-wiki-text-size="default"]) .edit-pane .CodeMirror {
+  font-size:var(--wiki-user-text-size)!important;
+}
+@media(max-width:970px) {
+  .main-area>.format-toolbar>.workspace-display-controls {gap:5px;padding:0 5px;}
+  .workspace-display-check,.workspace-display-size {font-size:10px;}
+}
+@media(max-width:710px) {
+  .main-area>.format-toolbar>.workspace-display-controls {
+    overflow-x:auto;max-width:55%;scrollbar-width:thin;
+  }
+}

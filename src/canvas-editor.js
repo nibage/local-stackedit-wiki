@@ -85,9 +85,14 @@
     message.setAttribute('role','status');
     meta.append(message,summary,hint);
     const warning = make('div','canvas-editor-confirm');
+    const separator = make('span','canvas-editor-toolbar-separator');
+    separator.setAttribute('aria-hidden','true');
+    const saveStack = make('div','canvas-editor-save-stack');
     warning.hidden = true;
-    toolbar.append(actions,zoomControls,warning);
-    root.append(toolbar,board,inspector);
+    toolbar.append(actions,separator,zoomControls,saveStack,warning);
+    root.append(toolbar,board,inspector,meta);
+    meta.replaceChildren(summary,hint);
+    saveStack.append(message);
 
     function status(text) { message.textContent = text; }
     function button(label, callback) {
@@ -192,7 +197,12 @@
           'External modification detected. Reload the file before retrying. ' : 'Save failed: ') + error.message);
       } finally { saving = false; refreshButtons(); }
     });
-    iconButton('Preview','back',leave);
+    // Preview belongs to the host dialog's action row next to "Insert into
+    // note", not in the graph toolbar. The host inserts it in that row.
+    const previewButton=iconButton('Preview','back',leave);
+    previewButton.classList.add('canvas-preview-exit');
+    previewButton.remove();
+    saveStack.append(save);
 
     function refreshButtons() {
       undo.disabled = !draft.canUndo || saving;
@@ -242,6 +252,7 @@
       inspector.replaceChildren();
       const data=draft.data;
       const node=data.nodes.find(n=>n.id===selected);
+      let removeCard=null;
       const properties=make('section','canvas-editor-inspector-properties');
       const heading=make('strong','canvas-editor-inspector-heading',
         node?node.type.toUpperCase()+':':'Card:');
@@ -251,7 +262,7 @@
         properties.append(make('p','canvas-editor-unselected',
           'Select a card to edit · click it again to unselect'));
       } else {
-        const grid=make('div','canvas-editor-properties-grid'+
+        const grid=make('div','canvas-editor-properties-grid canvas-properties-'+node.type+
           (node.type==='text'?' canvas-properties-multiline':''));
         // Fixed two-row geometry grid. Every field uses a short, horizontal
         // label/input pair instead of four full-width vertically stacked fields.
@@ -274,7 +285,8 @@
           });
         });
         color.classList.add('canvas-prop-color');
-        color.querySelector('input').title='Preset 1–6 or a hex color';
+        color.querySelector('input').title='Preset 1–6 or hex (e.g. #1c87a6)';
+        color.querySelector('input').maxLength=7;
         const remove=make('button','canvas-control canvas-editor-delete','Delete card');
         remove.type='button';
         remove.onclick=()=>{
@@ -286,7 +298,7 @@
           selected=null;
           render();
         };
-        grid.append(remove);
+        removeCard=remove;
         properties.append(grid);
       }
       const connections=make('section','canvas-editor-inspector-connections');
@@ -308,14 +320,18 @@
           item.title=edge.fromNode+' → '+edge.toNode;
           select.append(item);
         });
-        const removeEdge=make('button','canvas-control','Delete connection');
+        const removeEdge=make('button','canvas-control canvas-delete-connection','Delete connection');
         removeEdge.type='button';
         removeEdge.onclick=()=>change(doc=>{doc.edges.splice(Number(select.value),1);});
         row.append(select,removeEdge);
       } else {
         row.append(make('span','canvas-editor-no-connections','No connections'));
+        const inactive=make('button','canvas-control canvas-delete-connection','Delete connection');
+        inactive.type='button';inactive.disabled=true;
+        row.append(inactive);
       }
       connections.append(row);
+      if(removeCard)connections.append(removeCard);
       inspector.append(properties,connections);
     }
 
@@ -474,9 +490,10 @@
     return {
       root,
       meta,
+      previewButton,
       get isDirty() {return draft.dirty;},
       requestClose:askClose,
-      dispose(){disposed=true;activeViewer?.dispose?.();}
+      dispose(){disposed=true;activeViewer?.dispose?.();previewButton.remove();}
     };
   }
   global.LocalWikiCanvasEditor={createDraft,validate,mount};
