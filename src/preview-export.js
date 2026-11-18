@@ -232,6 +232,80 @@
       else if (raw.startsWith('#') || /^wiki:/i.test(raw)) anchor.removeAttribute('href');
     }
   }
+
+  function flattenVisualsForDocument(cloned,theme) {
+    // Existing preview viewers are interactive panning/zooming widgets. A
+    // serialized HTML/PDF needs a static print-sized graph, not a cropped
+    // viewport with a camera transform and fixed, overflowing dimensions.
+    const maxWidth=theme==='light'?620:870;
+    const maxHeight=theme==='light'?730:1050;
+    const fit=(width,height)=>{
+      const w=Number.isFinite(width)&&width>0?width:650;
+      const h=Number.isFinite(height)&&height>0?height:400;
+      return Math.min(1,maxWidth/w,maxHeight/h);
+    };
+    for(const viewer of cloned.querySelectorAll('.wiki-canvas-viewer')){
+      const board=viewer.querySelector('.canvas-board');
+      if(!board)continue;
+      const w=parseFloat(board.style.width)||850,h=parseFloat(board.style.height)||500;
+      const scale=fit(w,h);
+      const outer=cloned.ownerDocument.createElement('div');
+      outer.className='wiki-export-static-graph';
+      outer.style.cssText='position:relative!important;box-sizing:border-box!important;'+
+        'width:'+Math.ceil(w*scale)+'px!important;max-width:100%!important;'+
+        'height:'+Math.ceil(h*scale)+'px!important;min-height:0!important;'+
+        'overflow:visible!important;margin:0 auto 12px!important;';
+      board.style.setProperty('position','absolute','important');
+      board.style.setProperty('top','0','important');
+      board.style.setProperty('left','0','important');
+      board.style.setProperty('transform','scale('+scale+')','important');
+      board.style.setProperty('transform-origin','0 0','important');
+      board.classList.add('wiki-export-board');
+      outer.append(board);
+      viewer.replaceChildren(outer);
+      viewer.style.cssText='display:block!important;width:100%!important;'+
+        'max-width:100%!important;height:auto!important;min-height:0!important;'+
+        'overflow:visible!important;break-inside:avoid;';
+    }
+    // draw.io uses a direct native SVG already. Export the current page SVG
+    // without toolbar, viewport clipping or its interactive transform.
+    for(const viewer of cloned.querySelectorAll('.wiki-drawio-viewer')){
+      const svg=viewer.querySelector('.drawio-board svg');
+      if(!svg)continue;
+      viewer.replaceChildren(svg);
+      viewer.style.cssText='display:block!important;max-width:100%!important;'+
+        'width:100%!important;height:auto!important;overflow:visible!important;';
+    }
+    for(const svg of cloned.querySelectorAll(
+      '.visualization svg, .wiki-drawio-viewer>svg')){
+      // Do not alter Canvas connection-layer coordinates; scaling the entire
+      // board retains pixel-perfect card positions and arrow endpoints.
+      if(svg.closest('.wiki-export-static-graph'))continue;
+      const box=svg.getAttribute('viewBox')?.split(/[\s,]+/).map(Number)||[];
+      const w=parseFloat(svg.getAttribute('width'))||box[2]||parseFloat(svg.style.width)||650;
+      const h=parseFloat(svg.getAttribute('height'))||box[3]||parseFloat(svg.style.height)||400;
+      const scale=fit(w,h);
+      if(!svg.hasAttribute('viewBox')&&w>0&&h>0)
+        svg.setAttribute('viewBox','0 0 '+w+' '+h);
+      svg.setAttribute('width',String(Math.ceil(w*scale)));
+      svg.setAttribute('height',String(Math.ceil(h*scale)));
+      svg.style.setProperty('display','block','important');
+      svg.style.setProperty('width',Math.ceil(w*scale)+'px','important');
+      svg.style.setProperty('height',Math.ceil(h*scale)+'px','important');
+      svg.style.setProperty('max-width','100%','important');
+      svg.style.setProperty('overflow','visible','important');
+    }
+    for(const area of cloned.querySelectorAll('.bases-table-scroll')){
+      area.style.cssText='display:block!important;width:100%!important;'+
+        'max-width:100%!important;height:auto!important;max-height:none!important;'+
+        'overflow:visible!important;';
+      for(const table of area.querySelectorAll('.bases-table')){
+        table.style.cssText='width:100%!important;min-width:0!important;'+
+          'max-width:100%!important;table-layout:auto!important;';
+        table.querySelectorAll('col').forEach(col=>col.removeAttribute('style'));
+      }
+    }
+  }
   async function build(preview,{title='Wiki preview',theme='current'}={}) {
     if (!preview || !preview.isConnected) throw new Error('No rendered preview is available.');
     // Always copy from a genuinely laid-out offscreen document, even in
@@ -253,6 +327,22 @@
       if (copy.localName!=='style') copyStyle(original,copy);
       await inlineMedia(original,copy,budget,cache);
     }
+    // Preserve pixels for genuine HTML canvas-based diagrams; HTML cloneNode
+    // alone never copies a <canvas> bitmap. No external image requests.
+    const originalCanvases=source.querySelectorAll('canvas');
+    const exportedCanvases=cloned.querySelectorAll('canvas');
+    for(let i=0;i<originalCanvases.length;i++){
+      try {
+        const original=originalCanvases[i],copy=exportedCanvases[i];
+        if(!copy||!original.width||!original.height)continue;
+        const img=cloned.ownerDocument.createElement('img');
+        img.setAttribute('src',original.toDataURL('image/png'));
+        img.setAttribute('alt','Rendered diagram');
+        img.style.cssText=copy.style.cssText;
+        copy.replaceWith(img);
+      }catch(_){ /* Keep the non-raster canvas fallback if extraction is blocked. */ }
+    }
+    flattenVisualsForDocument(cloned,theme);
     if (theme==='light') {
       // Explicit final guarantee for the native PDF document, independent of
       // the source theme or any user-configured stylesheet load delays.
