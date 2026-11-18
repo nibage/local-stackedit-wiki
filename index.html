@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="assets/stackedit-mode.css">
   <link rel="stylesheet" href="assets/compact-workspace.css">
   <link rel="stylesheet" href="assets/workspace-display-controls.css">
+  <link rel="stylesheet" href="assets/sidebar-stackedit-refinements.css">
   <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css">
   <link rel="stylesheet" href="vendor/codemirror/addon/dialog/dialog.css">
   <script>
@@ -69,7 +70,7 @@
   </header>
   <div class="workspace">
     <aside class="sidebar">
-      <div class="sidebar-head"><span id="root-name">No folder</span><span id="count">0 files</span></div>
+      <div class="sidebar-head"><span id="root-name" title="No folder">No folder</span></div>
       <div class="sidebar-tabs" role="group" aria-label="Sidebar tabs">
         <button type="button" data-side="files" class="active">Files</button>
         <button type="button" data-side="search">Search</button>
@@ -151,12 +152,13 @@
           <button id="scroll-sync-toggle" class="scroll-sync-toggle" type="button" aria-pressed="false" title="Synchronize scrolling between editor and preview in Side by side mode">Scroll sync: Off</button>
         </div>
       <div class="editor-grid" id="editor-grid" data-layout="split">
-        <section class="pane edit-pane" aria-label="Markdown source"><textarea id="editor" spellcheck="false" disabled placeholder="Choose a note on the left.&#10;&#10;Saved changes are written to its original .md file."></textarea></section>
+        <section class="pane edit-pane" aria-label="Markdown source"><textarea id="editor" spellcheck="false" disabled placeholder="Open a note or start typing to create one in the wiki root."></textarea></section>
         <section class="pane preview-pane" aria-label="Live Markdown preview"><div id="preview" class="markdown-preview"><div class="preview-placeholder"><h2>Welcome to your local wiki</h2><p>Markdown and math will appear here when you open a note.</p><p>Mermaid and ABC notation work offline when the libraries are bundled.</p></div></div></section>
       </div>
       <footer class="statusbar" aria-label="Document and rendering statistics">
         <div class="statusbar-group statusbar-left">
           <span id="save-status">No file</span>
+          <span id="count" aria-label="Wiki file counts">0 .md · 0 attachments</span>
           <span id="editor-shortcuts" title="Ctrl+F search · Ctrl+S save · Autosave every 5 seconds">Ctrl+F search · Ctrl+S save · Autosave 5s</span>
           <span id="stats" aria-label="Markdown source statistics">Markdown 0 bytes · 0 words · 0 lines · Ln 1, Col 0</span>
         </div>
