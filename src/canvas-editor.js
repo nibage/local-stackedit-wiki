@@ -252,6 +252,7 @@
       inspector.replaceChildren();
       const data=draft.data;
       const node=data.nodes.find(n=>n.id===selected);
+      let removeCard=null;
       const properties=make('section','canvas-editor-inspector-properties');
       const heading=make('strong','canvas-editor-inspector-heading',
         node?node.type.toUpperCase()+':':'Card:');
@@ -261,7 +262,7 @@
         properties.append(make('p','canvas-editor-unselected',
           'Select a card to edit · click it again to unselect'));
       } else {
-        const grid=make('div','canvas-editor-properties-grid'+
+        const grid=make('div','canvas-editor-properties-grid canvas-properties-'+node.type+
           (node.type==='text'?' canvas-properties-multiline':''));
         // Fixed two-row geometry grid. Every field uses a short, horizontal
         // label/input pair instead of four full-width vertically stacked fields.
@@ -284,7 +285,8 @@
           });
         });
         color.classList.add('canvas-prop-color');
-        color.querySelector('input').title='Preset 1–6 or a hex color';
+        color.querySelector('input').title='Preset 1–6 or hex (e.g. #1c87a6)';
+        color.querySelector('input').maxLength=7;
         const remove=make('button','canvas-control canvas-editor-delete','Delete card');
         remove.type='button';
         remove.onclick=()=>{
@@ -296,7 +298,7 @@
           selected=null;
           render();
         };
-        grid.append(remove);
+        removeCard=remove;
         properties.append(grid);
       }
       const connections=make('section','canvas-editor-inspector-connections');
@@ -318,14 +320,18 @@
           item.title=edge.fromNode+' → '+edge.toNode;
           select.append(item);
         });
-        const removeEdge=make('button','canvas-control','Delete connection');
+        const removeEdge=make('button','canvas-control canvas-delete-connection','Delete connection');
         removeEdge.type='button';
         removeEdge.onclick=()=>change(doc=>{doc.edges.splice(Number(select.value),1);});
         row.append(select,removeEdge);
       } else {
         row.append(make('span','canvas-editor-no-connections','No connections'));
+        const inactive=make('button','canvas-control canvas-delete-connection','Delete connection');
+        inactive.type='button';inactive.disabled=true;
+        row.append(inactive);
       }
       connections.append(row);
+      if(removeCard)connections.append(removeCard);
       inspector.append(properties,connections);
     }
 
