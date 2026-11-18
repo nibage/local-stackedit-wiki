@@ -1,6 +1,8 @@
 name: Build complete offline wiki ZIP
 on:
   pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
