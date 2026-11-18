@@ -60,6 +60,7 @@ assert diagrams[0].get('name')=='Workflow'
 assert diagrams[1].get('name')=='Architecture (compressed)'
 compressed=diagrams[1].text.strip()
 unpacked=urllib.parse.unquote(zlib.decompress(base64.b64decode(compressed),-15).decode('utf-8'))
+assert ET.fromstring(unpacked).tag=='mxGraphModel', 'Compressed second page must contain valid XML'
 assert 'Database' in unpacked and 'Web application' in unpacked
 assert 'Databáze' not in unpacked
 assert 'Prepare notes' in ET.tostring(diagrams[0],encoding='unicode')
