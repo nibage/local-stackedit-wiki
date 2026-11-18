@@ -28,6 +28,8 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Verify bundled Mermaid and ABCjs render into SVG without network
         run: python tests/real-renderers-release-smoke.py --zip local-stackedit-wiki-offline.zip
+      - name: Verify nonempty Canvas/SVG/draw.io export and unclipped A4 print geometry
+        run: python tests/preview-export-visuals-ui-smoke.py
       - name: Capture current dark-mode screenshot from real offline app
         run: python tests/marketing-screenshot.py --zip local-stackedit-wiki-offline.zip --out marketing-current.jpg
       - name: Verify workspace layout, sidebar resizing and theme colors
@@ -72,8 +74,6 @@ jobs:
         run: python tests/stackedit-theme-toolbar-ui-smoke.py
       - name: Verify green layout choice and self-contained HTML/PDF preview export
         run: python tests/preview-export-ui-smoke.py
-      - name: Verify nonempty Canvas/SVG/draw.io export and unclipped A4 print geometry
-        run: python tests/preview-export-visuals-ui-smoke.py
       - name: Upload verified ZIP
         uses: actions/upload-artifact@v4
         with:
