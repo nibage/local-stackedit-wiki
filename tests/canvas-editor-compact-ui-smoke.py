@@ -112,6 +112,20 @@ with sync_playwright() as pw:
     assert page.locator('.canvas-editor-board .canvas-node-selected').count()==1
     first.press('Enter')
     assert page.locator('.canvas-editor-board .canvas-node-selected').count()==0
+    # File paths take the flexible long field, while color is hex-sized.
+    second=page.locator('.canvas-editor-board .canvas-node[data-node-id="b"]')
+    second.click()
+    file_field=inspector.locator('.canvas-prop-content input')
+    color_field=inspector.locator('.canvas-prop-color input')
+    assert file_field.bounding_box()['width']>120,file_field.bounding_box()
+    assert color_field.bounding_box()['width']<=75,color_field.bounding_box()
+    delete_edge=inspector.locator('.canvas-delete-connection').bounding_box()
+    delete_card=inspector.locator('.canvas-editor-delete').bounding_box()
+    assert abs(delete_edge['width']-delete_card['width'])<=1,(delete_edge,delete_card)
+    assert delete_card['y']>delete_edge['y']
+    assert page.locator('.canvas-editor-save-stack').bounding_box()['x']>zoom.bounding_box()['x']
+    assert page.locator('#attachment-dialog .dialog-actions .canvas-preview-exit').count()==1
+    assert page.locator('.canvas-editor>.canvas-editor-meta').bounding_box()['y']>inspector.bounding_box()['y']
 
     toolbar.locator('button',has_text='+ Group').click()
     assert 'unsaved changes' in save.inner_text()
