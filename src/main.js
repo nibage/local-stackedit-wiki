@@ -288,10 +288,10 @@
   }
   function endOperation(name) {
     operations.release(name);
-    editor.setReadOnly(bridge.getMode() !== 'readwrite' || !activePath);
+    editor.setReadOnly(bridge.getMode() !== 'readwrite');
     redrawDirty(); updateMoveModeUI(); updateDeleteModeUI();
   }
-  function isDirty() { return activePath !== null && editor.getValue() !== originalText; }
+  function isDirty() { return activePath !== null ? editor.getValue() !== originalText : editor.getValue().length > 0; }
   function confirmDiscard() {
     return !isDirty() || window.confirm('The current note has unsaved changes. Discard them?');
   }
@@ -299,9 +299,9 @@
     const dirty = isDirty();
     ui.dirty.textContent = dirty ? '● Unsaved' : '';
     ui.save.disabled = operations.isBusy() || bridge.getMode() !== 'readwrite' || !dirty;
-    const toolsEnabled=Boolean(activePath) && bridge.getMode()==='readwrite' && !operations.isBusy() && selectedMode!=='preview';
+    const toolsEnabled=bridge.getMode()==='readwrite' && !operations.isBusy() && selectedMode!=='preview';
     document.querySelectorAll('.format-toolbar .format-tools button').forEach(button=>{button.disabled=!toolsEnabled;});
-    $('save-status').textContent = dirty ? (bridge.getMode() === 'readwrite' ? 'Unsaved changes · autosave every 5s' : 'Unsaved changes') : activePath ? 'No unsaved changes' : 'No file';
+    $('save-status').textContent = !activePath ? (dirty ? 'Creating a new note…' : (bridge.getMode()==='readwrite' ? 'No note · type to create' : 'No note open')) : dirty ? (bridge.getMode() === 'readwrite' ? 'Unsaved changes · autosave every 5s' : 'Unsaved changes') : 'No unsaved changes';
     updateSourceStats();
   }
   function wordCount(text) {
@@ -309,10 +309,10 @@
     return match?match.length:0;
   }
   function updateSourceStats() {
-    const source=activePath?editor.getValue():'';
+    const source=editor.getValue();
     const cursor=editor.cm.getCursor();
     const bytes=new Blob([source]).size; // UTF-8 byte count, not JS string length.
-    const lines=activePath?editor.cm.lineCount():0;
+    const lines=(activePath||source)?editor.cm.lineCount():0;
     $('stats').textContent='Markdown '+bytes+' bytes · '+wordCount(source)+' words · '+
       lines+' lines · Ln '+(cursor.line+1)+', Col '+cursor.ch+
       ' · '+source.length+' characters';
@@ -354,8 +354,10 @@
     renderSequence++; clearTimeout(renderTimer); // Cancel delayed render/image updates.
     activePath = null; originalText = ''; fingerprint = null; hasBOM = false;
     updatePreviewExportEnabled();
-    editor.setValue(''); editor.setReadOnly(true);
+    editor.setValue(''); editor.setReadOnly(bridge.getMode() !== 'readwrite' || operations.isBusy());
     ui.filename.textContent = 'No note open';
+    ui.filename.title='No note open';
+    ui.filename.parentElement.title='No note open';
     updateMoveModeUI();
     ui.preview.replaceChildren();
     releaseImages(); redrawDirty(); updateHtmlStats(); updateScrollSyncButton();
@@ -654,6 +656,8 @@
       originalText = normalizedText; editor.setValue(normalizedText);
       editor.setReadOnly(bridge.getMode() !== 'readwrite');
       ui.filename.textContent = path;
+      ui.filename.title=path;
+      ui.filename.parentElement.title=path;
       updateMoveModeUI();
       $('backlinks-results').replaceChildren();
       $('outlinks-results').replaceChildren();
@@ -1216,6 +1220,7 @@
     const count = node => node.kind === 'file' ? 1 : node.kind === 'directory' ? node.children.reduce((n, child) => n + count(child), 0) : 0;
     ui.count.textContent = `${count(root)} .md · ${bridge.getAssetPaths().length} attachments`;
     ui.rootName.textContent = root.name;
+    ui.rootName.title = root.name;
   }
   function setExpandedAll(expand) {
     if (bridge.getMode() === 'none') return;
@@ -1289,6 +1294,67 @@
     $('fulltext-results').replaceChildren();
     $('backlinks-results').replaceChildren();
     backlinksForPath = null;
+  }
+  let quickNoteCreation=null;
+  async function createQuickNote() {
+    if (activePath) return true;
+    if (quickNoteCreation) return quickNoteCreation;
+    if (bridge.getMode()!=='readwrite' || operations.isBusy() || !editor.getValue()) return false;
+    // Acquire the normal mutation guard, but do not lock CodeMirror: people
+    // should be able to continue typing while the local disk scan completes.
+    if (!operations.acquire('create')) return false;
+    redrawDirty(); updateMoveModeUI(); updateDeleteModeUI();
+    quickNoteCreation=(async()=>{
+      let path=null;
+      try {
+        const existing=new Set([...bridge.getFilePaths(),...bridge.getAssetPaths()]
+          .map(name=>name.toLocaleLowerCase('cs')));
+        // Always create in the wiki root, even when the tree currently
+        // highlights a nested folder. Never overwrite an existing note.
+        for(let n=1;n<=9999;n++){
+          const candidate=n===1?'Untitled.md':'Untitled '+n+'.md';
+          if(existing.has(candidate.toLocaleLowerCase('cs')))continue;
+          path=await bridge.createFile(candidate);
+          break;
+        }
+        if(!path)throw new Error('No unused Untitled note filename is available.');
+        const snapshot=await bridge.read(path);
+        // User text stays in CodeMirror unchanged (including edits made while
+        // the file was being created). Only the file metadata is attached.
+        activePath=path;
+        originalText=snapshot.text.replace(/\r\n?/g,'\n');
+        fingerprint=snapshot.fingerprint;
+        hasBOM=Boolean(snapshot.hasBOM);
+        lineEnding='\n';
+        selectedFolder='';
+        lastTreeSelection=path;
+        ui.filename.textContent=path;
+        ui.filename.title=path;
+        ui.filename.parentElement.title=path;
+        invalidateWikiIndex();
+        renderTree();
+        redrawDirty();
+        renderPreview();
+        updatePreviewExportEnabled();
+        updateScrollSyncButton();
+        notice('Created '+path+' in the wiki root. Your text is saved automatically.','success');
+        return true;
+      } catch(error) {
+        // Do not clear the typed text if folder permissions, scanning or the
+        // new-file operation fails. Save/new keystrokes can retry creation.
+        notice('Could not create new note: '+error.message+'. Text remains in the editor.','error');
+        return false;
+      } finally {
+        operations.release('create');
+        redrawDirty();updateMoveModeUI();updateDeleteModeUI();
+        editor.setReadOnly(bridge.getMode()!=='readwrite');
+      }
+    })();
+    try {
+      const created=await quickNoteCreation;
+      if (created && isDirty()) await saveCurrent(true,true);
+      return created;
+    } finally {quickNoteCreation=null;}
   }
   async function createNew(kind) {
     if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
@@ -1846,7 +1912,13 @@
   });
   $('new-file').addEventListener('click', () => startDraft('file'));
   $('new-folder').addEventListener('click', () => startDraft('directory'));
-  editor.onChange(() => { redrawDirty(); scheduleRender(); });
+  editor.onChange(() => {
+    redrawDirty();
+    if (!activePath && bridge.getMode()==='readwrite' && !operations.isBusy() &&
+        editor.getValue().length>0) {
+      void createQuickNote();
+    } else scheduleRender();
+  });
   editor.cm.on('cursorActivity',updateSourceStats);
   document.querySelectorAll('[data-format]').forEach(button => button.addEventListener('click', () => editor.format(button.dataset.format)));
   // Local vault chooser for image, media, PDF, Canvas, Base and draw.io
@@ -1905,6 +1977,7 @@
   $('collapse-all').addEventListener('click', () => setExpandedAll(false));
   document.querySelectorAll('.view-switch button[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
   async function saveCurrent(automatic = false, force = false) {
+    if (!activePath && editor.getValue()) return createQuickNote();
     if (!activePath || !isDirty()) return true;
     if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return false;
     const path = activePath, savedText = editor.getValue();

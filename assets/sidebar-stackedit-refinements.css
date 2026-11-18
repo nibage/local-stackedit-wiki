@@ -1,0 +1,160 @@
+/* November 2026: compact navigation and StackEdit HTML fidelity.
+   Original StackEdit.html reference uses Lato/Helvetica 18px at 1.67 line
+   height, #0c93e4 links, 1.8em heading margins and subtle unboxed tables.
+   No hosted assets, external fonts or network requests are introduced. */
+
+/* Allow tiny sidebars without letting the title or "Contents" spill out. */
+.sidebar,.sidebar-head,.sidebar-tabs {min-width:0;}
+.sidebar-head {display:flex;align-items:center;overflow:hidden;min-width:0;}
+.sidebar-head #root-name {
+  flex:1 1 auto;min-width:0;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  overflow-wrap:normal;word-break:normal;display:block;
+}
+.sidebar-tabs button {
+  min-width:0;max-width:100%;flex:1 1 0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  padding-left:2px;padding-right:2px;
+}
+.sidebar-tabs button[data-side="toc"] {flex:1.55 1 0;}
+@media(max-width:190px) {
+  .sidebar-tabs {gap:1px;padding-left:3px;padding-right:3px;}
+  .sidebar-tabs button {font-size:10px;padding-left:1px;padding-right:1px;}
+  .sidebar-tabs button[data-side="toc"] {flex:1.8 1 0;}
+  .sidebar-head {padding-left:7px;padding-right:7px;}
+}
+/* Keep the full active file name next to the logo, not in the controls. */
+.topbar .brand {min-width:0;flex:1 1 365px;gap:10px;overflow:hidden;}
+.topbar .brand .brand-title {flex:0 0 auto;}
+.topbar .brand .file-title {
+  flex:1 1 350px;min-width:0;max-width:none;overflow:hidden;
+  border-left:1px solid color-mix(in srgb,var(--line) 85%,transparent);
+  padding-left:12px;gap:6px;align-items:center;
+}
+.topbar .brand .file-title strong {
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;
+  font-size:12px;font-weight:600;
+}
+.topbar .brand .file-title #dirty {flex:none;}
+.topbar .editor-bar {flex:0 0 auto;min-width:0;}
+.topbar .editor-actions .mode {display:none;}
+/* Keep diagnostic notices smaller than the actual file path. */
+.topbar .brand #notice.notice {
+  flex:0 1 190px;min-width:0;max-width:190px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* Writable/read-only status and file totals now live beside save statistics. */
+.statusbar #mode {display:inline!important;max-width:none;color:inherit;
+  font-size:inherit;font-weight:600;white-space:nowrap;margin:0;}
+.statusbar #count {max-width:none;white-space:nowrap;font-variant-numeric:tabular-nums;}
+@media(max-width:1300px) {
+  .topbar .brand {flex:1 1 420px;}
+  .topbar .editor-bar {flex:1 1 100%;justify-content:flex-end;}
+}
+@media(max-width:650px) {
+  .topbar .brand {flex:1 1 100%;overflow:hidden;}
+  .topbar .brand .file-title {padding-left:8px;}
+  .topbar .brand #notice.notice {display:none;}
+}
+
+/* StackEdit's neutral-paper editorial typography and less decorated preview.
+   Longer source notes/embedded media preserve their existing layout rules. */
+:root[data-theme="stackedit"] {
+  --accent:#188aca;--accent-strong:#0c79b5;
+  --text:#333;--muted:#777;
+  --line:#dedede;--panel:#fff;--panel-alt:#f8f8f8;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview {
+  font-family:Lato,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:18px;line-height:1.67;color:rgba(0,0,0,.8);
+  font-weight:400;letter-spacing:normal;
+  background:#fff;
+}
+:root[data-theme="stackedit"] .edit-pane .CodeMirror {
+  font-family:Lato,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:18px;line-height:1.67;color:rgba(0,0,0,.8);
+  font-weight:400;background:#fff;
+}
+:root[data-theme="stackedit"] .edit-pane .CodeMirror-line {
+  line-height:1.67;
+}
+:root[data-theme="stackedit"] .edit-pane .cm-header {font-weight:600;color:#333;}
+:root[data-theme="stackedit"] .edit-pane .cm-quote {color:rgba(0,0,0,.48);}
+:root[data-theme="stackedit"] .edit-pane .cm-link,
+:root[data-theme="stackedit"] .edit-pane .cm-url {color:#0c93e4;}
+:root[data-theme="stackedit"] .edit-pane .cm-comment {color:rgba(0,0,0,.28);}
+:root[data-theme="stackedit"] .edit-pane .cm-code {
+  font-family:"Roboto Mono","Lucida Console",monospace;font-size:.85em;
+}
+:root[data-theme="stackedit"] .edit-pane .CodeMirror-gutters {
+  background:#fafafa;border-right:1px solid #eee;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview h1,
+:root[data-theme="stackedit"] #preview.markdown-preview h2,
+:root[data-theme="stackedit"] #preview.markdown-preview h3,
+:root[data-theme="stackedit"] #preview.markdown-preview h4,
+:root[data-theme="stackedit"] #preview.markdown-preview h5,
+:root[data-theme="stackedit"] #preview.markdown-preview h6 {
+  font-family:inherit;line-height:1.33;
+  font-weight:600;color:#333;
+  margin:1.8em 0;padding:0;border:0;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview h1 {font-size:2em;}
+:root[data-theme="stackedit"] #preview.markdown-preview h2 {font-size:1.5em;}
+:root[data-theme="stackedit"] #preview.markdown-preview h3 {font-size:1.17em;}
+:root[data-theme="stackedit"] #preview.markdown-preview h4 {font-size:1em;}
+:root[data-theme="stackedit"] #preview.markdown-preview h5 {font-size:.83em;}
+:root[data-theme="stackedit"] #preview.markdown-preview h6 {font-size:.75em;}
+:root[data-theme="stackedit"] #preview.markdown-preview p,
+:root[data-theme="stackedit"] #preview.markdown-preview pre,
+:root[data-theme="stackedit"] #preview.markdown-preview ul,
+:root[data-theme="stackedit"] #preview.markdown-preview ol,
+:root[data-theme="stackedit"] #preview.markdown-preview blockquote {
+  margin:1.2em 0;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview ul,
+:root[data-theme="stackedit"] #preview.markdown-preview ol {
+  padding-left:1.65em;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview a[href] {
+  color:#0c93e4;text-decoration:underline;text-underline-offset:1px;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview blockquote {
+  color:rgba(0,0,0,.5);
+  border-left:5px solid rgba(0,0,0,.1);
+  border-radius:0;background:transparent;padding:0 0 0 1.5em;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview :not(pre)>code {
+  font-family:"Roboto Mono","Lucida Console",monospace;
+  font-size:.85em;background:rgba(0,0,0,.05);
+  border-radius:3px;padding:2px 4px;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview pre {
+  font-family:"Roboto Mono","Lucida Console",monospace;
+  font-size:.85em;line-height:1.45;
+  background:#f7f7f7;border:0;border-radius:3px;
+  padding:12px 14px;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview pre code {
+  background:transparent;font-family:inherit;font-size:inherit;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview table {
+  border-collapse:collapse;border-spacing:0;
+  background:transparent;max-width:100%;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview th,
+:root[data-theme="stackedit"] #preview.markdown-preview td {
+  background:transparent;color:inherit;
+  border:0;border-right:1px solid #dcdcdc;
+  padding:8px 12px;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview td {
+  border-top:1px solid #dcdcdc;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview hr {
+  border:0;border-top:1px solid rgba(128,128,128,.33);
+  margin:2em 0;
+}
+:root[data-theme="stackedit"] #preview.markdown-preview img {
+  border-radius:0;
+}

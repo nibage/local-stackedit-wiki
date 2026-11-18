@@ -187,3 +187,12 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Relocate Canvas card/connection count and gesture hint to a joined bottom-left info row with separator.
 - [x] Widen the Canvas file input; constrain color to hex-width; stack equal-width Delete card below Delete connection.
 - [x] Add Chromium checks for TOC modes, workspace preferences and Canvas inspector/action layout.
+
+## Quick note, compact sidebar and original StackEdit visual fidelity (November 2026)
+
+- [x] Allow first typing into an empty editable wiki to create a collision-safe root-level Untitled.md note without losing typed text; preserve normal read-only restrictions and guarded autosave.
+- [x] Keep the full current file path beside the app identity, truncate with ellipsis only when necessary, show full path in tooltip.
+- [x] Move Read/write state and Markdown/attachment counts into the compact bottom bar, outside the sidebar.
+- [x] Clip root folder name and Contents tab with ellipses at minimum sidebar width.
+- [x] Match additional StackEdit HTML styling for neutral paper, preview headings, links, code, tables, blockquotes and CodeMirror syntax while retaining offline operation and other themes.
+- [x] Verify through new Chromium UI regression and full offline build tests.
