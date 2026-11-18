@@ -30,6 +30,10 @@
   max-width:none!important;margin-left:0!important;margin-right:0!important;
   padding-left:24px!important;padding-right:24px!important;
 }
+:root[data-line-numbers="false"] .edit-pane .CodeMirror-linenumbers,
+:root[data-line-numbers="false"] .edit-pane .CodeMirror-linenumber {
+  display:none!important;visibility:hidden!important;
+}
 :root[data-wiki-text-size]:not([data-wiki-text-size="default"]) #preview.markdown-preview,
 :root[data-wiki-text-size]:not([data-wiki-text-size="default"]) .edit-pane .CodeMirror {
   font-size:var(--wiki-user-text-size)!important;
