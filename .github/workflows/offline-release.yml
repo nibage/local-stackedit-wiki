@@ -3,6 +3,7 @@ on:
   pull_request:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 permissions:
   contents: read
@@ -85,3 +86,20 @@ jobs:
           name: local-stackedit-wiki-offline
           path: local-stackedit-wiki-offline.zip
           if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download tested release archive
+        uses: actions/download-artifact@v4
+        with:
+          name: local-stackedit-wiki-offline
+      - name: Publish permanent ZIP to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release create "$GITHUB_REF_NAME" local-stackedit-wiki-offline.zip --verify-tag --generate-notes
