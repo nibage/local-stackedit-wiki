@@ -112,10 +112,17 @@ with sync_playwright() as pw:
       const notice=document.querySelector('#notice');
       const n=notice.getBoundingClientRect();
       const header=document.querySelector('.topbar').getBoundingClientRect();
-      const actions=document.querySelector('.topbar .actions').getBoundingClientRect();
-      return n.bottom <= header.bottom + 1 && n.right <= actions.left + 1 &&
-        getComputedStyle(notice).webkitLineClamp === '2';
-    }"""), 'Notice must use two lines, stay centered and end before toolbar controls'
+      const filename=document.querySelector('.brand .file-title').getBoundingClientRect();
+      const editor=document.querySelector('.topbar .editor-bar').getBoundingClientRect();
+      const style=getComputedStyle(notice);
+      const onSameRow=Math.abs(n.top-editor.top)<40;
+      return n.bottom<=header.bottom+2 &&
+        n.left>=filename.right-2 &&
+        (!onSameRow||n.right<=editor.left+2) &&
+        style.webkitLineClamp==='none' &&
+        style.overflow==='visible' &&
+        notice.scrollHeight<=notice.clientHeight+2;
+    }"""), 'Notice should be fully readable after filename, before Editor controls, without line clamp'
     page.locator('#renderer-check').click()
     assert page.locator('#diag-api').is_visible()
     assert 'File System API' in page.locator('#diag-api').inner_text()
