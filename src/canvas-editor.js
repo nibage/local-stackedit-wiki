@@ -85,9 +85,14 @@
     message.setAttribute('role','status');
     meta.append(message,summary,hint);
     const warning = make('div','canvas-editor-confirm');
+    const separator = make('span','canvas-editor-toolbar-separator');
+    separator.setAttribute('aria-hidden','true');
+    const saveStack = make('div','canvas-editor-save-stack');
     warning.hidden = true;
-    toolbar.append(actions,zoomControls,warning);
-    root.append(toolbar,board,inspector);
+    toolbar.append(actions,separator,zoomControls,saveStack,warning);
+    root.append(toolbar,board,inspector,meta);
+    meta.replaceChildren(summary,hint);
+    saveStack.append(message);
 
     function status(text) { message.textContent = text; }
     function button(label, callback) {
@@ -192,7 +197,12 @@
           'External modification detected. Reload the file before retrying. ' : 'Save failed: ') + error.message);
       } finally { saving = false; refreshButtons(); }
     });
-    iconButton('Preview','back',leave);
+    // Preview belongs to the host dialog's action row next to "Insert into
+    // note", not in the graph toolbar. The host inserts it in that row.
+    const previewButton=iconButton('Preview','back',leave);
+    previewButton.classList.add('canvas-preview-exit');
+    previewButton.remove();
+    saveStack.append(save);
 
     function refreshButtons() {
       undo.disabled = !draft.canUndo || saving;
@@ -474,9 +484,10 @@
     return {
       root,
       meta,
+      previewButton,
       get isDirty() {return draft.dirty;},
       requestClose:askClose,
-      dispose(){disposed=true;activeViewer?.dispose?.();}
+      dispose(){disposed=true;activeViewer?.dispose?.();previewButton.remove();}
     };
   }
   global.LocalWikiCanvasEditor={createDraft,validate,mount};
