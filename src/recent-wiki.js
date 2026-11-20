@@ -8,7 +8,25 @@
   // Deliberately do not migrate legacy global bookmark data from another installation.
   const DB_NAME = global.LocalWikiScope.databaseName('local-stackedit-wiki-local-folders');
   const STORE_NAME = 'bookmarks';
-  const ENTRY = 'last-directory';
+  // One browser tab may browse an entirely different wiki than another,
+  // even if both use the same index.html. Give each tab its own bookmark key.
+  // sessionStorage survives refresh / tab restoration, but is not shared
+  // between independently opened tabs. The DB holds handles, not note text.
+  function tabBookmarkKey(){
+    const key=global.LocalWikiScope.storageKey('tab-bookmark-identity');
+    try {
+      if(!global.sessionStorage)return 'last-directory'; // Old test/browser fallback
+      let id=global.sessionStorage.getItem(key);
+      if(!id){
+        id=typeof global.crypto?.randomUUID==='function'?
+          global.crypto.randomUUID():
+          String(Date.now())+'-'+String(Math.random()).slice(2);
+        global.sessionStorage.setItem(key,id);
+      }
+      return 'last-directory@'+id;
+    }catch(_){return 'last-directory';}
+  }
+  const ENTRY = tabBookmarkKey();
 
   function openDb() {
     return new Promise((resolve, reject) => {
@@ -54,7 +72,11 @@
     return transaction('readwrite', store => store.put(handle, ENTRY));
   }
   async function restoreHandle() {
-    const h = await transaction('readonly', store => store.get(ENTRY));
+    let h = await transaction('readonly', store => store.get(ENTRY));
+    // One-way compatibility read from the old single-tab bookmark. Never
+    // write to that record: after choosing a folder, each tab keeps its own.
+    if(!h && ENTRY!=='last-directory')
+      h=await transaction('readonly',store=>store.get('last-directory'));
     if (!h) return null;
     if (!isDirectory(h)) throw new Error('Saved folder is invalid. Choose it again.');
     return h;

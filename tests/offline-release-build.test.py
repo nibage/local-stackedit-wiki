@@ -114,13 +114,13 @@ class OfflineReleaseTests(unittest.TestCase):
                 module.load_npm_bundle(spec, module.make_cache_fetch(d))
 
     def test_release_whitelist_omits_development_files_and_keeps_runtime(self):
-        yes = ('index.html','README.md','src/main.js','assets/rc5.css',
-               'vendor/MathJax/MathJax.js','vendor/mermaid/LICENSE',
-               'docs/app-dark-diagrams.jpg')
+        yes = ('index.html','src/main.js','assets/rc5.css',
+               'vendor/MathJax/MathJax.js','vendor/mermaid/LICENSE')
         no = ('tests/wiki-index.test.cjs','tools/release-audit.py','demo-wiki/x.md',
               '.github/workflows/offline-release.yml','docs/RC3_OPRAVY.md',
               'tools/__pycache__/junk.pyc','src/vendor.min.js.map',
-              'docs/editor-smoke.png','docs/batch11-smoke.png')
+              'docs/editor-smoke.png','docs/batch11-smoke.png','README.md',
+              'docs/app-dark-diagrams.jpg')
         for filename in yes:
             self.assertTrue(module.is_release_file(Path(filename)), filename)
         for filename in no:

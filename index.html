@@ -135,7 +135,10 @@
           <button type="button" data-asset-kind="drawio" aria-label="Insert draw.io" title="Embed draw.io diagram">⬡</button>
           </div>
           <div class="workspace-display-controls" role="group" aria-label="Editor and preview display settings">
+            <button id="toolbar-back" type="button" class="toolbar-history-back" title="Back to previous note" aria-label="Back to previous note" hidden>← Back</button>
             <label class="workspace-display-check" title="Center editor and preview text in the available pane"><input id="center-content-toggle" type="checkbox" checked> Center</label>
+            <label class="workspace-display-check" title="Automatically re-render the Markdown preview 3 seconds after editing"><input id="auto-rerender-toggle" type="checkbox" checked> Auto re-render</label>
+            <button id="render-now" class="workspace-render-now" type="button" title="Rebuild preview now from current editor text (does not reread or change files)">Render</button>
             <label class="workspace-display-check" title="Show or hide editor line numbers"><input id="line-numbers-toggle" type="checkbox" checked> Line numbers</label>
             <label class="workspace-display-size" title="Font size for editor and preview">Text size
               <select id="workspace-text-size" aria-label="Editor and preview text size">
@@ -159,6 +162,7 @@
           <span id="mode" class="mode" aria-label="Folder access mode">Waiting for folder</span>
           <span id="count" aria-label="Wiki file counts">0 .md · 0 attachments</span>
           <span id="editor-shortcuts" title="Ctrl+F search · Ctrl+S save · Autosave every 5 seconds">Ctrl+F search · Ctrl+S save · Autosave 5s</span>
+          <span id="rerender-status" title="Markdown preview automatically re-renders after 3 seconds of inactivity">Auto re-render 3s</span>
           <span id="stats" aria-label="Markdown source statistics">Markdown 0 bytes · 0 words · 0 lines · Ln 1, Col 0</span>
         </div>
         <div class="statusbar-group statusbar-right">

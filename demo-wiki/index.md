@@ -1,48 +1,49 @@
-# Ukázková wiki · dávka 8
+# Welcome to the Local StackEdit Wiki demo
 
-Tohle je testovací složka. Můžeš ji otevřít **pro čtení i zápis** a zkoušet úpravy bez rizika pro vlastní poznámky.
+This folder is a **safe example wiki**. Open it in Chrome or Edge with read/write access to test the editor without changing your personal notes.
 
-## Odkazy
+## Links between notes
 
-- [Python – relativní odkaz](Programovani/Python.md)
-- [[Python|Python – Obsidian wiki odkaz]]
-- [Mermaid diagram](Diagramy/UML.md)
-- [ABC notový zápis](Diagramy/Noty.md)
-- [Obsidian metadata, callouty a obrázky](Obsidian-formaty.md)
+- [Python – relative Markdown link](Programming/Python.md)
+- [[Python|Python – Obsidian wiki link]]
+- [Mermaid diagram](Diagrams/UML.md)
+- [ABC music notation](Diagrams/Music.md)
+- [Obsidian metadata, callouts, and images](Obsidian-formats.md)
+- [Diagrams and sheet music](Diagrams-and-music.md)
 
-## Odkazy na nadpisy (dávka 17)
+## Links to headings
 
-- [Instalace na Windows v Pythonu](Programovani/Python.md#Instalace%20na%20Windows)
-- [[Programovani/Python#Úvod|Obsidian odkaz přímo na nadpis]]
+- [Installing Python on Windows](Programming/Python.md#Installing%20Python%20on%20Windows)
+- [[Programming/Python#Introduction|Obsidian link to Introduction]]
 
-## Matematika
+## Mathematics
 
-Inline vzorec: $E=mc^2$ a $x_1 + y_2 = 3$.
+An inline formula: $E=mc^2$ and $x_1+y_2=3$.
 
 $$
 \int_0^1 x^2\,dx = \frac{1}{3}
 $$
 
-## Obrázek v podsložce
+## Image in a subfolder
 
-![Ukázkový diagram](obrazky/schema.png)
+![Sample diagram](images/schema.png)
 
-## Nové v dávce 4
+## Explore the wiki
 
-V levém panelu přepni na **Fulltext** a vyhledej slovo `Python` nebo `notový`.
+Switch the sidebar to **Fulltext** and search for the word `Python` or `music`.
 
-V panelu **Odkazy** se zobrazí obsah aktuální stránky a po kliknutí na tlačítko i zpětné odkazy. Zkus otevřít `Programovani/Python.md` a vyhledat, kdo na něj odkazuje.
+The **Links** panel displays outbound and inbound links. Open `Programming/Python.md` and find out which other notes link to it.
 
-Mermaid a ABC notace se vykreslí po jednorázovém doplnění originálních JS knihoven podle `docs/RENDERERY.md`. Bez nich se zdrojový kód zachovává.
+Mermaid and ABC render locally with the bundled, verified JavaScript libraries. You can export finished diagrams as SVG.
 
-## Obsidian-compatible attachments (RC6)
+## Obsidian-compatible attachments
 
-Open [the attachment examples](Attachments/Examples.md) to test media inside a Markdown note, or expand the **Attachments** folder on the left. Examples include WAV audio in two pitches, WebM video, an SVG image, a sample PDF, and safe read-only Canvas/Bases files. All demos are local and work without uploading anything.
+Open [the attachment examples](Attachments/Examples.md) to test images, audio, video, PDF, Canvas, Bases and draw.io in Markdown. Expand **Attachments** to browse the files individually. Everything stays on your computer.
 
-## Test dlouhého stromu
+## Large file-tree test
 
-Otevři [Test stromu a posouvání](Tree-Test/README.md), klikni na **Expand all** a vyzkoušej vodorovný i svislý posuvník ve stromu. Nejhlubší poznámka má dlouhý název a složka s řadou souborů ukazuje chování při desítkách položek. Vyzkoušej také změnu šířky levého panelu a tlačítko **Move**.
+Read [Tree scrolling and long filenames](Tree-Test/README.md), click **Expand all**, and try horizontal and vertical scrolling. A deeply nested note and a folder with 45 files make it easy to test sidebar resizing and the **Move** action.
 
 ## draw.io / diagrams.net (offline)
 
-Otevři [ukázkový dvoustránkový diagram](Attachments/example.drawio). První stránka je nekomprimované XML, druhá je standardní Base64/DEFLATE komprimovaná stránka. Náhled podporuje bezpečně vykreslené základní tvary, propojení, výběr stránek a přiblížení; složité knihovny tvarů pro plnou věrnost vyžadují oficiální diagrams.net.
+Open the [two-page diagram](Attachments/example.drawio). Page one contains plain XML and page two standard Base64/DEFLATE-compressed data. The local viewer handles basic shapes, connectors, pages and zoom. Complex diagrams may need diagrams.net for full fidelity.

@@ -68,7 +68,7 @@
       reader.readAsDataURL(blob);
     });
   }
-  async function lightThemeSnapshot(preview) {
+  async function themeSnapshot(preview,theme) {
     // Create an off-screen same-origin document with the actual light-theme
     // stylesheets. Never change the application's selected theme or print dark
     // inline CSS values. No scripts are copied, no external hosts are allowed.
@@ -76,12 +76,18 @@
     frame.setAttribute('aria-hidden','true');
     frame.tabIndex=-1;
     frame.style.cssText='position:fixed;left:-200vw;top:0;opacity:0;'+
-      'pointer-events:none;border:0;height:30px;width:'+
-      Math.max(320,preview.clientWidth||780)+'px;';
+      'pointer-events:none;border:0;height:950px;width:'+
+      Math.max(760,preview.clientWidth||900)+'px;';
     document.body.append(frame);
     try {
       const doc=frame.contentDocument;
-      doc.documentElement.dataset.theme='light';
+      doc.documentElement.dataset.theme=theme==='light'?'light':
+        (document.documentElement.dataset.theme||'light');
+      for(const key of ['centered','wikiTextSize','lineNumbers'])
+        if(document.documentElement.dataset[key]!==undefined)
+          doc.documentElement.dataset[key]=document.documentElement.dataset[key];
+      const size=document.documentElement.style.getPropertyValue('--wiki-user-text-size');
+      if(size)doc.documentElement.style.setProperty('--wiki-user-text-size',size);
       const pending=[];
       for(const original of document.querySelectorAll('link[rel="stylesheet"],style')) {
         if (original.localName==='link') {
@@ -120,12 +126,14 @@
       // The print copy must be light even if a stylesheet cannot be cloned.
       // Force only the main preview palette, leaving light-theme typography,
       // diagrams and syntax styles inherited from the copied offline CSS.
-      const lightPalette=doc.createElement('style');
-      lightPalette.textContent=':root[data-theme="light"]{color-scheme:light;'+
-        '--panel:#fff;--panel-alt:#f7f8fa;--text:#252c34;--muted:#677182;--line:#d9dde2;}'+
-        '[data-theme="light"] .markdown-preview{background:#fff!important;'+
-        'color:#252c34!important;}';
-      doc.head.append(lightPalette);
+      if(theme==='light'){
+        const lightPalette=doc.createElement('style');
+        lightPalette.textContent=':root[data-theme="light"]{color-scheme:light;'+
+          '--panel:#fff;--panel-alt:#f7f8fa;--text:#252c34;--muted:#677182;--line:#d9dde2;}'+
+          '[data-theme="light"] .markdown-preview{background:#fff!important;'+
+          'color:#252c34!important;}';
+        doc.head.append(lightPalette);
+      }
       const wrapper=doc.createElement('section');
       wrapper.className='pane preview-pane';
       const light=doc.importNode(preview,true);
@@ -224,10 +232,87 @@
       else if (raw.startsWith('#') || /^wiki:/i.test(raw)) anchor.removeAttribute('href');
     }
   }
+
+  function flattenVisualsForDocument(cloned,theme) {
+    // Existing preview viewers are interactive panning/zooming widgets. A
+    // serialized HTML/PDF needs a static print-sized graph, not a cropped
+    // viewport with a camera transform and fixed, overflowing dimensions.
+    const maxWidth=theme==='light'?620:870;
+    const maxHeight=theme==='light'?730:1050;
+    const fit=(width,height)=>{
+      const w=Number.isFinite(width)&&width>0?width:650;
+      const h=Number.isFinite(height)&&height>0?height:400;
+      return Math.min(1,maxWidth/w,maxHeight/h);
+    };
+    for(const viewer of cloned.querySelectorAll('.wiki-canvas-viewer')){
+      const board=viewer.querySelector('.canvas-board');
+      if(!board)continue;
+      const w=parseFloat(board.style.width)||850,h=parseFloat(board.style.height)||500;
+      const scale=fit(w,h);
+      const outer=cloned.ownerDocument.createElement('div');
+      outer.className='wiki-export-static-graph';
+      outer.style.cssText='position:relative!important;box-sizing:border-box!important;'+
+        'width:'+Math.ceil(w*scale)+'px!important;max-width:100%!important;'+
+        'height:'+Math.ceil(h*scale)+'px!important;min-height:0!important;'+
+        'overflow:visible!important;margin:0 auto 12px!important;';
+      board.style.setProperty('position','absolute','important');
+      board.style.setProperty('top','0','important');
+      board.style.setProperty('left','0','important');
+      board.style.setProperty('transform','scale('+scale+')','important');
+      board.style.setProperty('transform-origin','0 0','important');
+      board.classList.add('wiki-export-board');
+      outer.append(board);
+      viewer.replaceChildren(outer);
+      viewer.style.cssText='display:block!important;width:100%!important;'+
+        'max-width:100%!important;height:auto!important;min-height:0!important;'+
+        'overflow:visible!important;break-inside:avoid;';
+    }
+    // draw.io uses a direct native SVG already. Export the current page SVG
+    // without toolbar, viewport clipping or its interactive transform.
+    for(const viewer of cloned.querySelectorAll('.wiki-drawio-viewer')){
+      const svg=viewer.querySelector('.drawio-board svg');
+      if(!svg)continue;
+      viewer.replaceChildren(svg);
+      viewer.style.cssText='display:block!important;max-width:100%!important;'+
+        'width:100%!important;height:auto!important;overflow:visible!important;';
+    }
+    for(const svg of cloned.querySelectorAll(
+      '.visualization svg, .wiki-drawio-viewer>svg')){
+      // Do not alter Canvas connection-layer coordinates; scaling the entire
+      // board retains pixel-perfect card positions and arrow endpoints.
+      if(svg.closest('.wiki-export-static-graph'))continue;
+      const box=svg.getAttribute('viewBox')?.split(/[\s,]+/).map(Number)||[];
+      const w=parseFloat(svg.getAttribute('width'))||box[2]||parseFloat(svg.style.width)||650;
+      const h=parseFloat(svg.getAttribute('height'))||box[3]||parseFloat(svg.style.height)||400;
+      const scale=fit(w,h);
+      if(!svg.hasAttribute('viewBox')&&w>0&&h>0)
+        svg.setAttribute('viewBox','0 0 '+w+' '+h);
+      svg.setAttribute('width',String(Math.ceil(w*scale)));
+      svg.setAttribute('height',String(Math.ceil(h*scale)));
+      svg.style.setProperty('display','block','important');
+      svg.style.setProperty('width',Math.ceil(w*scale)+'px','important');
+      svg.style.setProperty('height',Math.ceil(h*scale)+'px','important');
+      svg.style.setProperty('max-width','100%','important');
+      svg.style.setProperty('overflow','visible','important');
+    }
+    for(const area of cloned.querySelectorAll('.bases-table-scroll')){
+      area.style.cssText='display:block!important;width:100%!important;'+
+        'max-width:100%!important;height:auto!important;max-height:none!important;'+
+        'overflow:visible!important;';
+      for(const table of area.querySelectorAll('.bases-table')){
+        table.style.cssText='width:100%!important;min-width:0!important;'+
+          'max-width:100%!important;table-layout:auto!important;';
+        table.querySelectorAll('col').forEach(col=>col.removeAttribute('style'));
+      }
+    }
+  }
   async function build(preview,{title='Wiki preview',theme='current'}={}) {
     if (!preview || !preview.isConnected) throw new Error('No rendered preview is available.');
-    const light=theme==='light'?await lightThemeSnapshot(preview):null;
-    const source=light?.node||preview;
+    // Always copy from a genuinely laid-out offscreen document, even in
+    // Editor-only mode where the onscreen preview's width/height are zero.
+    // This also avoids inheriting clipped scroll/viewport geometry.
+    const snapshot=await themeSnapshot(preview,theme);
+    const source=snapshot.node;
     try {
     const cloned=source.cloneNode(true);
     normalizeDocumentLinks(cloned,title);
@@ -242,6 +327,22 @@
       if (copy.localName!=='style') copyStyle(original,copy);
       await inlineMedia(original,copy,budget,cache);
     }
+    // Preserve pixels for genuine HTML canvas-based diagrams; HTML cloneNode
+    // alone never copies a <canvas> bitmap. No external image requests.
+    const originalCanvases=source.querySelectorAll('canvas');
+    const exportedCanvases=cloned.querySelectorAll('canvas');
+    for(let i=0;i<originalCanvases.length;i++){
+      try {
+        const original=originalCanvases[i],copy=exportedCanvases[i];
+        if(!copy||!original.width||!original.height)continue;
+        const img=cloned.ownerDocument.createElement('img');
+        img.setAttribute('src',original.toDataURL('image/png'));
+        img.setAttribute('alt','Rendered diagram');
+        img.style.cssText=copy.style.cssText;
+        copy.replaceWith(img);
+      }catch(_){ /* Keep the non-raster canvas fallback if extraction is blocked. */ }
+    }
+    flattenVisualsForDocument(cloned,theme);
     if (theme==='light') {
       // Explicit final guarantee for the native PDF document, independent of
       // the source theme or any user-configured stylesheet load delays.
@@ -264,7 +365,7 @@
     const renderedStyle=source.ownerDocument.defaultView.getComputedStyle(source);
     const color=renderedStyle.color || '#222';
     const background=renderedStyle.backgroundColor || '#fff';
-    const width=Math.max(320,Math.round(preview.clientWidth || preview.getBoundingClientRect().width || 780));
+    const width=Math.max(760,Math.round(source.clientWidth || source.getBoundingClientRect().width || 900));
     const name=validTitle(title);
     // Inline style snapshot is self-contained; no libraries, fonts, network or
     // scripts are referenced. Print-specific rules only remove viewport clipping.
@@ -293,6 +394,13 @@
       'background:#fff!important;color:#333!important;'+
       'font-family:Arial,"Helvetica Neue",sans-serif!important;'+
       'font-size:16px!important;line-height:1.72!important;}'+
+      '.wiki-export-preview p,.wiki-export-preview h1,.wiki-export-preview h2,'+
+      '.wiki-export-preview h3,.wiki-export-preview h4,.wiki-export-preview h5,'+
+      '.wiki-export-preview h6,.wiki-export-preview ul,.wiki-export-preview ol,'+
+      '.wiki-export-preview li,.wiki-export-preview blockquote,'+
+      '.wiki-export-preview pre,.wiki-export-preview details{'+
+      'box-sizing:border-box!important;width:auto!important;'+
+      'min-width:0!important;max-width:100%!important;}'+
       '.wiki-export-preview p,.wiki-export-preview li,.wiki-export-preview blockquote{'+
       'font-size:16px!important;line-height:1.72!important;letter-spacing:normal!important;}'+
       '.wiki-export-preview p{margin:0 0 1.25em!important;}'+
@@ -325,13 +433,35 @@
       'break-inside:avoid;page-break-inside:avoid;}'+
       '.wiki-export-preview img,.wiki-export-preview svg{max-width:100%!important;'+
       'height:auto;break-inside:avoid;page-break-inside:avoid;}'+
+      '.wiki-export-preview .wiki-export-static-graph,'+
+      '.wiki-export-preview .visualization,'+
+      '.wiki-export-preview .wiki-drawio-viewer{'+
+      'box-sizing:border-box!important;max-width:100%!important;'+
+      'overflow:visible!important;break-inside:avoid-page!important;}'+
+      '.wiki-export-preview .bases-table-scroll{max-height:none!important;'+
+      'height:auto!important;overflow:visible!important;}'+
+      '.wiki-export-preview table{min-width:0!important;'+
+      'table-layout:auto!important;width:100%!important;}'+
+      '.wiki-export-preview table th,.wiki-export-preview table td{'+
+      'position:static!important;white-space:normal!important;'+
+      'overflow:visible!important;overflow-wrap:anywhere!important;'+
+      'word-break:break-word!important;max-width:none!important;'+
+      'font-size:11px!important;line-height:1.4!important;'+
+      'padding:5px 7px!important;}'+
+      '.wiki-export-preview pre,.wiki-export-preview pre code{'+
+      'max-width:100%!important;white-space:pre-wrap!important;'+
+      'overflow-wrap:anywhere!important;overflow:visible!important;}'+
+      '.wiki-export-preview .wiki-drawio-viewer svg,'+
+      '.wiki-export-preview .visualization svg{max-width:100%!important;'+
+      'overflow:visible!important;}'+
+      '.wiki-export-preview .canvas-node{box-sizing:border-box!important;}'+
       '.wiki-export-preview .MathJax_MathML{max-width:100%!important;}'+
       '}'+
       '</style></head><body>\n'+
       '<main class="wiki-export-preview markdown-preview" style="'+escapeHtml(cloned.style.cssText)+'">'+cloned.innerHTML+
       '</main>\n</body></html>';
     return html;
-    } finally {if (light) light.frame.remove();}
+    } finally {snapshot.frame.remove();}
   }
   function waitForReady(preview,isPending=()=>false) {
     return new Promise((resolve,reject)=>{
@@ -386,6 +516,10 @@
         img.addEventListener('error',resolve,{once:true});
       })));
     try {await popup.document.fonts.ready;} catch(_){}
+    // Chrome captures print layout at the start of print(); allow two layout
+    // frames for intrinsic SVG dimensions and static Canvas graph sizing.
+    await new Promise(resolve=>popup.requestAnimationFrame(()=>
+      popup.requestAnimationFrame(resolve)));
     if (!popup.closed){popup.focus();popup.print();}
   }
   global.LocalWikiPreviewExport={build,downloadHtml,openPrintWindow,printHtml,waitForReady,fileName,escapeHtml};

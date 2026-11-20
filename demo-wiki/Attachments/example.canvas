@@ -3,7 +3,7 @@
     {
       "id": "overview",
       "type": "group",
-      "label": "Projekt offline wiki",
+      "label": "Offline wiki project",
       "x": -60,
       "y": -60,
       "width": 755,
@@ -13,7 +13,7 @@
     {
       "id": "note",
       "type": "text",
-      "text": "# Poznámka\nMarkdown v kartě Canvas\n**offline a bezpečně**",
+      "text": "# Note\nMarkdown in a Canvas card\n**offline and secure**",
       "x": 0,
       "y": 0,
       "width": 260,
@@ -33,7 +33,7 @@
     {
       "id": "details",
       "type": "text",
-      "text": "Vyzkoušej: přiblížení (+/-), Fit, 100 %, přetažení prázdného místa a čtení textu.",
+      "text": "Try zooming (+/-), Fit, 100%, panning the empty canvas, and reading card text.",
       "x": 0,
       "y": 230,
       "width": 300,
@@ -53,7 +53,7 @@
     {
       "id": "note-embed",
       "type": "file",
-      "file": "Attachments/Bases-Zaznam-Hotovo.md",
+      "file": "Attachments/Bases-Record-Done.md",
       "x": 360,
       "y": 245,
       "width": 300,
@@ -68,7 +68,7 @@
       "fromSide": "right",
       "toNode": "image",
       "toSide": "left",
-      "label": "lokální obrázek",
+      "label": "local image",
       "toEnd": "arrow",
       "color": "5"
     },

@@ -82,3 +82,30 @@
   background-clip:padding-box;box-shadow:0 -3px 0 var(--panel-alt),0 1px 0 var(--line);}
 .bases-table th,.bases-table td {border-bottom:1px solid var(--line);}
 .bases-table tbody {position:relative;z-index:0;}
+
+
+/* A sticky <thead> only sticks inside its nearest scrolling ancestor.
+   Earlier the outer dialog scrolled vertically while the inner table wrapper
+   only scrolled horizontally, so the header disappeared or leaked beneath
+   cells (particularly in the StackEdit light-paper theme). */
+.attachment-dialog.bases-dialog-open .attachment-dialog-viewer:has(.wiki-bases-viewer) {
+  overflow:visible;max-height:none;
+}
+.attachment-dialog.bases-dialog-open .bases-table-scroll {
+  position:relative;isolation:isolate;
+  max-height:min(54vh,565px);overflow:auto;
+  overscroll-behavior:contain;
+}
+.attachment-dialog.bases-dialog-open .bases-table {
+  border-collapse:separate;border-spacing:0;
+}
+.attachment-dialog.bases-dialog-open .bases-table thead th {
+  position:sticky;top:0;z-index:5;
+  background:var(--panel-alt)!important;
+  background-clip:padding-box;
+  box-shadow:0 -4px 0 0 var(--panel-alt),0 1px 0 0 var(--line);
+}
+:root[data-theme="stackedit"] .attachment-dialog.bases-dialog-open .bases-table th {
+  color:var(--text);background:var(--panel-alt)!important;
+  border-bottom:1px solid var(--line);
+}

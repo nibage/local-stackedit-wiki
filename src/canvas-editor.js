@@ -89,7 +89,7 @@
     separator.setAttribute('aria-hidden','true');
     const saveStack = make('div','canvas-editor-save-stack');
     warning.hidden = true;
-    toolbar.append(actions,separator,zoomControls,saveStack,warning);
+    toolbar.append(zoomControls,separator,actions,saveStack,warning);
     root.append(toolbar,board,inspector,meta);
     meta.replaceChildren(summary,hint);
     saveStack.append(message);
@@ -210,7 +210,7 @@
       save.disabled = !draft.dirty || saving;
       root.dataset.dirty = draft.dirty ? 'true' : 'false';
       if (!message.textContent || /^Canvas: /.test(message.textContent))
-        status('Canvas: ' + (draft.dirty ? 'unsaved changes' : 'saved') + ' · select a card to edit');
+        status('Canvas: ' + (draft.dirty ? 'unsaved changes' : 'saved'));
     }
 
     function addNode(type) {
@@ -257,25 +257,36 @@
       const heading=make('strong','canvas-editor-inspector-heading',
         node?node.type.toUpperCase()+':':'Card:');
       if (node) heading.title=node.id;
-      properties.append(heading);
       if (!node) {
+        properties.append(heading);
         properties.append(make('p','canvas-editor-unselected',
           'Select a card to edit · click it again to unselect'));
       } else {
+        // Layout follows the supplied new.png: the selected type, a wide
+        // FILE/LINK/GROUP field and compact COLOR share the top line. Geometry
+        // occupies two short rows beneath it. TEXT has a larger two-row editor
+        // alongside geometry instead of pretending that file nodes have text.
+        const top=make('div','canvas-editor-property-top canvas-property-type-'+node.type);
+        top.append(heading);
         const grid=make('div','canvas-editor-properties-grid canvas-properties-'+node.type+
           (node.type==='text'?' canvas-properties-multiline':''));
-        // Fixed two-row geometry grid. Every field uses a short, horizontal
-        // label/input pair instead of four full-width vertically stacked fields.
         for (const name of ['x','width','y','height']) numberField(grid,node,name);
         const property={text:'text',file:'file',link:'url',group:'label'}[node.type];
-        const content=field(grid,property,node[property],value=>{
+        const content=field(node.type==='text'?grid:top,property,node[property],value=>{
           if (property==='file' && value && !global.LocalWikiCanvas.canonicalPath(value)) {
             status('File paths must stay inside the selected wiki folder.'); return;
           }
           change(doc=>{doc.nodes.find(n=>n.id===node.id)[property]=value;});
         },property==='text');
         content.classList.add('canvas-prop-content');
-        const color=field(grid,'color',node.color||'',value=>{
+        if (node.type!=='text') {
+          // The FILE:/LINK:/GROUP: heading already identifies this field.
+          // Avoid a second redundant lowercase label but keep its input named.
+          content.firstChild.textContent='';
+          content.querySelector('input')?.setAttribute('aria-label',
+            {file:'Canvas file path',link:'Canvas link URL',group:'Canvas group label'}[node.type]);
+        }
+        const color=field(top,'color',node.color||'',value=>{
           if (value && !/^(?:[1-6]|#[0-9a-f]{3}|#[0-9a-f]{6})$/i.test(value)) {
             status('Use preset 1–6 or a hex color.'); return;
           }
@@ -299,7 +310,7 @@
           render();
         };
         removeCard=remove;
-        properties.append(grid);
+        properties.append(top,grid);
       }
       const connections=make('section','canvas-editor-inspector-connections');
       connections.append(make('strong','canvas-editor-inspector-heading','Connections:'));
@@ -353,7 +364,7 @@
       // in extra rows above the viewport.
       summary.textContent='JSON Canvas editor · '+data.nodes.length+' cards · '+
         data.edges.length+' connections';
-      hint.textContent='Drag cards to move · corner to resize · Ctrl+wheel to zoom';
+      hint.textContent='Drag cards to move · corner to resize · Ctrl+wheel to zoom · select a card to edit';
       viewer.querySelector('.canvas-summary')?.remove();
       const zoomBar=viewer.querySelector('.canvas-controls');
       zoomBar.querySelector('.canvas-hint')?.remove();

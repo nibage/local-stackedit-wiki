@@ -82,6 +82,25 @@ with sync_playwright() as pw:
       nowrap:getComputedStyle(el).whiteSpace})""")
     assert filename['full']>filename['visible'],filename
     assert filename['overflow']=='ellipsis' and filename['nowrap']=='nowrap',filename
+    # Long "previous wiki is remembered" notice uses the free area after
+    # the filename; the old RC5 two-line clamp must not hide the message.
+    page.evaluate("""() => {
+      const box=document.querySelector('#notice');
+      box.textContent='The previous wiki is remembered. Chrome needs renewed permission; use Open folder.';
+      box.hidden=false;
+    }""")
+    banner=page.locator('#notice').evaluate("""el=>({
+      rect:el.getBoundingClientRect().toJSON(),
+      height:el.clientHeight,scrollHeight:el.scrollHeight,
+      clamp:getComputedStyle(el).webkitLineClamp,
+      overflow:getComputedStyle(el).overflow
+    })""")
+    assert banner['height']+1>=banner['scrollHeight'],banner
+    assert banner['clamp'] in ('none','unset'),banner
+    assert banner['overflow']=='visible',banner
+    filename_box=page.locator('#filename').bounding_box()
+    assert banner['rect']['x']>=filename_box['x']+filename_box['width']-2,(filename_box,banner)
+    page.locator('#notice').evaluate('(el)=>el.hidden=true')
     page.locator('#theme-select').select_option('stackedit')
     page.locator('#view-preview').click()
     page.wait_for_function("document.querySelector('#preview h1')")

@@ -87,7 +87,7 @@ with sync_playwright() as pw:
     page.locator('.drawio-tab').nth(1).click()
     page.wait_for_function("""() => {
         const g=document.querySelector('.drawio-graph');
-        return g && g.textContent.includes('Databáze') && g.textContent.includes('Webová aplikace');
+        return g && g.textContent.includes('Database') && g.textContent.includes('Web application');
     }""")
     assert page.locator('.drawio-tab').nth(1).get_attribute('aria-pressed')=='true'
     assert 'complex / custom shapes' in page.locator('.drawio-warning').inner_text()
@@ -122,7 +122,7 @@ with sync_playwright() as pw:
     page.wait_for_function("document.querySelector('#preview .wiki-structured-embed .drawio-graph')!==null")
     assert page.locator('#preview .wiki-structured-embed .drawio-tab').count()==2
     page.locator('#preview .wiki-structured-embed .drawio-tab').nth(1).click()
-    page.wait_for_function("document.querySelector('#preview .drawio-graph')?.textContent.includes('Databáze')")
+    page.wait_for_function("document.querySelector('#preview .drawio-graph')?.textContent.includes('Database')")
     # The ordinary Markdown hyperlink still opens the larger read-only dialog.
     page.locator('#preview a', has_text='Open graph').click()
     page.wait_for_function("document.querySelector('#attachment-dialog .drawio-tab')!==null")

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="app.diagrams.net" version="26.0.0" pages="2">
-  <diagram id="intro" name="Pracovní postup">
+  <diagram id="intro" name="Workflow">
     <mxGraphModel dx="900" dy="560" grid="1" page="1" pageWidth="850" pageHeight="1100">
       <root>
         <mxCell id="0"/>
@@ -8,10 +8,10 @@
         <mxCell id="start" value="Start" style="ellipse;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
           <mxGeometry x="50" y="170" width="150" height="90" as="geometry"/>
         </mxCell>
-        <mxCell id="work" value="Připravit poznámky" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+        <mxCell id="work" value="Prepare notes" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
           <mxGeometry x="275" y="160" width="170" height="100" as="geometry"/>
         </mxCell>
-        <mxCell id="decision" value="Hotovo?" style="rhombus;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+        <mxCell id="decision" value="Done?" style="rhombus;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
           <mxGeometry x="520" y="143" width="165" height="140" as="geometry"/>
         </mxCell>
         <mxCell id="edge1" style="endArrow=classic;edgeStyle=orthogonalEdgeStyle;strokeColor=#6c8ebf;" edge="1" parent="1" source="start" target="work">
@@ -23,5 +23,5 @@
       </root>
     </mxGraphModel>
   </diagram>
-  <diagram id="architecture" name="Architektura (komprimovaná)">vZTBboMwDIafJncgo9Bjx7qddt7ZEBeipg0yaQt7+oUmqejotG6aJqEo/HZ+k88kjBe7/oWgbV61QMWSSPSMP7EkydPIjqMwOCGNvFCTFE6KndBCjROBr1m0svL48IK0NldSCOz6AtVYMbg5++f7ki+lCffmF+tF6QyOoA7+45/AQMkKzlbxO7poZwblo10D7TitBiX3Aonxx41UqtBK0zmDYyxSzKzeGdJbnESWi4zDwkZ8TSSD/Zf7CBDPrUG9Q0ODTQkLYt8G35bMv56kMI1PCVqDsm6Ca2gfdE6oL9aBGi/sxJO6C+IJ5xTfsNRHR3Es1iq5hWqOk/TBUhx94jlJyzEXD7dI5knJF39Eki+/J7n8J5IbpU8zRrgXKyIbsH+dgq6T1S0kaZ7lEF2QoLg6jDeA2Br6QBV+6qEBqtFMT8ecHKECI4/XBX6O4axPLgafN7mH+PoD</diagram>
+  <diagram id="architecture" name="Architecture (compressed)">vZTBboMwDEC/hjuQUeixo+1OO+/sEheipQQ5aQt/v9AkFR2d1k3TJITCs7HhGRKx8tC/EHTNq+IoozTmfcTWUZoWWWzPIxgcyGIPahLcocSBDmqcALaJ4pXF48FKUsrcoBA49CXKsWOo5spvH0u+tiZszS/u5ztX4ATy6B9+DQZ2oNEFtBmkD+gGunFZDVK0HCliz3shZamkoksGw4RnmFuuDal3nESWi5zBwkZ8OySD/ZevEPxdpoLqgIYGmxJuSPwE/ERyf3kW3DQ+JbAGRd2EqmFyoB2or6WDMFbahZf0kL8zzgW+jSyGrpOiAiNUOzNJ6mgFjiWSuUSrsOBP9yQW6Y4t/kgiW34vcflPEvdSnWeOsOUrIhuwH5wErUV1T0lW5AXEVyXIb37BO0JsD3WkCj+NzwDVaKb/xNwcobTjPN02+LmGC59sBz5vsvuwzQc=</diagram>
 </mxfile>

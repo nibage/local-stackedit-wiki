@@ -37,9 +37,9 @@ class BuildError(RuntimeError):
 # Only runtime assets, essential offline documentation, and the latest
 # authentic application screenshot belong in user downloads. Never ship test code,
 # temporary caches, old development reports or a second sample vault.
-RELEASE_ROOT_FILES = {'index.html', 'README.md'}
+RELEASE_ROOT_FILES = {'index.html'}
 RELEASE_DIRS = {'assets', 'src', 'vendor'}
-RELEASE_SCREENSHOTS = {'docs/app-dark-diagrams.jpg'}
+RELEASE_SCREENSHOTS = set()
 
 
 def is_release_file(relative):

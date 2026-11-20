@@ -68,10 +68,14 @@ with sync_playwright() as pw:
     page.wait_for_function("document.querySelector('#filename').textContent==='Docs/Other.md'")
     assert page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line")==2
     assert page.locator('#preview a.wiki-link-location').count()==1
-    assert page.locator('#nav-back').is_visible()
-    page.locator('#nav-back').click()
+    # Navigating an incoming link exposes its full path in the file tree.
+    assert page.locator('#side-files').is_visible()
+    assert page.locator('.tree-row[aria-label="Docs/Other.md"]').is_visible()
+    assert page.locator('.tree-row[aria-label="Docs/Other.md"]').get_attribute('class').find('selected')>=0
+    assert page.locator('#toolbar-back').is_visible()
+    page.locator('#toolbar-back').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Home.md'")
-    assert not page.locator('#nav-back').is_visible()
+    assert not page.locator('#toolbar-back').is_visible()
     page.locator('[data-side="files"]').click()
     page.locator('.tree-row[aria-label="Orphan.md"]').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Orphan.md'")
@@ -99,7 +103,10 @@ with sync_playwright() as pw:
     assert not page.locator('#fulltext-results').inner_text().strip()
 
     page.locator('[data-side="files"]').click()
-    page.locator('.tree-row[aria-label="Docs"]').click()
+    # Cross-note navigation already expanded Docs. Only click if it is still
+    # collapsed; clicking an expanded folder would deliberately collapse it.
+    if not page.locator('.tree-row[aria-label="Docs/Other.md"]').count():
+        page.locator('.tree-row[aria-label="Docs"]').click()
     assert page.locator('.tree-row[aria-label="Docs/Other.md"]').count()==1
     page.locator('#refresh').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Orphan.md'")
@@ -112,10 +119,17 @@ with sync_playwright() as pw:
       const notice=document.querySelector('#notice');
       const n=notice.getBoundingClientRect();
       const header=document.querySelector('.topbar').getBoundingClientRect();
-      const actions=document.querySelector('.topbar .actions').getBoundingClientRect();
-      return n.bottom <= header.bottom + 1 && n.right <= actions.left + 1 &&
-        getComputedStyle(notice).webkitLineClamp === '2';
-    }"""), 'Notice must use two lines, stay centered and end before toolbar controls'
+      const filename=document.querySelector('.brand .file-title').getBoundingClientRect();
+      const editor=document.querySelector('.topbar .editor-bar').getBoundingClientRect();
+      const style=getComputedStyle(notice);
+      const onSameRow=Math.abs(n.top-editor.top)<40;
+      return n.bottom<=header.bottom+2 &&
+        n.left>=filename.right-2 &&
+        (!onSameRow||n.right<=editor.left+2) &&
+        style.webkitLineClamp==='none' &&
+        style.overflow==='visible' &&
+        notice.scrollHeight<=notice.clientHeight+2;
+    }"""), 'Notice should be fully readable after filename, before Editor controls, without line clamp'
     page.locator('#renderer-check').click()
     assert page.locator('#diag-api').is_visible()
     assert 'File System API' in page.locator('#diag-api').inner_text()

@@ -66,10 +66,23 @@ with sync_playwright() as pw:
     assert meta.bounding_box()['y']>page.locator('.canvas-editor-inspector').bounding_box()['y']
     assert meta.locator('.canvas-editor-info-hint').evaluate('(e)=>getComputedStyle(e).borderLeftWidth')=='1px'
     assert 'Canvas: saved' in save.inner_text()
-    assert 'select a card to edit' in save.inner_text()
+    assert 'select a card to edit' in meta.inner_text()
     assert save.bounding_box()['x']>zoom.bounding_box()['x']
     assert page.locator('.canvas-editor-board>.wiki-canvas-viewer>.canvas-summary').count()==0
     assert page.locator('.canvas-editor-board>.wiki-canvas-viewer>.canvas-controls').count()==0
+    # Screenshot new.png: [- + Fit 100% pct] | [node actions Undo Redo] ... Save
+    separator=toolbar.locator('.canvas-editor-toolbar-separator')
+    zoom_box=zoom.bounding_box()
+    separator_box=separator.bounding_box()
+    actions_box=buttons.bounding_box()
+    save_box=save.bounding_box()
+    assert zoom_box['x']+zoom_box['width']<=separator_box['x']+2,(zoom_box,separator_box)
+    assert separator_box['x']+separator_box['width']<=actions_box['x']+2,(separator_box,actions_box)
+    assert actions_box['x']<save_box['x'],(actions_box,save_box)
+    preview_exit=page.locator('#attachment-dialog .dialog-actions .canvas-preview-exit')
+    insert=page.locator('#attachment-insert')
+    close=page.locator('#attachment-close')
+    assert preview_exit.bounding_box()['x']<insert.bounding_box()['x']<close.bounding_box()['x']
     assert zoom.locator('button').count()==4
     assert toolbar.locator('.canvas-zoom-status').count()==1
     assert toolbar.locator('.canvas-editor-toolbar-separator').count()==1
@@ -93,6 +106,14 @@ with sync_playwright() as pw:
     props=inspector.locator('.canvas-editor-inspector-properties')
     edges=inspector.locator('.canvas-editor-inspector-connections')
     assert 'TEXT:' in props.inner_text()
+    text_top=props.locator('.canvas-editor-property-top')
+    assert text_top.is_visible()
+    assert props.locator('.canvas-prop-content textarea').count()==1
+    textarea_box=props.locator('.canvas-prop-content textarea').bounding_box()
+    width_box=props.locator('.canvas-prop-width input').bounding_box()
+    assert textarea_box['x']>width_box['x']+width_box['width'],(textarea_box,width_box)
+    assert props.locator('.canvas-prop-color').bounding_box()['y']<props.locator('.canvas-prop-x').bounding_box()['y']
+
     assert edges.bounding_box()['x']>=props.bounding_box()['x']+props.bounding_box()['width']-1
     assert inspector.locator('.canvas-editor-field input[type="number"]').count()==4
     for fld in inspector.locator('.canvas-editor-field input[type="number"]').all():
@@ -117,7 +138,21 @@ with sync_playwright() as pw:
     second.click()
     file_field=inspector.locator('.canvas-prop-content input')
     color_field=inspector.locator('.canvas-prop-color input')
-    assert file_field.bounding_box()['width']>120,file_field.bounding_box()
+    # The FILE value is on the same header row as FILE: and COLOR;
+    # compact X/Y/width/height appear below it, never beside the path.
+    assert props.locator('.canvas-editor-property-top .canvas-prop-content input').count()==1
+    assert props.locator('.canvas-editor-properties-grid .canvas-prop-content').count()==0
+    assert props.locator('.canvas-prop-content input').get_attribute('aria-label')=='Canvas file path'
+    file_box=file_field.bounding_box()
+    color_box=color_field.bounding_box()
+    heading_box=props.locator('.canvas-editor-inspector-heading').bounding_box()
+    geometry_box=props.locator('.canvas-prop-x').bounding_box()
+    assert abs(file_box['y']-color_box['y'])<4,(file_box,color_box)
+    assert abs(file_box['y']-heading_box['y'])<12,(file_box,heading_box)
+    assert color_box['x']>file_box['x']+file_box['width'],(file_box,color_box)
+    assert geometry_box['y']>file_box['y']+file_box['height'],(geometry_box,file_box)
+    assert file_box['width']>260,file_box
+
     assert color_field.bounding_box()['width']<=75,color_field.bounding_box()
     delete_edge=inspector.locator('.canvas-delete-connection').bounding_box()
     delete_card=inspector.locator('.canvas-editor-delete').bounding_box()

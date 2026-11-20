@@ -40,8 +40,9 @@ function makeFakeIndexedDB() {
     }
   };
 }
-function load(storage = makeFakeIndexedDB()) {
+function load(storage = makeFakeIndexedDB(), tabSession = null) {
   const context = { indexedDB: storage, location: {href:'file:///install-A/index.html'} };
+  if(tabSession)context.sessionStorage=tabSession;
   vm.runInNewContext(scopeSource, context);
   vm.runInNewContext(source, context);
   return context.LocalWikiRecent;
@@ -81,4 +82,29 @@ test('rejects invalid handle and gracefully reports blocked storage', async () =
   assert.ok(blocked);
   const noStorage = load(null);
   await assert.rejects(noStorage.restoreHandle(), /IndexedDB/);
+});
+
+test('independent tabs using the same index.html remember different folders', async () => {
+  const db = makeFakeIndexedDB();
+  function tab() {
+    const storage=new Map();
+    return {getItem:key=>storage.get(key)||null,setItem:(key,value)=>{storage.set(key,value);}};
+  }
+  const tabOne=tab(),tabTwo=tab();
+  const a=load(db,tabOne),b=load(db,tabTwo);
+  const first=handle(true),second=handle(true);
+  first.name='First wiki';second.name='Second wiki';
+  assert.equal(await b.restoreHandle(),null);
+  await a.remember(first);
+  assert.equal(await a.restoreHandle(),first);
+  assert.equal(await b.restoreHandle(),null);
+  await b.remember(second);
+  assert.equal(await a.restoreHandle(),first);
+  assert.equal(await b.restoreHandle(),second);
+  const reloadedA=load(db,tabOne),reloadedB=load(db,tabTwo);
+  assert.equal(await reloadedA.restoreHandle(),first);
+  assert.equal(await reloadedB.restoreHandle(),second);
+  await reloadedA.forget();
+  assert.equal(await reloadedA.restoreHandle(),null);
+  assert.equal(await reloadedB.restoreHandle(),second);
 });
