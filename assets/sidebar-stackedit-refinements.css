@@ -209,7 +209,7 @@
 }
 .topbar .brand #notice.notice {
   flex:1 1 330px;min-width:235px;
-  height:76px;min-height:76px;max-height:none;
+  height:52px;min-height:52px;max-height:none;
   font-size:10px;line-height:1.25;
   text-align:left;overflow:visible!important;
   display:block!important;
