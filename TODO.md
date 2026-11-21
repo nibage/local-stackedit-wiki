@@ -218,3 +218,15 @@ The future Canvas/Bases editing design and the draw.io non-goal are explained in
 - [x] Store IndexedDB recent-directory bookmarks per browser tab to avoid two same-app wiki tabs overwriting one another; do not store note contents.
 - [x] Remove README/screenshots and all support/dev files from release ZIP; keep runtime and upstream licenses. Publish on successful main builds, and on v* tags as permanent Releases.
 - [x] Retain Status diagnostics for offline renderer troubleshooting rather than remove access.
+
+## Complete Canvas exit flow, index startup, math and structured exports (November 2026)
+
+- [x] Fix Scroll sync On/Off width to avoid moving neighboring controls.
+- [x] Open root `index.md` automatically when a wiki opens or restores; keep blank if missing and preserve existing note on Refresh.
+- [x] Generate a clickable exported Contents section using actual heading IDs for HTML and print/PDF; retain original within-document links.
+- [x] Align MathJax 2 display formulas left when Center is disabled.
+- [x] Resize Canvas inspector to 2/3 properties and 1/3 connections; shorten/aligned Width and Height fields and right-align disabled Delete connection with Delete card.
+- [x] Use green Connect state and an arrow/alias cursor over potential connection targets.
+- [x] Place dirty-exit Discard changes and green Save changes directly above Preview / Insert into note / Close; highlight active requested action, dismiss prompt on resumed editing, preserve guarded save.
+- [x] Await all real asynchronous structured embeds before HTML/PDF export, and keep Canvas/Bases/draw.io print content visible.
+- [x] Expand Chromium regression tests to cover startup/MathJax/scroll layout, Canvas exit UX and actual embedded HTML/PDF export with links.
