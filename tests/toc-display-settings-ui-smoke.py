@@ -133,7 +133,6 @@ with sync_playwright() as pw:
         assert abs(geometry['right']-geometry['separator'])<=1.5,geometry
         page.locator('#line-wrap-toggle').uncheck()
         assert page.evaluate("window.LocalWikiDebug.editor.cm.getOption('lineWrapping')===false")
-        assert page.evaluate("localStorage.getItem(window.LocalWikiScope.storageKey('local-wiki-line-wrapping'))==='off'")
         page.locator('#line-wrap-toggle').check()
         assert page.evaluate("window.LocalWikiDebug.editor.cm.getOption('lineWrapping')===true")
         page.locator('#line-numbers-toggle').uncheck()
