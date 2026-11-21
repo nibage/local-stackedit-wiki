@@ -83,3 +83,14 @@
     overflow-x:auto;scrollbar-width:thin;max-width:64%;
   }
 }
+
+/* MathJax 2 NativeMML centres display math by default. Match the user's
+   document Center preference without changing inline formula layout. */
+:root[data-centered="false"] .markdown-preview .MathJax_Display,
+:root[data-centered="false"] .markdown-preview .MathJax_MathML[display="block"],
+:root[data-centered="false"] .markdown-preview math[display="block"],
+:root[data-centered="false"] .markdown-preview mjx-container[display="true"] {
+  text-align:left!important;
+  margin-left:0!important;
+  margin-right:auto!important;
+}
