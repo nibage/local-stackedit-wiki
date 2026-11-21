@@ -244,7 +244,9 @@
       while(ids.has(next))next+='-1';
       ids.add(next);h.id=next;
     });
-    const choices=headings.filter(h=>Number(h.localName.slice(1))<=3 && h.textContent.trim());
+    const choices=headings.filter(h=>Number(h.localName.slice(1))<=3 &&
+      h.textContent.trim() && !h.closest(
+        '.wiki-structured-embed,.wiki-canvas-viewer,.wiki-bases-viewer,.wiki-drawio-viewer'));
     if(choices.length<2)return;
     const doc=root.ownerDocument,nav=doc.createElement('nav');
     nav.className='wiki-export-toc';nav.setAttribute('aria-label','Contents');
@@ -319,6 +321,18 @@
       svg.style.setProperty('height',Math.ceil(h*scale)+'px','important');
       svg.style.setProperty('max-width','100%','important');
       svg.style.setProperty('overflow','visible','important');
+    }
+    // Bases file-name cells are buttons for wiki navigation; the safe
+    // standalone export removes buttons. Preserve their text as static spans.
+    for(const button of cloned.querySelectorAll('.bases-open-note')){
+      const label=cloned.ownerDocument.createElement('span');
+      label.className='bases-export-note';
+      label.textContent=button.textContent;
+      label.style.cssText=button.style.cssText;
+      label.style.setProperty('display','inline','important');
+      label.style.setProperty('color','inherit','important');
+      label.style.setProperty('font-weight','600','important');
+      button.replaceWith(label);
     }
     for(const area of cloned.querySelectorAll('.bases-table-scroll')){
       area.style.cssText='display:block!important;width:100%!important;'+
