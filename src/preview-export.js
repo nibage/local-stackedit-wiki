@@ -239,6 +239,35 @@
     }
   }
 
+  function printableContents(root) {
+    // The interactive Contents sidebar is outside #preview. Include a
+    // self-contained Contents list in HTML/PDF using actual heading anchors.
+    // Chromium's Save as PDF carries these href="#id" links as destinations.
+    const headings=Array.from(root.querySelectorAll('h1,h2,h3,h4,h5,h6')).filter(h=>
+      !h.closest('.wiki-canvas-viewer,.wiki-bases-viewer,.wiki-drawio-viewer,.wiki-structured-embed')).slice(0,120);
+    const used=new Set(headings.map(h=>h.id).filter(Boolean));
+    headings.forEach((heading,i)=>{
+      if(heading.id)return;
+      let id='wiki-export-heading-'+i;
+      while(used.has(id))id+='-1';
+      heading.id=id;used.add(id);
+    });
+    const items=headings.filter(h=>Number(h.localName.slice(1))<=3 && h.textContent.trim());
+    if(items.length<2)return;
+    const d=root.ownerDocument,nav=d.createElement('nav');
+    nav.className='wiki-export-toc';
+    nav.setAttribute('aria-label','Contents');
+    const header=d.createElement('strong');header.textContent='Contents';
+    const list=d.createElement('ol');
+    items.forEach(h=>{
+      const li=d.createElement('li'),link=d.createElement('a');
+      li.className='wiki-export-toc-level-'+h.localName.slice(1);
+      link.href='#'+h.id;
+      link.textContent=h.textContent.trim().slice(0,190);
+      li.append(link);list.append(li);
+    });
+    nav.append(header,list);root.insertBefore(nav,root.firstChild);
+  }
   function flattenVisualsForDocument(cloned,theme,layoutWidth,visualMetrics) {
     // Existing preview viewers are interactive panning/zooming widgets. A
     // serialized HTML/PDF needs static geometry without the user's pan/zoom.
@@ -335,6 +364,7 @@
     const layoutWidth=Math.max(760,source.clientWidth||900);
     const cloned=source.cloneNode(true);
     normalizeDocumentLinks(cloned,title);
+    printableContents(cloned);
     const originals=[source,...source.querySelectorAll('*')];
     const copies=[cloned,...cloned.querySelectorAll('*')];
     const budget={bytes:0},cache=new Map();
@@ -407,6 +437,15 @@
       '.wiki-export-preview{margin:0 auto;max-width:100%;width:'+width+'px;'+
       'height:auto!important;min-height:0!important;overflow:visible!important;flex:none!important;}'+
       '.wiki-export-preview .visualization{overflow:visible!important;}'+
+      '.wiki-export-toc{max-width:100%;box-sizing:border-box;'+
+      'border:1px solid #c8cdd3;border-radius:6px;padding:12px 15px;'+
+      'margin:0 0 23px;break-inside:avoid;background:transparent;}'+
+      '.wiki-export-toc strong{font-size:1.1em;font-weight:700;}'+
+      '.wiki-export-toc ol{padding-left:1.5em;margin:8px 0 0;}'+
+      '.wiki-export-toc li{margin:3px 0;line-height:1.45;}'+
+      '.wiki-export-toc-level-2{padding-left:1em;}'+
+      '.wiki-export-toc-level-3{padding-left:2em;}'+
+      '.wiki-export-toc a{color:#247fb9;text-decoration:underline;}'+
       'img,svg{max-width:100%;}'+
       /* StackEdit-like printed article: centred ~470pt reading column,
          12pt body text and generous headings. Inline snapshots use fixed
