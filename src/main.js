@@ -1985,7 +1985,9 @@
     loading.type='button';loading.disabled=true;loading.textContent='Loading recent folders…';
     recentMenu.append(loading);
     try {
-      const folders=await recent.recentFolders();
+      let folders=[];
+      try{folders=await recent.recentFolders();}
+      catch(error){if(!bridge.getRootHandle())throw error;}
       const current=bridge.getRootHandle();
       if(current){
         // A restored tab may predate the recent-folders list: surface the
