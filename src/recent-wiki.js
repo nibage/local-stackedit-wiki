@@ -66,10 +66,30 @@
   function isDirectory(handle) {
     return !!handle && handle.kind === 'directory' && typeof handle.values === 'function';
   }
+  const RECENT_KEY='recent-folders';
+  const MAX_RECENT=8;
+  async function recentFolders() {
+    const stored=await transaction('readonly',store=>store.get(RECENT_KEY));
+    if(!Array.isArray(stored))return [];
+    return stored.filter(item=>item && isDirectory(item.handle) &&
+      typeof item.name==='string').slice(0,MAX_RECENT);
+  }
   async function remember(handle) {
     if (!isDirectory(handle)) throw new Error('Only a selected directory can be remembered.');
-    // FileSystemDirectoryHandle is structured-cloneable in supporting Chrome/Edge.
-    return transaction('readwrite', store => store.put(handle, ENTRY));
+    // Keep each tab's automatic reopening independent, while sharing an
+    // explicit, local list for the dropdown. No note data leaves the browser.
+    await transaction('readwrite',store=>store.put(handle,ENTRY));
+    const saved=await recentFolders(),distinct=[];
+    for(const item of saved) {
+      let same=false;
+      try {same=typeof handle.isSameEntry==='function'?
+        await handle.isSameEntry(item.handle):handle.name===item.name;}
+      catch(_) {same=handle.name===item.name;}
+      if(!same)distinct.push(item);
+    }
+    const entries=[{name:String(handle.name||'Wiki').slice(0,150),handle},
+      ...distinct].slice(0,MAX_RECENT);
+    await transaction('readwrite',store=>store.put(entries,RECENT_KEY));
   }
   async function restoreHandle() {
     let h = await transaction('readonly', store => store.get(ENTRY));
@@ -92,5 +112,5 @@
     }
     return false;
   }
-  global.LocalWikiRecent = { remember, restoreHandle, forget, ensurePermission };
+  global.LocalWikiRecent = { remember, restoreHandle, recentFolders, forget, ensurePermission };
 })(typeof window !== 'undefined' ? window : globalThis);
