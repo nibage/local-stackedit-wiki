@@ -218,7 +218,7 @@
     }
     // Structured Canvas writes are explicitly opt-in. Unknown attachment types stay read-only.
     async function readAssetSnapshot(path) {
-      if (!/\.(?:canvas|base)$/i.test(path)) throw new Error('Only Canvas and Bases assets can be edited here.');
+      if (!/\.(?:canvas|base|drawio)$/i.test(path)) throw new Error('Only Canvas, Bases and draw.io assets can be edited here.');
       const handle = assetHandles.get(path);
       if (!handle) throw new Error('Canvas not found in the selected wiki.');
       const file = typeof handle.getFile === 'function' ? await handle.getFile() : handle;
@@ -228,7 +228,7 @@
     }
     async function writeAsset(path, text, expectedFingerprint) {
       if (mode !== 'readwrite') throw new Error('The folder is open read-only.');
-      if (!/\.(?:canvas|base)$/i.test(path)) throw new Error('This editor only writes .canvas and .base files.');
+      if (!/\.(?:canvas|base|drawio)$/i.test(path)) throw new Error('This editor only writes .canvas, .base and .drawio files.');
       if (typeof text !== 'string' || new TextEncoder().encode(text).length > 2 * 1024 * 1024)
         throw new Error('Structured file exceeds the 2 MB write limit.');
       const handle = assetHandles.get(path);
