@@ -36,6 +36,8 @@ jobs:
         run: python tests/preview-export-visuals-ui-smoke.py
       - name: Verify real asynchronous Canvas/Bases/draw.io HTML and PDF exports with linked Contents
         run: python tests/structured-export-real-ui-smoke.py
+      - name: Verify condensed Canvas toolbar, inline discard, inspector and selection toggle
+        run: python tests/canvas-editor-compact-ui-smoke.py
       - name: Capture current dark-mode screenshot from real offline app
         run: python tests/marketing-screenshot.py --zip local-stackedit-wiki-offline.zip --out marketing-current.jpg
       - name: Verify workspace layout, sidebar resizing and theme colors
@@ -66,8 +68,6 @@ jobs:
         run: python tests/drawio-ui-smoke.py
       - name: Verify Canvas editor Save, Undo/Redo, discard and external conflict
         run: python tests/canvas-editor-ui-smoke.py
-      - name: Verify condensed Canvas toolbar, inline discard, inspector and selection toggle
-        run: python tests/canvas-editor-compact-ui-smoke.py
       - name: Verify Canvas pointer dragging, live arrows and resize handles
         run: python tests/canvas-drag-ui-smoke.py
       - name: Verify temporary Bases filters, sorting and column resizing
