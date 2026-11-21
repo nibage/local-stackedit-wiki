@@ -154,7 +154,8 @@
     function change(action) {
       if (saving || disposed) return;
       try {
-        draft.change(action);
+        if (draft.change(action))
+          status('Canvas: ' + (draft.dirty ? 'unsaved changes' : 'saved'));
         clearExitChoice();
         render();
       } catch (error) { status(error.message); }
