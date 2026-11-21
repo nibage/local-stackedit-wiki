@@ -373,6 +373,8 @@
       }catch(_){ /* Keep the non-raster canvas fallback if extraction is blocked. */ }
     }
     flattenVisualsForDocument(cloned,theme,layoutWidth,visualMetrics);
+    if(global.LocalWikiPdfExport)
+      await global.LocalWikiPdfExport.render(cloned,budget,{maxBytes:MAX_TOTAL_BYTES});
     // The live Markdown renderer nests structured attachment <span>s inside
     // <p>s. Its snapshot copied a fixed, scroll-viewport-sized height to BOTH
     // elements. Simply removing the grey span is not enough: the leftover <p>
@@ -489,6 +491,10 @@
       '.wiki-export-preview details.obsidian-properties pre{display:block!important;'+
       'height:auto!important;max-height:none!important;white-space:pre-wrap!important;'+
       'overflow:visible!important;}'+
+      '.wiki-export-preview .wiki-bases-viewer{height:auto!important;'+
+      'max-height:none!important;min-height:0!important;overflow:visible!important;}'+
+      '.wiki-export-preview .wiki-export-pdf-pages{height:auto!important;'+
+      'max-height:none!important;overflow:visible!important;}'+
       'img,svg{max-width:100%;}'+
       /* StackEdit-like printed article: centred ~470pt reading column,
          12pt body text and generous headings. Inline snapshots use fixed
@@ -548,8 +554,9 @@
       '.wiki-export-preview .wiki-drawio-viewer{'+
       'box-sizing:border-box!important;max-width:100%!important;'+
       'overflow:visible!important;break-inside:avoid-page!important;}'+
+      '.wiki-export-preview .wiki-bases-viewer,'+
       '.wiki-export-preview .bases-table-scroll{max-height:none!important;'+
-      'height:auto!important;overflow:visible!important;}'+
+      'min-height:0!important;height:auto!important;overflow:visible!important;}'+
       '.wiki-export-preview table{min-width:0!important;'+
       'table-layout:auto!important;width:100%!important;}'+
       '.wiki-export-preview table th,.wiki-export-preview table td{'+
