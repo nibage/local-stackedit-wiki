@@ -304,7 +304,8 @@
     bar.append(create('span','canvas-hint','Drag empty space to pan · Ctrl+wheel to zoom · read-only'));
     let drag=null;
     viewport.addEventListener('pointerdown',e=>{
-      if (e.button!==0 || e.target.closest('.canvas-node')) return;
+      if (e.button!==0 || e.target.closest('.canvas-node') ||
+          e.target.matches('.canvas-connections > path')) return;
       e.preventDefault();
       drag={id:e.pointerId,x:e.clientX,y:e.clientY,startX:state.x,startY:state.y};
       viewport.setPointerCapture(e.pointerId);
