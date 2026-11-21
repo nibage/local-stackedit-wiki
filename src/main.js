@@ -1634,12 +1634,17 @@
     // A pending 3-second debounce must never produce an outdated export.
     if (renderTimer) renderPreview(true);
     await exporter.waitForReady(ui.preview,()=>$('render-status').textContent.includes('Rendering:'));
+    // MathJax typesetting is asynchronous and must be fully committed before
+    // cloning the DOM; otherwise the standalone export may contain raw TeX.
+    if (window.MathJax?.Hub?.Queue) {
+      await new Promise(resolve=>window.MathJax.Hub.Queue(resolve));
+    }
     if (!activePath || activePath!==path)
       throw new Error('The selected note changed during export. Please retry.');
     const html=await exporter.build(ui.preview,{title:basename(path),theme:kind==='pdf'?'light':'current'});
     if (kind==='html') {
-      exporter.downloadHtml(html,exporter.fileName(path,'html'));
-      notice('Standalone HTML downloaded with inline styles and local preview assets.','success');
+      exporter.showHtmlPreview(html,popup,exporter.fileName(path,'html'));
+      notice('HTML opened in a new tab. Use Download HTML there to save the standalone file.','success');
     } else {
       await exporter.printHtml(html,popup);
       notice('In the print dialog, choose Save as PDF. PDF always uses the light theme; the app theme stays unchanged.','success');
@@ -1650,9 +1655,12 @@
     if (!activePath || previewExporting) return;
     const path=activePath;
     let popup=null;
-    if (kind==='pdf') {
-      try {popup=window.LocalWikiPreviewExport.openPrintWindow();}
-      catch(error){notice('Cannot open PDF preview: '+error.message,'error');return;}
+    try {
+      popup=window.LocalWikiPreviewExport.openPrintWindow(
+        kind==='html'?'Preparing HTML preview…':'Preparing PDF preview…');
+    } catch(error) {
+      notice('Cannot open '+kind.toUpperCase()+' preview: '+error.message,'error');
+      return;
     }
     previewExporting=true;updatePreviewExportEnabled();
     void exportRenderedPreview(kind,popup,path).catch(error=>{
