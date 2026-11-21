@@ -1,4 +1,4 @@
-"""Canvas editor UX: single-row actions/zoom, path metadata, compact inspector, inline discard and toggle selection."""
+"""Canvas editor UX: compact inspector, connection targeting and footer save/discard confirmation."""
 from pathlib import Path
 from urllib.parse import urlsplit,unquote
 from playwright.sync_api import sync_playwright
@@ -151,13 +151,28 @@ with sync_playwright() as pw:
     assert abs(file_box['y']-heading_box['y'])<12,(file_box,heading_box)
     assert color_box['x']>file_box['x']+file_box['width'],(file_box,color_box)
     assert geometry_box['y']>file_box['y']+file_box['height'],(geometry_box,file_box)
-    assert file_box['width']>260,file_box
+    assert file_box['width']>110,file_box
 
     assert color_field.bounding_box()['width']<=75,color_field.bounding_box()
     delete_edge=inspector.locator('.canvas-delete-connection').bounding_box()
     delete_card=inspector.locator('.canvas-editor-delete').bounding_box()
     assert abs(delete_edge['width']-delete_card['width'])<=1,(delete_edge,delete_card)
+    assert abs(delete_edge['x']-delete_card['x'])<=1,(delete_edge,delete_card)
     assert delete_card['y']>delete_edge['y']
+    width_input=inspector.locator('.canvas-prop-width input').bounding_box()
+    height_input=inspector.locator('.canvas-prop-height input').bounding_box()
+    assert width_input['width']<=52 and height_input['width']<=52
+    assert abs(width_input['x']-height_input['x'])<=1
+    assert abs(width_input['width']-height_input['width'])<=1
+    props_width=props.bounding_box()['width']
+    edges_width=edges.bounding_box()['width']
+    assert 1.8<props_width/edges_width<2.25,(props_width,edges_width)
+    connect=toolbar.locator('button',has_text='Connect')
+    connect.click()
+    assert 'canvas-editor-connect-active' in (connect.get_attribute('class') or '')
+    assert page.locator('.canvas-node[data-node-id="a"]').evaluate('(el)=>getComputedStyle(el).cursor')=='pointer'
+    connect.click()
+    assert 'canvas-editor-connect-active' not in (connect.get_attribute('class') or '')
     assert page.locator('.canvas-editor-save-stack').bounding_box()['x']>zoom.bounding_box()['x']
     assert page.locator('#attachment-dialog .dialog-actions .canvas-preview-exit').count()==1
     assert page.locator('.canvas-editor>.canvas-editor-meta').bounding_box()['y']>inspector.bounding_box()['y']
@@ -166,22 +181,22 @@ with sync_playwright() as pw:
     assert 'unsaved changes' in save.inner_text()
     page.locator('#attachment-close').click()
     assert page.locator('#attachment-dialog').evaluate('(el)=>el.open')
-    warning=toolbar.locator('.canvas-editor-confirm')
+    warning=page.locator('#attachment-dialog > .canvas-editor-confirm')
     assert warning.is_visible()
     assert warning.locator('button').count()==2
-    assert warning.inner_text().strip()=='Discard changes\nKeep editing',warning.inner_text()
-    assert warning.bounding_box()['x']>buttons.bounding_box()['x']
-    assert abs(warning.bounding_box()['y']-buttons.bounding_box()['y'])<12
-    assert not zoom.is_visible(),'Zoom should give room to confirmation buttons'
-    assert not save.is_visible(),'Save/status should give room to confirmation buttons'
-    assert toolbar.bounding_box()['height']<49,'Confirmation must not add a toolbar row'
-    warning.locator('button',has_text='Keep editing').click()
-    assert zoom.is_visible()
-    assert save.is_visible()
+    assert warning.inner_text().strip()=='Discard changes\nSave changes',warning.inner_text()
+    assert warning.bounding_box()['y']>meta.bounding_box()['y']
+    assert warning.bounding_box()['y']<page.locator('#attachment-dialog .dialog-actions').bounding_box()['y']
+    assert zoom.is_visible() and save.is_visible()
+    assert toolbar.bounding_box()['height']<49
+    assert 'canvas-exit-pending' in (close.get_attribute('class') or '')
+    # Making a new edit automatically clears the pending decision and highlight.
+    toolbar.locator('button',has_text='+ Text').click()
     assert not warning.is_visible()
+    assert 'canvas-exit-pending' not in (close.get_attribute('class') or '')
     page.locator('#attachment-close').click()
     warning.locator('button',has_text='Discard changes').click()
     page.wait_for_function("!document.querySelector('#attachment-dialog').open")
     assert not errors,errors
-    print('PASS: Canvas compact chrome, path status, zoom, icons, inspector, deselection and inline discard')
+    print('PASS: Canvas compact inspector, green Connect mode and footer confirmation')
     browser.close()
