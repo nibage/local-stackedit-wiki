@@ -33,8 +33,7 @@ with sync_playwright() as pw:
         file('example.base',base),
         file('One.md','---\\nstatus: done\\nscore: 8\\n---\\n# One'),
         file('Two.md','---\\nstatus: planned\\nscore: 3\\n---\\n# Two'),
-        file('Three.md','---\\nstatus: done\\nscore: 6\\n---\\n# Three'),
-        file('Embed.md','# Embedded Base\\n![[example.base]]')
+        file('Three.md','---\\nstatus: done\\nscore: 6\\n---\\n# Three')
       ].map(f=>[f.name,f]));
       window.mockWiki={name:'Wiki',kind:'directory',entries,
         async *values(){yield* entries.values()},
@@ -119,7 +118,12 @@ with sync_playwright() as pw:
     light=header.evaluate('el=>({bg:getComputedStyle(el).backgroundColor,border:getComputedStyle(el).borderBottomWidth})')
     assert light['bg']=='rgb(238, 243, 248)' and light['border']=='2px',light
     page.locator('#attachment-close').click()
-    page.locator('.tree-row[aria-label="Embed.md"]').click()
+    page.evaluate("""() => {
+      const note=window.mockWiki.entries.get('Three.md');
+      note.body+='\\n\\n![[example.base]]';
+      note.lastModified++;
+    }""")
+    page.locator('.tree-row[aria-label="Three.md"]').click()
     inline=page.locator('#preview .wiki-bases-viewer .bases-table thead th').first
     inline.wait_for()
     inline_scroll=page.locator('#preview .bases-table-scroll')
