@@ -918,6 +918,7 @@
         const lineEnding=/\r\n/.test(source)?'\r\n':'\n';
         const editor=window.LocalWikiAssetSourceEditor.mount(source.replace(/\r\n?/g,'\n'),{
           kind,fingerprint:snapshot.fingerprint,
+          closeButton:$('attachment-close'),
           onSave:async(body,expected)=>{
             if(operations.isBusy())throw new Error('Finish the current wiki operation before saving source.');
             const content=(snapshot.hasBOM?'\uFEFF':'')+body.replace(/\n/g,lineEnding);
