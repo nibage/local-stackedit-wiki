@@ -54,6 +54,17 @@ with sync_playwright() as pw:
     page.locator('#attachment-edit-canvas').click()
     page.wait_for_function("document.querySelector('.canvas-editor-board .canvas-node')")
     assert page.locator('.canvas-editor-board .canvas-node').count()==1
+    page.locator('.canvas-editor-board .canvas-node').first.click()
+    # Even with no connection, disabled Delete connection stays directly above
+    # Delete card in the enlarged right-hand inspector.
+    disabled_edge=page.locator('.canvas-delete-connection')
+    delete_card=page.locator('.canvas-editor-delete')
+    assert disabled_edge.is_disabled()
+    edge_rect=disabled_edge.bounding_box()
+    card_rect=delete_card.bounding_box()
+    assert abs(edge_rect['x']-card_rect['x'])<=1,(edge_rect,card_rect)
+    assert abs(edge_rect['width']-card_rect['width'])<=1,(edge_rect,card_rect)
+    assert edge_rect['y']<card_rect['y']
     page.locator('.canvas-editor-toolbar button',has_text='+ Text').click()
     assert page.locator('.canvas-editor-board .canvas-node').count()==2
     page.locator('.canvas-editor-toolbar button',has_text='Undo').click()
