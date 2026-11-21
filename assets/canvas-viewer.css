@@ -523,3 +523,86 @@
     grid-template-columns:94px 112px minmax(0,1fr);
   }
 }
+
+
+/* Nov 2026 Canvas inspector: 2/3 properties + 1/3 connections. */
+.canvas-editor .canvas-editor-inspector {
+  grid-template-columns:minmax(0,2fr) minmax(250px,1fr);
+  gap:11px;
+}
+.canvas-editor .canvas-editor-properties-grid,
+.canvas-editor .canvas-editor-properties-grid.canvas-properties-multiline {
+  grid-template-columns:105px 97px minmax(0,1fr);
+  grid-template-rows:27px 27px;
+  align-items:center;
+}
+.canvas-editor .canvas-prop-width,
+.canvas-editor .canvas-prop-height {
+  display:flex;align-items:center;
+  width:97px;max-width:97px;justify-self:start;
+}
+.canvas-editor .canvas-prop-width input,
+.canvas-editor .canvas-prop-height input {
+  flex:0 0 48px!important;max-width:48px!important;width:48px!important;
+  box-sizing:border-box;
+}
+.canvas-editor .canvas-prop-x,.canvas-editor .canvas-prop-y {
+  display:flex;align-items:center;width:105px;
+}
+.canvas-editor .canvas-editor-connection-row {
+  display:grid;grid-template-columns:minmax(0,1fr) 119px;
+  align-items:center;gap:6px;min-width:0;width:100%;
+}
+.canvas-editor .canvas-editor-connection-row .canvas-editor-edge-list {
+  box-sizing:border-box;width:100%;max-width:100%;min-width:0;
+  text-overflow:ellipsis;white-space:nowrap;
+}
+.canvas-editor .canvas-editor-connection-row .canvas-delete-connection {
+  width:119px;max-width:119px;min-width:119px;
+  justify-self:end;margin:0;
+}
+.canvas-editor .canvas-editor-inspector-connections>.canvas-editor-delete {
+  width:119px;min-width:119px;max-width:119px;
+  align-self:flex-end;margin-left:auto;margin-right:0;
+}
+/* Connect mode: green active action + an arrow/add cursor on viable targets. */
+.canvas-editor[data-connect-active="true"] .canvas-connect-action {
+  border-color:#58a36a!important;box-shadow:0 0 0 1px #58a36a inset;
+  color:#58a36a;font-weight:650;
+}
+.canvas-editor[data-connect-active="true"] .canvas-node:not(.canvas-connect-source) {
+  cursor:alias!important;
+  outline:1px dashed #58a36a;
+}
+.canvas-editor[data-connect-active="true"] .canvas-node.canvas-connect-source {
+  cursor:default!important;
+}
+/* Confirm a dirty Preview/Close step above, not inside, the toolbar. */
+#attachment-dialog.canvas-dialog-open>.canvas-editor-confirm {
+  display:flex;align-items:center;justify-content:flex-end;
+  gap:7px;min-height:30px;padding:2px 0;margin:5px 0 2px;
+  background:transparent;border:0;border-radius:0;
+}
+#attachment-dialog.canvas-dialog-open>.canvas-editor-confirm[hidden] {
+  display:none!important;
+}
+#attachment-dialog.canvas-dialog-open>.canvas-editor-confirm .canvas-control {
+  min-height:29px;padding:5px 10px;white-space:nowrap;font-size:11px;
+}
+#attachment-dialog.canvas-dialog-open>.canvas-editor-confirm .canvas-confirm-save {
+  border-color:#58a36a!important;box-shadow:0 0 0 1px #58a36a inset;
+  font-weight:650;
+}
+#attachment-dialog.canvas-dialog-open .dialog-actions .canvas-exit-pending {
+  border-color:#b88144!important;
+  box-shadow:0 0 0 1px #b88144 inset;
+}
+@media(max-width:900px) {
+  .canvas-editor .canvas-editor-inspector {
+    grid-template-columns:minmax(0,1fr);
+  }
+  .canvas-editor .canvas-editor-properties-grid,
+  .canvas-editor .canvas-editor-properties-grid.canvas-properties-multiline {
+    grid-template-columns:105px 97px minmax(0,1fr);
+  }
+}
