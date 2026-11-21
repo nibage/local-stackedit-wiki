@@ -31,11 +31,11 @@ with sync_playwright() as pw:
       const rows=Array.from({length:45},(_,i)=>
         '<tr><td>Long Base row '+i+'</td><td>Value '+i+'</td></tr>').join('');
       preview.innerHTML='<h1>Full Bases export</h1>'+
-        '<div class="wiki-export-structured">'+
-        '<div class="wiki-bases-viewer" style="height:513px;overflow:hidden">'+
+        '<div class="wiki-attachment-embed wiki-structured-embed" style="height:513px">'+
+        '<div class="structured-embed-body"><div class="wiki-bases-viewer" style="height:513px;overflow:hidden">'+
         '<div class="bases-table-scroll" style="height:500px;overflow:auto">'+
         '<table class="bases-table"><thead><tr><th>Category</th><th>Value</th></tr></thead>'+
-        '<tbody>'+rows+'</tbody></table></div></div></div>'+
+        '<tbody>'+rows+'</tbody></table></div></div></div></div>'+
         '<div class="visualization visualization-mermaid">'+
         '<svg width="600" height="110" viewBox="0 0 600 110">'+
         '<rect width="600" height="110" fill="#def"/>'+
