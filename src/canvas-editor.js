@@ -89,12 +89,28 @@
     separator.setAttribute('aria-hidden','true');
     const saveStack = make('div','canvas-editor-save-stack');
     warning.hidden = true;
-    toolbar.append(zoomControls,separator,actions,saveStack,warning);
+    toolbar.append(zoomControls,separator,actions,saveStack);
     root.append(toolbar,board,inspector,meta);
+    // Keep exit confirmation above the host dialog footer, not in the graph toolbar.
+    if (options.confirmHost) options.confirmHost.before(warning);
+    else root.append(warning);
     meta.replaceChildren(summary,hint);
     saveStack.append(message);
 
     function status(text) { message.textContent = text; }
+    function clearExitChoice() {
+      warning.hidden = true;
+      previewButton?.classList.remove('canvas-exit-pending');
+      options.closeButton?.classList.remove('canvas-exit-pending');
+    }
+    function refreshConnectionMode() {
+      root.dataset.connecting = connectFrom ? 'true' : 'false';
+      connectButton.classList.toggle('canvas-editor-connect-active',Boolean(connectFrom));
+      root.querySelectorAll('.canvas-node').forEach(card=>{
+        card.classList.toggle('canvas-connect-target',Boolean(connectFrom) && card.dataset.nodeId!==connectFrom);
+        card.style.cursor=connectFrom?'pointer':'move';
+      });
+    }
     function button(label, callback) {
       const b = make('button','canvas-control',label);
       b.type = 'button';
@@ -139,33 +155,36 @@
       if (saving || disposed) return;
       try {
         draft.change(action);
-        warning.hidden = true;
+        clearExitChoice();
         render();
       } catch (error) { status(error.message); }
     }
-    function question(messageText, action) {
-      // Inline confirmation replaces the zoom controls; do not add a new
-      // message row or move the centered dialog while a draft is unsaved.
+    function question(messageText, action, trigger) {
+      clearExitChoice();
       warning.replaceChildren();
       warning.setAttribute('role','group');
       warning.setAttribute('aria-label',messageText);
-      const confirm = make('button','canvas-control','Discard changes');
-      const cancel = make('button','canvas-control','Keep editing');
-      confirm.type = cancel.type = 'button';
-      confirm.onclick = () => { warning.hidden = true; draft.discard(); action(); };
-      cancel.onclick = () => { warning.hidden = true; };
-      warning.append(confirm,cancel);
+      const discard = make('button','canvas-control','Discard changes');
+      const saveChanges = make('button','canvas-control canvas-confirm-save','Save changes');
+      discard.type = saveChanges.type = 'button';
+      discard.onclick = () => { clearExitChoice(); draft.discard(); action(); };
+      saveChanges.onclick = async () => {
+        if (await persist()) { clearExitChoice(); action(); }
+      };
+      warning.append(discard,saveChanges);
       warning.hidden = false;
-      cancel.focus();
+      trigger?.classList.add('canvas-exit-pending');
+      saveChanges.focus();
     }
     function leave() {
-      if (draft.dirty) question('Unsaved canvas changes will be lost.',() => options.onPreview());
+      if (saving) return;
+      if (draft.dirty) question('Save or discard changes before preview.',() => options.onPreview(),previewButton);
       else options.onPreview();
     }
     function askClose() {
       if (saving) return false;
       if (draft.dirty) {
-        question('Save your changes or discard them before closing.',() => options.onClose());
+        question('Save or discard changes before closing.',() => options.onClose(),options.closeButton);
         return false;
       }
       return true;
@@ -174,15 +193,22 @@
     button('+ File',() => addNode('file'));
     button('+ Link',() => addNode('link'));
     button('+ Group',() => addNode('group'));
-    button('Connect →',() => {
+    const connectButton=button('Connect →',() => {
+      if (connectFrom) {
+        connectFrom=null; refreshConnectionMode();
+        status('Connection cancelled.');
+        return;
+      }
       if (!selected) { status('Select a source card first.'); return; }
       connectFrom = selected;
-      status('Click the target card to create a connection.');
+      refreshConnectionMode();
+      status('Click another card to connect, or click Connect again to cancel.');
     });
     const undo = iconButton('Undo','undo',() => { if (draft.undo()) render(); });
     const redo = iconButton('Redo','redo',() => { if (draft.redo()) render(); });
-    const save = iconButton('Save canvas','save',async () => {
-      if (saving || !draft.dirty) return;
+    async function persist() {
+      if (saving) return false;
+      if (!draft.dirty) return true;
       saving = true; save.disabled = true;
       status('Checking source file and saving…');
       try {
@@ -191,12 +217,14 @@
         fingerprint = result.fingerprint;
         draft.markSaved();
         status('Canvas saved safely.');
-        warning.hidden = true;
+        return true;
       } catch (error) {
         status((error.code === 'EXTERNAL_CHANGE' ?
           'External modification detected. Reload the file before retrying. ' : 'Save failed: ') + error.message);
+        return false;
       } finally { saving = false; refreshButtons(); }
-    });
+    }
+    const save = iconButton('Save canvas','save',()=>void persist());
     // Preview belongs to the host dialog's action row next to "Insert into
     // note", not in the graph toolbar. The host inserts it in that row.
     const previewButton=iconButton('Preview','back',leave);
@@ -321,7 +349,7 @@
           if (!item) return id;
           const title={text:item.text,file:item.file,link:item.url,group:item.label}[item.type];
           const first=typeof title==='string'?title.split('\n')[0].trim():'';
-          return (first||item.type).slice(0,28);
+          return (first||item.type).slice(0,64);
         };
         const select=make('select','canvas-editor-edge-list');
         select.setAttribute('aria-label','Choose a Canvas connection');
@@ -391,6 +419,7 @@
           if(suppressClick){suppressClick=false;return;}
           if (connectFrom) {
             const from=connectFrom;connectFrom=null;
+            refreshConnectionMode();
             if (from!==node.id) change(doc=>{
               doc.edges.push({id:randomId('edge',doc.edges),fromNode:from,toNode:node.id,fromSide:'right',toSide:'left',toEnd:'arrow'});
             });
@@ -407,7 +436,7 @@
         resize.type='button';resize.title='Drag to resize card';
         card.append(resize);
         const begin=(event,kind)=>{
-          if (event.button!==0 || saving) return;
+          if (event.button!==0 || saving || (connectFrom && kind==='move')) return;
           event.preventDefault();event.stopPropagation();
           const initiallySelected=selected===node.id;
           suppressClick=false;
@@ -490,8 +519,15 @@
       });
       renderInspector();
       refreshButtons();
+      refreshConnectionMode();
     }
+    root.addEventListener('pointerdown',()=>{ if(!warning.hidden) clearExitChoice(); },true);
+    root.addEventListener('input',()=>{ if(!warning.hidden) clearExitChoice(); },true);
     root.addEventListener('keydown',event=>{
+      if(event.key==='Escape' && connectFrom) {
+        event.preventDefault();connectFrom=null;refreshConnectionMode();
+        status('Connection cancelled.');return;
+      }
       if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase()!=='z') return;
       event.preventDefault();
       if (event.shiftKey) {if (draft.redo()) render();}
@@ -504,7 +540,7 @@
       previewButton,
       get isDirty() {return draft.dirty;},
       requestClose:askClose,
-      dispose(){disposed=true;activeViewer?.dispose?.();previewButton.remove();}
+      dispose(){disposed=true;activeViewer?.dispose?.();previewButton.remove();warning.remove();clearExitChoice();}
     };
   }
   global.LocalWikiCanvasEditor={createDraft,validate,mount};
