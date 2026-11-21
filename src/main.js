@@ -14,6 +14,7 @@
   let indexPromise = null;
   let activePath = null, originalText = '', fingerprint = null, lineEnding = '\n', hasBOM = false;
   let expanded = new Set(['']), renderTimer = null, renderSequence = 0;
+  let structuredRenderPromise=Promise.resolve();
   let inlineDraft = null, imageDialogURL = null, attachmentDialogURL = null, pendingMovePath = null;
   let activeCanvasEditor = null;
   let activeBaseEditor = null;
@@ -609,7 +610,7 @@
     renderSequence++;
     const sequence = renderSequence;
     releaseImages(true);
-    if (!activePath) return;
+    if (!activePath) {structuredRenderPromise=Promise.resolve();return;}
     if (fromEditor) {
       previewPosition = {
         sequence, top:oldTop, followBottom, line:cursorLine, lastLine,
@@ -659,7 +660,7 @@
       buildToc();
       if (!$('side-links').hidden) buildOutlinks();
       void loadImages(result.imageNodes, activePath, sequence);
-      void loadAttachments(result.attachmentNodes, activePath, sequence);
+      structuredRenderPromise=loadAttachments(result.attachmentNodes, activePath, sequence);
     } catch (err) {
       const p = document.createElement('p'); p.textContent = `Preview failed: ${err.message}`;
       ui.preview.replaceChildren(p);
@@ -1344,6 +1345,13 @@
         : 'Wiki opened read-only. Preview and links remain available.', 'success');
     }
   }
+  // On opening a wiki, prefer its root index.md. Avoid opening another
+  // index.md buried in a subfolder, and leave the editor empty if absent.
+  async function openRootIndex() {
+    const match=bridge.getFilePaths().find(path=>path==='index.md') ||
+      bridge.getFilePaths().find(path=>path.toLowerCase()==='index.md');
+    if (match && !activePath && bridge.hasFile(match)) await selectFile(match);
+  }
   function invalidateWikiIndex() {
     wikiIndex.invalidate(); indexPromise = null;
     $('fulltext-status').textContent = 'The full-text index will be rebuilt on the next search.';
@@ -1623,6 +1631,10 @@
     const exporter=window.LocalWikiPreviewExport;
     // A pending 3-second debounce must never produce an outdated export.
     if (renderTimer) renderPreview(true);
+    // Structured embeds (Bases, Canvas, draw.io) load asynchronously AFTER the
+    // Markdown pass. Never snapshot the temporary 'Loading local ...' text.
+    await Promise.race([structuredRenderPromise,new Promise((_,reject)=>setTimeout(
+      ()=>reject(new Error('Embedded Canvas/Bases/draw.io is still loading. Try export again.')),20000))]);
     await exporter.waitForReady(ui.preview,()=>$('render-status').textContent.includes('Rendering:'));
     if (!activePath || activePath!==path)
       throw new Error('The selected note changed during export. Please retry.');
@@ -1928,6 +1940,7 @@
       if (!beginOperation('restore')) return;
       try { applyOpen(await bridge.openExisting(handle, showScanProgress, !writable)); }
       finally { endOperation('restore'); }
+      await openRootIndex();
     } catch (err) {
       notice('Automatic reopening of your wiki failed: ' + err.message, 'error');
     }
@@ -1941,11 +1954,12 @@
     } catch (err) {
       if (err.name !== 'AbortError') notice(`Could not open folder: ${err.message}`, 'error');
     } finally { endOperation('open'); }
+    await openRootIndex();
   });
   // Input fallback is retained only for browsers without File System Access API.
   ui.picker.addEventListener('change', () => {
     if (operations.isBusy()) { ui.picker.value = ''; return; }
-    try { applyOpen(bridge.openReadOnly(ui.picker.files)); }
+    try { applyOpen(bridge.openReadOnly(ui.picker.files));void openRootIndex(); }
     catch (err) { notice(err.message, 'error'); }
     ui.picker.value = '';
   });
@@ -1956,7 +1970,10 @@
     try { applyOpen(await bridge.refresh(showScanProgress), { preserveTree: true }); refreshed = true; }
     catch (err) { notice(`Refresh failed: ${err.message}`, 'error'); }
     finally { endOperation('refresh'); }
-    if (refreshed && old && bridge.hasFile(old)) await selectFile(old);
+    if(refreshed) {
+      if(old && bridge.hasFile(old)) await selectFile(old);
+      else await openRootIndex();
+    }
   });
   $('rename-file').addEventListener('click', () => {
     if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
