@@ -116,13 +116,21 @@ with sync_playwright() as pw:
         # the vertical gutter separator into the source text.
         numbers=page.locator('.edit-pane .CodeMirror-linenumber').first
         assert numbers.evaluate('(el)=>getComputedStyle(el).fontSize')=='22px'
+        page.wait_for_function("""() => {
+          const gutter=document.querySelector('.edit-pane .CodeMirror-gutters');
+          const digit=document.querySelector(
+            '.edit-pane .CodeMirror-code .CodeMirror-gutter-wrapper .CodeMirror-linenumber');
+          return gutter&&digit&&Math.abs(
+            digit.getBoundingClientRect().right-gutter.getBoundingClientRect().right)<1.5;
+        }""")
         geometry=page.evaluate("""() => {
           const gutter=document.querySelector('.edit-pane .CodeMirror-gutters');
-          const digit=document.querySelector('.edit-pane .CodeMirror-linenumber');
+          const digit=document.querySelector(
+            '.edit-pane .CodeMirror-code .CodeMirror-gutter-wrapper .CodeMirror-linenumber');
           return {right:digit.getBoundingClientRect().right,
             separator:gutter.getBoundingClientRect().right};
         }""")
-        assert geometry['right']<=geometry['separator']+1,geometry
+        assert abs(geometry['right']-geometry['separator'])<=1.5,geometry
         page.locator('#line-wrap-toggle').uncheck()
         assert page.evaluate("window.LocalWikiDebug.editor.cm.getOption('lineWrapping')===false")
         assert page.evaluate("localStorage.getItem(window.LocalWikiScope.storageKey('local-wiki-line-wrapping'))==='off'")
