@@ -60,6 +60,19 @@ with sync_playwright() as pw:
     with page.expect_download() as generated:
         page.locator('#preview-export-html').click()
     exported=Path(generated.value.path()).read_text(encoding='utf-8')
+    print('EXPORT EMBED DIAGNOSTIC',page.evaluate("""() => ({
+      canvas:document.querySelectorAll('#preview .wiki-canvas-viewer').length,
+      bases:document.querySelectorAll('#preview .wiki-bases-viewer').length,
+      basesTable:document.querySelectorAll('#preview .bases-table').length,
+      basesText:document.querySelector('#preview .wiki-bases-viewer')?.innerText?.slice(0,400),
+      drawio:document.querySelectorAll('#preview .wiki-drawio-viewer').length,
+      placeholders:[...document.querySelectorAll('#preview .structured-embed-body')].map(e=>e.innerText.slice(0,200))
+    })"""), 'html snippets', {
+      'bases-class':exported.includes('bases-table'),
+      'done-note':exported.includes('Completed'),
+      'fallback':exported.indexOf('Cannot show Bases'),
+      'loading':exported.includes('Loading local')
+    },flush=True)
     assert 'Canvas card visible in export' in exported, 'Canvas was empty'
     assert 'Completed' in exported and 'bases-table' in exported, 'Bases was empty'
     assert 'drawio-graph' in exported and 'wiki-drawio-viewer' in exported, 'draw.io was empty'
