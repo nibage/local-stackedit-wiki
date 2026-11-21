@@ -44,10 +44,14 @@ with sync_playwright() as pw:
         '<text x="50" y="180" font-size="54">draw.io diagram</text></svg>';
       const note='A very long multi-paragraph document. '.repeat(90);
       preview.innerHTML='<h1>Graphical export test</h1>'+
+        '<details class="obsidian-properties"><summary>Properties</summary>'+
+        '<pre>category: demo\nstatus: ready</pre></details>'+
         '<nav><a href="#after-all-graphical-content">Jump to section</a></nav>'+
         '<p>'+note+'</p><div class="visualization visualization-mermaid">'+diagram+'</div>'+
         '<div class="visualization visualization-abc">'+abc+'</div>'+
-        '<div class="wiki-attachment-embed"><div class="wiki-canvas-viewer">'+
+        '<div class="wiki-attachment-embed wiki-structured-embed">'+
+          '<div class="structured-embed-header">Interactive grey wrapper</div>'+
+          '<div class="structured-embed-body"><div class="wiki-canvas-viewer">'+
           '<div class="canvas-viewport"><div class="canvas-board"'+
           ' style="width:1900px;height:1250px;transform:translate(-120px,-60px) scale(0.45)">'+
             '<svg class="canvas-connections" xmlns="http://www.w3.org/2000/svg"'+
@@ -60,7 +64,7 @@ with sync_playwright() as pw:
               '<div class="canvas-node" data-kind="text"'+
               ' style="position:absolute;top:300px;left:850px;width:450px;height:250px">'+
               '<div class="canvas-node-content">Second Canvas card</div></div>'+
-            '</div></div></div></div></div>'+
+            '</div></div></div></div></div></div>'+
         '<div class="wiki-drawio-viewer"><div class="drawio-viewport">'+
           '<div class="drawio-board" style="width:1400px;height:460px;transform:translate(-10px,0px) scale(0.45)">'+
             drawing+'</div></div></div>'+
@@ -89,6 +93,10 @@ with sync_playwright() as pw:
         assert 'Record Alpha' in text
         assert 'bases-open-note' not in text
         assert 'wiki-export-static-graph' in text
+        assert 'Interactive grey wrapper' not in text
+        assert 'wiki-attachment-embed' not in text
+        assert 'wiki-export-structured' in text
+        assert '<summary' in text
         assert 'scale(' in text
         assert 'translate(-120px,-60px)' not in text
         assert 'blob:' not in text
@@ -99,6 +107,15 @@ with sync_playwright() as pw:
     assert html_page.locator('main').bounding_box()['width']>=760
     assert html_page.locator('.visualization svg').count()==2
     assert html_page.locator('.wiki-export-static-graph .canvas-node').count()==2
+    assert html_page.locator('.wiki-attachment-embed').count()==0
+    disclosure=html_page.locator('details.obsidian-properties')
+    assert not disclosure.evaluate('(el)=>el.open')
+    disclosure.locator('summary').click()
+    assert disclosure.evaluate('(el)=>el.open')
+    assert disclosure.locator('pre').bounding_box()['height']>20
+    graph=html_page.locator('.wiki-export-static-graph').bounding_box()
+    main=html_page.locator('main').bounding_box()
+    assert abs(graph['x']+graph['width']/2-main['x']-main['width']/2)<18,(graph,main)
     assert html_page.locator('.wiki-drawio-viewer>svg').count()==1
     assert html_page.locator('.visualization-mermaid svg').bounding_box()['width']>=500
     html_page.locator('nav a[href="#wiki-export-heading-1"]').click()
@@ -124,9 +141,9 @@ with sync_playwright() as pw:
     for item in dims['items']:
         rect=item['rect']
         assert rect['width']>10 and rect['height']>10,item
-    assert printed.locator('.visualization-mermaid svg').bounding_box()['width']>=400
         assert rect['right']<=dims['main']['right']+5,(item,dims['main'])
         assert rect['left']>=dims['main']['left']-5,(item,dims['main'])
+    assert printed.locator('.visualization-mermaid svg').bounding_box()['width']>=400
     assert dims['scroll']<=1445,dims
     assert printed.locator('.bases-table').evaluate('(el)=>getComputedStyle(el).tableLayout')=='auto'
     assert printed.locator('pre').evaluate('(el)=>getComputedStyle(el).whiteSpace')=='pre-wrap'
