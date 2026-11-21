@@ -73,6 +73,8 @@ with sync_playwright() as pw:
       'fallback':exported.find('Cannot show Bases'),
       'loading':'Loading local' in exported
     },flush=True)
+    marker=exported.find('bases-table')
+    print('EXPORT TABLE REGION',repr(exported[max(0,marker-250):marker+1800]),flush=True)
     assert 'Canvas card visible in export' in exported, 'Canvas was empty'
     assert 'Completed' in exported and 'bases-table' in exported, 'Bases was empty'
     assert 'drawio-graph' in exported and 'wiki-drawio-viewer' in exported, 'draw.io was empty'
