@@ -91,10 +91,10 @@
     warning.hidden = true;
     toolbar.append(zoomControls,separator,actions,saveStack);
     root.append(toolbar,board,inspector,meta);
-    // Keep exit confirmation above the host dialog footer, not in the graph toolbar.
-    if (options.confirmHost) options.confirmHost.before(warning);
-    else root.append(warning);
-    meta.replaceChildren(summary,hint);
+    // Reserve ONE fixed-height status row for both hint and exit choices.
+    // Do not inject an extra row before the host footer: it caused a
+    // vertical scrollbar to appear as soon as Preview/Close was clicked.
+    meta.replaceChildren(summary,hint,warning);
     saveStack.append(message);
 
     function status(text) { message.textContent = text; }
