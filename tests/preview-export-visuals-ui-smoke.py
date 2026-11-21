@@ -124,9 +124,9 @@ with sync_playwright() as pw:
     for item in dims['items']:
         rect=item['rect']
         assert rect['width']>10 and rect['height']>10,item
-    assert printed.locator('.visualization-mermaid svg').bounding_box()['width']>=400
         assert rect['right']<=dims['main']['right']+5,(item,dims['main'])
         assert rect['left']>=dims['main']['left']-5,(item,dims['main'])
+    assert printed.locator('.visualization-mermaid svg').bounding_box()['width']>=400
     assert dims['scroll']<=1445,dims
     assert printed.locator('.bases-table').evaluate('(el)=>getComputedStyle(el).tableLayout')=='auto'
     assert printed.locator('pre').evaluate('(el)=>getComputedStyle(el).whiteSpace')=='pre-wrap'
