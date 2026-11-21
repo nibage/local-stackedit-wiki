@@ -47,3 +47,11 @@ Read [Tree scrolling and long filenames](Tree-Test/README.md), click **Expand al
 ## draw.io / diagrams.net (offline)
 
 Open the [two-page diagram](Attachments/example.drawio). Page one contains plain XML and page two standard Base64/DEFLATE-compressed data. The local viewer handles basic shapes, connectors, pages and zoom. Complex diagrams may need diagrams.net for full fidelity.
+
+![[Attachments/example.base]]
+![[Attachments/example.canvas]]
+![[Attachments/example.drawio]]
+![icon](Attachments/icon.svg)
+![[Attachments/sample.pdf]]
+![[Attachments/video.webm]]
+![[Attachments/tone.wav]]
