@@ -108,3 +108,21 @@ test('independent tabs using the same index.html remember different folders', as
   assert.equal(await reloadedA.restoreHandle(),null);
   assert.equal(await reloadedB.restoreHandle(),second);
 });
+
+test('recent folder menu keeps newest eight handles while tab bookmarks remain independent', async () => {
+  const db=makeFakeIndexedDB();
+  const recent=load(db);
+  for(let i=0;i<10;i++){
+    const item=handle(true);item.name='Wiki '+i;
+    await recent.remember(item);
+  }
+  const list=await recent.recentFolders();
+  assert.equal(list.length,8);
+  assert.equal(list[0].name,'Wiki 9');
+  assert.equal(list[7].name,'Wiki 2');
+  await recent.remember(list[4].handle);
+  const reordered=await recent.recentFolders();
+  assert.equal(reordered[0].name,list[4].name);
+  assert.equal(new Set(reordered.map(x=>x.name)).size,reordered.length);
+  assert.equal(await recent.restoreHandle(),list[4].handle);
+});
