@@ -895,6 +895,8 @@
         const raw = JSON.parse(snapshot.text.replace(/^\uFEFF/,''));
         const canvasEditor = window.LocalWikiCanvasEditor.mount(raw, {
           fingerprint:snapshot.fingerprint,
+          confirmHost:dialog.querySelector('.dialog-actions'),
+          closeButton:$('attachment-close'),
           readImage:async target => {
             if (!bridge.hasAsset(target) || !types.isImage(target)) return null;
             const image=await bridge.readAsset(target);
@@ -1344,6 +1346,14 @@
         : 'Wiki opened read-only. Preview and links remain available.', 'success');
     }
   }
+  async function openIndexIfPresent() {
+    // Only a wiki-root index.md is a start page. Do not guess another note
+    // if there is no index, and never replace a note the user already opened.
+    if (activePath || editor.getValue() || operations.isBusy()) return;
+    const index=bridge.getFilePaths().find(path=>
+      !path.includes('/') && path.toLocaleLowerCase()==='index.md');
+    if (index) await selectFile(index);
+  }
   function invalidateWikiIndex() {
     wikiIndex.invalidate(); indexPromise = null;
     $('fulltext-status').textContent = 'The full-text index will be rebuilt on the next search.';
@@ -1683,9 +1693,19 @@
   ui.preview.addEventListener('scroll',()=>synchronizeScroll('preview'),{passive:true});
   $('scroll-sync-toggle').addEventListener('click',()=>{
     if($('scroll-sync-toggle').disabled)return;
+    // Changing the control must not count as either pane being scrolled.
+    // Freeze both exact positions across focus, CSS and button layout updates.
+    const editorTop=editor.cm.getScrollInfo().top;
+    const previewTop=ui.preview.scrollTop;
+    scrollSyncLock=true;
     scrollSyncEnabled=!scrollSyncEnabled;
     safeStore('local-wiki-scroll-sync',scrollSyncEnabled?'on':'off');
     updateScrollSyncButton();
+    requestAnimationFrame(()=>{
+      editor.cm.scrollTo(null,editorTop);
+      ui.preview.scrollTop=previewTop;
+      requestAnimationFrame(()=>{scrollSyncLock=false;});
+    });
   });
   function setView(mode) {
     selectedMode = mode; ui.grid.dataset.layout = mode;
@@ -1928,6 +1948,7 @@
       if (!beginOperation('restore')) return;
       try { applyOpen(await bridge.openExisting(handle, showScanProgress, !writable)); }
       finally { endOperation('restore'); }
+      await openIndexIfPresent();
     } catch (err) {
       notice('Automatic reopening of your wiki failed: ' + err.message, 'error');
     }
@@ -1935,17 +1956,20 @@
   void restoreQuietly();
   ui.open.addEventListener('click', async () => {
     if (!confirmDiscard() || !beginOperation('open')) return;
+    let opened=false;
     try {
       applyOpen(await bridge.openWritable(showScanProgress, ui.readonlyToggle.checked));
+      opened=true;
       await rememberCurrent();
     } catch (err) {
       if (err.name !== 'AbortError') notice(`Could not open folder: ${err.message}`, 'error');
     } finally { endOperation('open'); }
+    if (opened) await openIndexIfPresent();
   });
   // Input fallback is retained only for browsers without File System Access API.
   ui.picker.addEventListener('change', () => {
     if (operations.isBusy()) { ui.picker.value = ''; return; }
-    try { applyOpen(bridge.openReadOnly(ui.picker.files)); }
+    try { applyOpen(bridge.openReadOnly(ui.picker.files)); void openIndexIfPresent(); }
     catch (err) { notice(err.message, 'error'); }
     ui.picker.value = '';
   });
@@ -1957,6 +1981,7 @@
     catch (err) { notice(`Refresh failed: ${err.message}`, 'error'); }
     finally { endOperation('refresh'); }
     if (refreshed && old && bridge.hasFile(old)) await selectFile(old);
+    else if (refreshed) await openIndexIfPresent();
   });
   $('rename-file').addEventListener('click', () => {
     if (bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
