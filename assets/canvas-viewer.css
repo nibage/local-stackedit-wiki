@@ -708,8 +708,12 @@
 .canvas-editor>.canvas-editor-meta>.canvas-editor-confirm .canvas-confirm-save {
   border-color:#58a36a!important;box-shadow:0 0 0 1px #58a36a44;
 }
-.canvas-editor:has(.canvas-editor-meta>.canvas-editor-confirm:not([hidden])) .canvas-editor-zoom {
+.canvas-editor:has(.canvas-editor-meta>.canvas-editor-confirm:not([hidden])) .canvas-editor-zoom,
+.canvas-editor:has(.canvas-editor-meta>.canvas-editor-confirm:not([hidden])) .canvas-editor-save-stack {
   display:flex!important;
+}
+.canvas-editor:has(.canvas-editor-meta>.canvas-editor-confirm:not([hidden])) .canvas-editor-toolbar-separator {
+  display:block!important;
 }
 .canvas-editor:has(.canvas-editor-meta>.canvas-editor-confirm:not([hidden])) .canvas-editor-meta .canvas-editor-info-hint {
   flex:0 1 auto;min-width:0;
