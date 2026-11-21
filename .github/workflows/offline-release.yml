@@ -34,6 +34,10 @@ jobs:
         run: python tests/real-renderers-release-smoke.py --zip local-stackedit-wiki-offline.zip
       - name: Verify nonempty Canvas/SVG/draw.io export and unclipped A4 print geometry
         run: python tests/preview-export-visuals-ui-smoke.py
+      - name: Verify actual Canvas, Bases, draw.io HTML preview and linked PDF
+        run: python tests/structured-export-real-ui-smoke.py
+      - name: Verify root index, scroll button geometry and MathJax alignment
+        run: python tests/index-math-scroll-ui-smoke.py
       - name: Capture current dark-mode screenshot from real offline app
         run: python tests/marketing-screenshot.py --zip local-stackedit-wiki-offline.zip --out marketing-current.jpg
       - name: Verify workspace layout, sidebar resizing and theme colors
