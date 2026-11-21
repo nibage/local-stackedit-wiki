@@ -308,6 +308,7 @@
       svg.style.setProperty('height',Math.ceil(h*scale)+'px','important');
       svg.style.setProperty('max-width','100%','important');
       svg.style.setProperty('overflow','visible','important');
+      svg.style.setProperty('margin','0 auto 12px','important');
     }
     for(const area of cloned.querySelectorAll('.bases-table-scroll')){
       area.style.cssText='display:block!important;width:100%!important;'+
@@ -362,9 +363,12 @@
       }catch(_){ /* Keep the non-raster canvas fallback if extraction is blocked. */ }
     }
     flattenVisualsForDocument(cloned,theme,layoutWidth,visualMetrics);
-    // Live interactive attachment wrappers create a redundant grey placeholder
-    // before the static Canvas / Base / draw.io visual in standalone exports.
-    // Keep only the actual rendered viewer, which retains inline media & CSS.
+    // The live Markdown renderer nests structured attachment <span>s inside
+    // <p>s. Its snapshot copied a fixed, scroll-viewport-sized height to BOTH
+    // elements. Simply removing the grey span is not enough: the leftover <p>
+    // stays ~580px tall and pushes the actual SVG below an empty rectangle.
+    // Rebuild these as real block-level elements, never <p><section> (invalid
+    // HTML which the standalone browser would silently reparent).
     for(const embed of Array.from(cloned.querySelectorAll('.wiki-structured-embed'))) {
       const visual=embed.querySelector('.wiki-canvas-viewer,.wiki-drawio-viewer,.wiki-bases-viewer');
       if(!visual)continue;
@@ -376,7 +380,26 @@
         'background:transparent!important;border:0!important;'+
         'height:auto!important;min-height:0!important;overflow:visible!important;';
       clean.append(visual);
-      embed.replaceWith(clean);
+      const paragraph=embed.parentElement;
+      if(paragraph?.localName==='p') {
+        const before=paragraph.cloneNode(false),after=paragraph.cloneNode(false);
+        before.style.setProperty('height','auto','important');
+        after.style.setProperty('height','auto','important');
+        let passed=false;
+        for(const node of Array.from(paragraph.childNodes)){
+          if(node===embed){passed=true;continue;}
+          (passed?after:before).append(node);
+        }
+        const meaningful=element=>element.children.length>0 ||
+          Boolean(element.textContent.trim());
+        const replacements=[];
+        if(meaningful(before))replacements.push(before);
+        replacements.push(clean);
+        if(meaningful(after))replacements.push(after);
+        paragraph.replaceWith(...replacements);
+      } else {
+        embed.replaceWith(clean);
+      }
     }
     // Browsers may snapshot the closed <details> at zero intrinsic height.
     // Restore native disclosure behavior so YAML expands correctly offline.
