@@ -83,3 +83,25 @@
     overflow-x:auto;scrollbar-width:thin;max-width:64%;
   }
 }
+
+
+/* Scroll Sync must never resize the shared toolbar when toggled. On and Off
+   occupy the same fixed column even in narrow themes and zoom levels. */
+.main-area>.format-toolbar #scroll-sync-toggle {
+  box-sizing:border-box;flex:0 0 112px;width:112px;min-width:112px;
+  max-width:112px;text-align:center;white-space:nowrap;
+}
+/* MathJax 2 creates a centered display wrapper independently of the article
+   alignment. Follow the explicit Center choice without modifying TeX markup. */
+:root[data-centered="false"] #preview .MathJax_Display,
+:root[data-centered="false"] #preview .MathJax_SVG_Display,
+:root[data-centered="false"] #preview .MathJax_CHTML,
+:root[data-centered="false"] #preview .MJXc-display,
+:root[data-centered="false"] #preview mjx-container[display="true"] {
+  text-align:left!important;margin-left:0!important;margin-right:0!important;
+}
+:root[data-centered="false"] #preview .MathJax_Display > span,
+:root[data-centered="false"] #preview .MathJax_SVG_Display > span,
+:root[data-centered="false"] #preview mjx-container[display="true"] > svg {
+  margin-left:0!important;margin-right:0!important;
+}
