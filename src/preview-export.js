@@ -500,7 +500,7 @@
         if (!preview.isConnected){cleanup();reject(new Error('The preview was closed during export.'));return;}
         const images=Array.from(preview.querySelectorAll('img'));
         const loading=images.some(image=>image.getAttribute('src') && !image.complete);
-        const visualPending=!!preview.querySelector('.drawio-loading,.canvas-note-loading');
+        const visualPending=!!preview.querySelector('[data-export-pending="true"],.drawio-loading,.canvas-note-loading');
         if (!loading && !visualPending && !isPending() && Date.now()-quietSince>=400) {
           cleanup();resolve();return;
         }
