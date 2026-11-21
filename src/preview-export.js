@@ -233,6 +233,31 @@
     }
   }
 
+  function addPrintableContents(root) {
+    // The on-screen Contents panel lives outside the preview. Build a
+    // navigable standalone TOC using genuine heading fragment destinations.
+    const headings=Array.from(root.querySelectorAll('h1,h2,h3,h4,h5,h6')).slice(0,120);
+    const ids=new Set(headings.map(h=>h.id).filter(Boolean));
+    headings.forEach((h,index)=>{
+      if(h.id)return;
+      let next='wiki-export-heading-'+index;
+      while(ids.has(next))next+='-1';
+      ids.add(next);h.id=next;
+    });
+    const choices=headings.filter(h=>Number(h.localName.slice(1))<=3 && h.textContent.trim());
+    if(choices.length<2)return;
+    const doc=root.ownerDocument,nav=doc.createElement('nav');
+    nav.className='wiki-export-toc';nav.setAttribute('aria-label','Contents');
+    const label=doc.createElement('strong');label.textContent='Contents';
+    const list=doc.createElement('ol');
+    choices.forEach(h=>{
+      const item=doc.createElement('li'),link=doc.createElement('a');
+      link.href='#'+h.id;link.textContent=h.textContent.trim().slice(0,190);
+      item.className='wiki-export-toc-level-'+h.localName.slice(1);
+      item.append(link);list.append(item);
+    });
+    nav.append(label,list);root.insertBefore(nav,root.firstChild);
+  }
   function flattenVisualsForDocument(cloned,theme) {
     // Existing preview viewers are interactive panning/zooming widgets. A
     // serialized HTML/PDF needs a static print-sized graph, not a cropped
@@ -343,6 +368,7 @@
       }catch(_){ /* Keep the non-raster canvas fallback if extraction is blocked. */ }
     }
     flattenVisualsForDocument(cloned,theme);
+    addPrintableContents(cloned);
     if (theme==='light') {
       // Explicit final guarantee for the native PDF document, independent of
       // the source theme or any user-configured stylesheet load delays.
@@ -369,7 +395,7 @@
     const name=validTitle(title);
     // Inline style snapshot is self-contained; no libraries, fonts, network or
     // scripts are referenced. Print-specific rules only remove viewport clipping.
-    const html='<!doctype html>\n<html lang="cs"><head><meta charset="utf-8">'+
+    const html='<!doctype html>\n<html lang="en"><head><meta charset="utf-8">'+
       '<meta name="viewport" content="width=device-width,initial-scale=1">'+
       '<meta name="referrer" content="no-referrer">'+
       '<title>'+escapeHtml(name)+'</title>\n<style>'+
@@ -379,6 +405,15 @@
       '.wiki-export-preview{margin:0 auto;max-width:100%;width:'+width+'px;'+
       'height:auto!important;min-height:0!important;overflow:visible!important;flex:none!important;}'+
       '.wiki-export-preview .visualization{overflow:visible!important;}'+
+      '.wiki-export-toc{max-width:100%;box-sizing:border-box;'+
+      'border:1px solid #c8cdd3;border-radius:6px;padding:12px 15px;'+
+      'margin:0 0 23px;break-inside:avoid;background:transparent;}'+
+      '.wiki-export-toc strong{font-size:1.1em;font-weight:700;}'+
+      '.wiki-export-toc ol{padding-left:1.5em;margin:8px 0 0;}'+
+      '.wiki-export-toc li{margin:3px 0;line-height:1.45;}'+
+      '.wiki-export-toc-level-2{padding-left:1em;}'+
+      '.wiki-export-toc-level-3{padding-left:2em;}'+
+      '.wiki-export-toc a{color:#247fb9;text-decoration:underline;}'+
       'img,svg{max-width:100%;}'+
       /* StackEdit-like printed article: centred ~470pt reading column,
          12pt body text and generous headings. Inline snapshots use fixed
@@ -438,6 +473,13 @@
       '.wiki-export-preview .wiki-drawio-viewer{'+
       'box-sizing:border-box!important;max-width:100%!important;'+
       'overflow:visible!important;break-inside:avoid-page!important;}'+
+      '.wiki-export-preview .wiki-structured-embed,'+
+      '.wiki-export-preview .structured-embed-body,'+
+      '.wiki-export-preview .wiki-bases-viewer,'+
+      '.wiki-export-preview .wiki-canvas-viewer,'+
+      '.wiki-export-preview .wiki-drawio-viewer{'+
+      'display:block!important;max-width:100%!important;max-height:none!important;'+
+      'overflow:visible!important;height:auto!important;}'+
       '.wiki-export-preview .bases-table-scroll{max-height:none!important;'+
       'height:auto!important;overflow:visible!important;}'+
       '.wiki-export-preview table{min-width:0!important;'+
