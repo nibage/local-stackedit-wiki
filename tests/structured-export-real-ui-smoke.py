@@ -56,40 +56,13 @@ with sync_playwright() as pw:
     page.wait_for_function("!document.querySelector('#preview-export-toggle').disabled")
     # Export immediately. The three structured embeds may still be loading;
     # the export must await the actual asynchronous render promises.
-    page.evaluate("""() => {
-      const original=window.LocalWikiPreviewExport.build;
-      window.LocalWikiPreviewExport.build=async(...args)=>{
-        window.__exportSnapshotDiagnostics={
-          bases:document.querySelector('#preview .wiki-bases-viewer')?.textContent?.slice(-500),
-          rows:document.querySelectorAll('#preview .bases-table tbody tr').length,
-          embeds:document.querySelectorAll('#preview .wiki-structured-embed').length
-        };
-        return original(...args);
-      };
-    }""")
     page.locator('#preview-export-toggle').click()
     with page.expect_download() as generated:
         page.locator('#preview-export-html').click()
     exported=Path(generated.value.path()).read_text(encoding='utf-8')
-    print('EXPORT EMBED DIAGNOSTIC',page.evaluate("""() => ({
-      canvas:document.querySelectorAll('#preview .wiki-canvas-viewer').length,
-      bases:document.querySelectorAll('#preview .wiki-bases-viewer').length,
-      basesTable:document.querySelectorAll('#preview .bases-table').length,
-      basesText:document.querySelector('#preview .wiki-bases-viewer')?.innerText?.slice(0,400),
-      drawio:document.querySelectorAll('#preview .wiki-drawio-viewer').length,
-      placeholders:[...document.querySelectorAll('#preview .structured-embed-body')].map(e=>e.innerText.slice(0,200))
-    })"""), 'html snippets', {
-      'bases-class':'bases-table' in exported,
-      'done-note':'Completed' in exported,
-      'fallback':exported.find('Cannot show Bases'),
-      'loading':'Loading local' in exported
-    },flush=True)
-    print('BUILD-TIME LIVE STATE',page.evaluate('window.__exportSnapshotDiagnostics'),flush=True)
-    marker=exported.find('Obsidian Bases')
-    print('EXPORT BASES MARKUP',repr(exported[max(0,marker-250):marker+3000]),flush=True)
-    print('EXPORTED TABLE TAG COUNT',exported.count('<table'),flush=True)
     assert 'Canvas card visible in export' in exported, 'Canvas was empty'
-    assert 'Completed' in exported and 'bases-table' in exported, 'Bases was empty'
+    assert 'Completed' in exported and 'bases-export-note' in exported, 'Bases file names were lost'
+    assert '<button' not in exported, 'Standalone export must not contain interactive buttons'
     assert 'drawio-graph' in exported and 'wiki-drawio-viewer' in exported, 'draw.io was empty'
     assert 'Loading local' not in exported
     assert '<nav class="wiki-export-toc"' in exported
@@ -103,6 +76,7 @@ with sync_playwright() as pw:
         assert offline.locator('[id="'+destination+'"]').count()==1,destination
     assert offline.locator('.wiki-export-static-graph .canvas-node').count()==2
     assert offline.locator('.wiki-bases-viewer .bases-table tbody tr').count()>=1
+    assert offline.locator('.wiki-bases-viewer .bases-export-note',has_text='Completed').count()==1
     assert offline.locator('.wiki-drawio-viewer>svg').count()==1
     offline.close()
 
@@ -114,6 +88,7 @@ with sync_playwright() as pw:
     popup.wait_for_function("window.__printed===true",timeout=20000)
     assert popup.locator('.wiki-export-static-graph .canvas-node').count()==2
     assert popup.locator('.wiki-bases-viewer .bases-table tbody tr').count()>=1
+    assert popup.locator('.wiki-bases-viewer .bases-export-note',has_text='Completed').count()==1
     assert popup.locator('.wiki-drawio-viewer>svg').count()==1
     assert popup.locator('.wiki-export-toc a[href="#wiki-heading-1"]').count()==1
     popup.emulate_media(media='print')
