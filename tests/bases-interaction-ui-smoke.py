@@ -106,7 +106,17 @@ with sync_playwright() as pw:
     assert abs(start['y']-now['y'])<=2,(start,now)
     assert moved_row['y']<first_row['y']-10,(first_row,moved_row)
     assert header.evaluate('(el)=>getComputedStyle(el).position')=='sticky'
-    assert header.evaluate('(el)=>getComputedStyle(el).backgroundColor')!='rgba(0, 0, 0, 0)'
+    opaque=header.evaluate("""el=>{
+      const cs=getComputedStyle(el),bg=cs.backgroundColor;
+      return {background:bg,border:cs.borderBottomWidth,
+        borderColor:cs.borderBottomColor,shadow:cs.boxShadow};
+    }""")
+    assert opaque['background']=='rgb(246, 246, 246)',opaque
+    assert opaque['border']=='2px',opaque
+    assert opaque['shadow']!='none',opaque
+    page.locator('#theme-select').select_option('light')
+    light=header.evaluate('el=>({bg:getComputedStyle(el).backgroundColor,border:getComputedStyle(el).borderBottomWidth})')
+    assert light['bg']=='rgb(238, 243, 248)' and light['border']=='2px',light
     assert not errors,errors
     browser.close()
     print('PASS: Bases temporary filters, sort, widths, multi-view and no source writes')
