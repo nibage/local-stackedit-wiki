@@ -684,3 +684,42 @@
     grid-template-areas:"from to" "fromside toside";
   }
 }
+
+/* Pending Preview / Close choices share the EXISTING Canvas status line.
+   Reserve its height even before any choice so buttons never add an extra
+   row or introduce a transient vertical scrollbar in the editor dialog. */
+.canvas-editor>.canvas-editor-meta {
+  height:31px!important;min-height:31px!important;max-height:31px!important;
+  flex:0 0 31px!important;overflow:hidden;gap:0;align-items:center;
+}
+.canvas-editor>.canvas-editor-meta>.canvas-editor-confirm {
+  box-sizing:border-box;display:flex;align-items:center;justify-content:flex-end;
+  flex:0 0 auto;order:5;gap:6px;
+  height:28px;min-height:0;max-height:28px;
+  margin:0 0 0 auto!important;padding:0!important;
+  border:0!important;background:transparent!important;flex-wrap:nowrap!important;
+}
+.canvas-editor>.canvas-editor-meta>.canvas-editor-confirm[hidden] {display:none!important;}
+.canvas-editor>.canvas-editor-meta>.canvas-editor-confirm .canvas-control {
+  box-sizing:border-box;flex:none;padding:3px 8px;
+  height:26px;min-height:26px;line-height:16px;font-size:11px;
+  white-space:nowrap;
+}
+.canvas-editor>.canvas-editor-meta>.canvas-editor-confirm .canvas-confirm-save {
+  border-color:#58a36a!important;box-shadow:0 0 0 1px #58a36a44;
+}
+.canvas-editor:has(.canvas-editor-meta>.canvas-editor-confirm:not([hidden])) .canvas-editor-zoom,
+.canvas-editor:has(.canvas-editor-meta>.canvas-editor-confirm:not([hidden])) .canvas-editor-save-stack {
+  display:flex!important;
+}
+.canvas-editor:has(.canvas-editor-meta>.canvas-editor-confirm:not([hidden])) .canvas-editor-toolbar-separator {
+  display:block!important;
+}
+.canvas-editor:has(.canvas-editor-meta>.canvas-editor-confirm:not([hidden])) .canvas-editor-meta .canvas-editor-info-hint {
+  flex:0 1 auto;min-width:0;
+}
+@media(max-width:780px){
+  .canvas-editor:has(.canvas-editor-meta>.canvas-editor-confirm:not([hidden])) .canvas-editor-meta .canvas-editor-info-hint {
+    display:none;
+  }
+}

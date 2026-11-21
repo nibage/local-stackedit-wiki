@@ -43,6 +43,12 @@ with sync_playwright() as pw:
     page.locator('.tree-row[aria-label="Guide.md"]').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Guide.md'")
     page.wait_for_function("document.querySelector('#preview h2')")
+    # A restored/current wiki is always visible in the history menu, even
+    # when IndexedDB has no recent-folders record yet.
+    page.evaluate("window.LocalWikiRecent.recentFolders=async()=>[]")
+    page.locator('#recent-folder-toggle').click()
+    page.locator('#recent-folder-options [role="menuitem"]',has_text='Wiki').wait_for()
+    page.locator('#recent-folder-toggle').click()
     page.locator('[data-side="toc"]').click()
     target=page.locator('#toc .toc-item',has_text='Section 79')
     assert target.count()==1
@@ -78,9 +84,10 @@ with sync_playwright() as pw:
       center:document.querySelector('#center-content-toggle').getBoundingClientRect().x,
       lines:document.querySelector('#line-numbers-toggle').getBoundingClientRect().x,
       size:document.querySelector('#workspace-text-size').getBoundingClientRect().x,
+      wrap:document.querySelector('#line-wrap-toggle').getBoundingClientRect().x,
       sync:document.querySelector('#scroll-sync-toggle').getBoundingClientRect().x
     })""")
-    assert positions['center']<positions['lines']<positions['size']<positions['sync'],positions
+    assert positions['center']<positions['lines']<positions['size']<positions['wrap']<positions['sync'],positions
     for theme in ['light','dark','stackedit']:
         page.locator('#theme-select').select_option(theme)
         page.locator('#view-preview').click()
@@ -91,10 +98,12 @@ with sync_playwright() as pw:
         left=page.locator('#preview').evaluate('(el)=>parseFloat(getComputedStyle(el).paddingLeft)')
         assert left==24,(theme,left)
         assert page.locator('#line-numbers-toggle').is_disabled()
+        assert page.locator('#line-wrap-toggle').is_disabled()
         assert page.locator('#center-content-toggle').is_enabled()
         page.locator('#view-edit').click()
         assert page.locator('#center-content-toggle').is_enabled()
         assert page.locator('#line-numbers-toggle').is_enabled()
+        assert page.locator('#line-wrap-toggle').is_enabled()
         page.locator('#center-content-toggle').check()
         page.locator('#view-split').click()
         assert page.locator('#center-content-toggle').is_disabled()
@@ -103,6 +112,29 @@ with sync_playwright() as pw:
         page.locator('#workspace-text-size').select_option('22')
         assert page.locator('#preview').evaluate('(el)=>getComputedStyle(el).fontSize')=='22px'
         assert page.locator('.edit-pane .CodeMirror').evaluate('(el)=>getComputedStyle(el).fontSize')=='22px'
+        # The digit itself uses the editor font size, and must not cross
+        # the vertical gutter separator into the source text.
+        numbers=page.locator('.edit-pane .CodeMirror-linenumber').first
+        assert numbers.evaluate('(el)=>getComputedStyle(el).fontSize')=='22px'
+        page.wait_for_function("""() => {
+          const gutter=document.querySelector('.edit-pane .CodeMirror-gutters');
+          const digit=document.querySelector(
+            '.edit-pane .CodeMirror-code .CodeMirror-gutter-wrapper .CodeMirror-linenumber');
+          return gutter&&digit&&Math.abs(
+            digit.getBoundingClientRect().right-gutter.getBoundingClientRect().right)<1.5;
+        }""")
+        geometry=page.evaluate("""() => {
+          const gutter=document.querySelector('.edit-pane .CodeMirror-gutters');
+          const digit=document.querySelector(
+            '.edit-pane .CodeMirror-code .CodeMirror-gutter-wrapper .CodeMirror-linenumber');
+          return {right:digit.getBoundingClientRect().right,
+            separator:gutter.getBoundingClientRect().right};
+        }""")
+        assert abs(geometry['right']-geometry['separator'])<=1.5,geometry
+        page.locator('#line-wrap-toggle').uncheck()
+        assert page.evaluate("window.LocalWikiDebug.editor.cm.getOption('lineWrapping')===false")
+        page.locator('#line-wrap-toggle').check()
+        assert page.evaluate("window.LocalWikiDebug.editor.cm.getOption('lineWrapping')===true")
         page.locator('#line-numbers-toggle').uncheck()
         assert page.evaluate("window.LocalWikiDebug.editor.cm.getOption('lineNumbers')===false")
         page.locator('#line-numbers-toggle').check()

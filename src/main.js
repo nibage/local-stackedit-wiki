@@ -144,6 +144,7 @@
   // rewrite the Markdown file or change the currently selected layout.
   const centerToggle=$('center-content-toggle');
   const linesToggle=$('line-numbers-toggle');
+  const wrapToggle=$('line-wrap-toggle');
   const sizeSelect=$('workspace-text-size');
   const autoRerenderToggle=$('auto-rerender-toggle');
   autoRerenderToggle.checked=safeStored('local-wiki-auto-rerender','on')!=='off';
@@ -165,6 +166,7 @@
   });
   centerToggle.checked=safeStored('local-wiki-centered','on')!=='off';
   linesToggle.checked=safeStored('local-wiki-line-numbers','on')!=='off';
+  wrapToggle.checked=safeStored('local-wiki-line-wrapping','on')!=='off';
   const initialSize=safeStored('local-wiki-text-size','default');
   sizeSelect.value=['default','12','14','16','18','20','22','24','26'].includes(initialSize)
     ?initialSize:'default';
@@ -173,20 +175,62 @@
     // Line numbers apply to source editing and have no role in Preview-only.
     centerToggle.disabled=selectedMode==='split';
     linesToggle.disabled=selectedMode==='preview';
+    wrapToggle.disabled=selectedMode==='preview';
+    wrapToggle.parentElement.title=wrapToggle.disabled
+      ?'Line wrapping is available in Editor and Side by side modes.'
+      :'Wrap long source lines without inserting Markdown line breaks';
     centerToggle.parentElement.title=centerToggle.disabled
       ?'Center is available in Editor and Preview modes.':'Center or left-align the document';
     linesToggle.parentElement.title=linesToggle.disabled
       ?'Line numbers are available in Editor and Side by side modes.':'Show or hide source line numbers';
   }
+  // The CodeMirror gutter background is anchored to the scroller, whereas
+  // the digits live in individually centered CodeMirror-lines. Align the
+  // separator with the actual digits rather than drawing it over "46".
+  // Recompute after width, theme, text-size and viewport changes.
+  let gutterAlignQueued=false;
+  function alignLineNumberGutter(){
+    if(gutterAlignQueued)return;
+    gutterAlignQueued=true;
+    requestAnimationFrame(()=>{
+      gutterAlignQueued=false;
+      const root=editor.cm.getWrapperElement();
+      const gutter=root.querySelector('.CodeMirror-gutters');
+      if(!gutter)return;
+      gutter.style.transform='';
+      if(!linesToggle.checked)return;
+      const digits=Array.from(root.querySelectorAll(
+        '.CodeMirror-code .CodeMirror-gutter-wrapper .CodeMirror-linenumber'))
+        .find(el=>el.getBoundingClientRect().width>0);
+      if(!digits)return;
+      const difference=digits.getBoundingClientRect().right-
+        gutter.getBoundingClientRect().right;
+      if(Number.isFinite(difference)&&Math.abs(difference)>.5)
+        gutter.style.transform='translateX('+Math.round(difference*100)/100+'px)';
+    });
+  }
+  editor.cm.on('refresh',alignLineNumberGutter);
+  editor.cm.on('viewportChange',alignLineNumberGutter);
+  window.addEventListener('resize',alignLineNumberGutter);
+  if(window.ResizeObserver){
+    const alignObserver=new ResizeObserver(alignLineNumberGutter);
+    alignObserver.observe(editor.cm.getWrapperElement());
+  }
+  themeSelect.addEventListener('change',()=>requestAnimationFrame(()=>editor.refresh()));
   function applyDisplaySettings() {
     document.documentElement.dataset.centered=String(centerToggle.checked);
     document.documentElement.dataset.lineNumbers=String(linesToggle.checked);
+    document.documentElement.dataset.lineWrapping=String(wrapToggle.checked);
     document.documentElement.dataset.wikiTextSize=sizeSelect.value;
     if(sizeSelect.value==='default')
       document.documentElement.style.removeProperty('--wiki-user-text-size');
     else document.documentElement.style.setProperty('--wiki-user-text-size',sizeSelect.value+'px');
     editor.cm.setOption('lineNumbers',linesToggle.checked);
-    requestAnimationFrame(()=>editor.refresh());
+    editor.cm.setOption('lineWrapping',wrapToggle.checked);
+    requestAnimationFrame(()=>{
+      editor.refresh();
+      alignLineNumberGutter();
+    });
   }
   centerToggle.addEventListener('change',()=>{
     safeStore('local-wiki-centered',centerToggle.checked?'on':'off');
@@ -194,6 +238,10 @@
   });
   linesToggle.addEventListener('change',()=>{
     safeStore('local-wiki-line-numbers',linesToggle.checked?'on':'off');
+    applyDisplaySettings();
+  });
+  wrapToggle.addEventListener('change',()=>{
+    safeStore('local-wiki-line-wrapping',wrapToggle.checked?'on':'off');
     applyDisplaySettings();
   });
   sizeSelect.addEventListener('change',()=>{
@@ -1014,6 +1062,7 @@
         const lineEnding = /\r\n/.test(source) ? '\r\n' : '\n';
         const editor = window.LocalWikiBasesEditor.mount(source.replace(/\r\n?/g,'\n'), {
           fingerprint:snapshot.fingerprint,
+          closeButton:$('attachment-close'),
           onSave:async (content,expected) => {
             if (operations.isBusy()) throw new Error('Finish the current wiki operation before saving Bases.');
             const bytes=(snapshot.hasBOM ? '\uFEFF' : '')+content.replace(/\n/g,lineEnding);
@@ -2035,7 +2084,22 @@
     loading.type='button';loading.disabled=true;loading.textContent='Loading recent folders…';
     recentMenu.append(loading);
     try {
-      const folders=await recent.recentFolders();
+      let folders=[];
+      try{folders=await recent.recentFolders();}
+      catch(error){if(!bridge.getRootHandle())throw error;}
+      const current=bridge.getRootHandle();
+      if(current){
+        // A restored tab may predate the recent-folders list: surface the
+        // current wiki immediately even if its history record is absent.
+        let found=false;
+        for(const item of folders){
+          try{found=typeof current.isSameEntry==='function'
+            ?await current.isSameEntry(item.handle):current.name===item.name;}
+          catch(_){found=current.name===item.name;}
+          if(found)break;
+        }
+        if(!found)folders.unshift({name:current.name||'Current wiki',handle:current});
+      }
       if(request!==recentMenuRequest)return;
       recentMenu.replaceChildren();
       if(!folders.length) {
@@ -2103,6 +2167,7 @@
       try { applyOpen(await bridge.openExisting(handle, showScanProgress, !writable)); }
       finally { endOperation('restore'); }
       await openIndexIfPresent();
+      await rememberCurrent();
     } catch (err) {
       notice('Automatic reopening of your wiki failed: ' + err.message, 'error');
     }

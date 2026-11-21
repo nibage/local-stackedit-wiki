@@ -83,9 +83,21 @@ with sync_playwright() as pw:
     page.locator('.bases-edit-toolbar button',has_text='Save Base').click()
     page.wait_for_function("document.querySelector('.bases-edit-message')?.textContent.includes('External modification detected')")
     assert 'Attempted view' not in page.evaluate("window.mockWiki.entries.get('sample.base').body")
-    # Closing an unsaved edit must require explicit discard.
+    # Same compact Save/Discard decision as Canvas; no extra dialog row.
+    footer=page.locator('.bases-edit-footer')
+    footer_height=footer.bounding_box()['height']
+    dialog_height=page.locator('#attachment-dialog').bounding_box()['height']
     page.locator('#attachment-close').click()
     assert page.locator('#attachment-dialog').evaluate("(el)=>el.open")
+    confirm=footer.locator('.bases-edit-confirm')
+    assert confirm.is_visible()
+    assert confirm.locator('button').count()==2
+    assert confirm.inner_text().strip()=='Discard changes\nSave changes'
+    assert confirm.locator('.asset-confirm-save').evaluate(
+      '(el)=>getComputedStyle(el).borderTopColor')=='rgb(88, 163, 106)'
+    assert 'asset-exit-pending' in (page.locator('#attachment-close').get_attribute('class') or '')
+    assert footer.bounding_box()['height']==footer_height
+    assert abs(page.locator('#attachment-dialog').bounding_box()['height']-dialog_height)<3
     page.locator('.bases-edit-confirm button',has_text='Discard changes').click()
     page.wait_for_function("!document.querySelector('#attachment-dialog').open")
     assert not errors,errors

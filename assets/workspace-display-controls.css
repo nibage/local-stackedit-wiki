@@ -94,3 +94,61 @@
   margin-left:0!important;
   margin-right:auto!important;
 }
+
+/* Line-number column belongs entirely to the LEFT of its separator.
+   CodeMirror calculates gutter width from the number font; forcing the old
+   26px minimum on each number made it overhang its own gutter at 2+ digits.
+   Match the actual editor text size, without a second font-size setting. */
+:root[data-theme] .edit-pane .CodeMirror-gutters {
+  border-right:1px solid var(--line)!important;
+}
+:root[data-theme] .edit-pane .CodeMirror-linenumber {
+  font-family:inherit!important;
+  font-size:inherit!important;
+  font-weight:400!important;
+  line-height:inherit!important;
+  min-width:0!important;
+  padding:0 3px 0 5px!important;
+  margin:0!important;
+  text-align:right!important;
+  white-space:nowrap!important;
+}
+:root[data-theme] .edit-pane .CodeMirror-gutter-elt {
+  box-sizing:border-box;
+}
+:root[data-theme] .edit-pane .CodeMirror-linenumbers {
+  overflow:hidden;
+}
+:root[data-line-wrapping="false"] .edit-pane .CodeMirror-wrap pre {
+  white-space:pre!important;
+}
+
+/* Base YAML (and raw JSON/XML) confirmation occupies the existing status
+   footer rather than inserting a tall warning/question under the textarea.
+   Exactly two actions: discard or safely save, with a green Save border. */
+.attachment-dialog .bases-edit-footer {
+  display:flex;align-items:center;justify-content:space-between;
+  flex:0 0 32px;height:32px;min-height:32px;min-width:0;
+  box-sizing:border-box;gap:8px;
+}
+.attachment-dialog .bases-edit-footer>.bases-edit-message {
+  flex:1 1 auto;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;margin:0;
+}
+.attachment-dialog .bases-edit-footer>.bases-edit-confirm {
+  display:flex;flex:0 0 auto;align-items:center;justify-content:flex-end;
+  min-height:0;margin:0;padding:0;
+  border:0;background:transparent;border-radius:0;
+  flex-wrap:nowrap;gap:6px;
+}
+.attachment-dialog .bases-edit-footer>.bases-edit-confirm[hidden] {display:none!important;}
+.attachment-dialog .bases-edit-confirm .canvas-control {
+  box-sizing:border-box;min-height:27px;padding:4px 9px;
+  font-size:11px;white-space:nowrap;
+}
+.attachment-dialog .bases-edit-confirm .asset-confirm-save,
+.attachment-dialog .dialog-actions .asset-exit-pending,
+.attachment-dialog .bases-edit-toolbar .asset-exit-pending {
+  border-color:#58a36a!important;
+  box-shadow:0 0 0 1px #58a36a55;
+}

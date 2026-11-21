@@ -193,14 +193,18 @@ with sync_playwright() as pw:
 
     toolbar.locator('button',has_text='+ Group').click()
     assert 'unsaved changes' in save.inner_text()
+    stable_meta_height=meta.bounding_box()['height']
+    stable_dialog_height=page.locator('#attachment-dialog').bounding_box()['height']
     page.locator('#attachment-close').click()
     assert page.locator('#attachment-dialog').evaluate('(el)=>el.open')
-    warning=page.locator('#attachment-dialog > .canvas-editor-confirm')
+    warning=page.locator('#attachment-dialog .canvas-editor-meta > .canvas-editor-confirm')
     assert warning.is_visible()
     assert warning.locator('button').count()==2
     assert warning.inner_text().strip()=='Discard changes\nSave changes',warning.inner_text()
-    assert warning.bounding_box()['y']>meta.bounding_box()['y']
-    assert warning.bounding_box()['y']<page.locator('#attachment-dialog .dialog-actions').bounding_box()['y']
+    assert abs(warning.bounding_box()['y']-meta.bounding_box()['y'])<6
+    assert warning.bounding_box()['x']>=meta.bounding_box()['x']
+    assert meta.bounding_box()['height']==stable_meta_height
+    assert abs(page.locator('#attachment-dialog').bounding_box()['height']-stable_dialog_height)<3
     assert zoom.is_visible() and save.is_visible()
     assert toolbar.bounding_box()['height']<49
     assert 'canvas-exit-pending' in (close.get_attribute('class') or '')

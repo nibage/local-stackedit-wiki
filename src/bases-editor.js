@@ -46,73 +46,94 @@
     textarea.setAttribute('aria-label','Edit Base YAML');
     textarea.setAttribute('spellcheck','false');
     textarea.value=source;
+    const footer=create('div','bases-edit-footer');
     const message=create('p','bases-edit-message');
     message.setAttribute('role','status');
     const confirm=create('div','bases-edit-confirm');
     confirm.hidden=true;
-    root.append(note,toolbar,textarea,message,confirm);
-    let fingerprint=options.fingerprint,disposed=false,saving=false;
+    footer.append(message,confirm);
+    root.append(note,toolbar,textarea,footer);
+    let fingerprint=options.fingerprint,disposed=false,saving=false,pendingTrigger=null;
     function button(label,cb){
       const el=create('button','canvas-control',label);
       el.type='button';el.addEventListener('click',cb);toolbar.append(el);return el;
     }
-    const save=button('Save Base',async()=>{
-      if(saving || !draft.dirty) return;
-      saving=true;save.disabled=true;
+    function clearConfirm(){
+      confirm.hidden=true;
+      pendingTrigger?.classList.remove('asset-exit-pending');
+      pendingTrigger=null;
+    }
+    async function persist(){
+      if(saving)return false;
+      if(!draft.dirty)return true;
+      saving=true;
+      save.disabled=true;
+      message.textContent='Checking source file and saving Base YAML…';
       try {
         validate(draft.value);
         const result=await options.onSave(draft.value,fingerprint);
         fingerprint=result.fingerprint;
         draft.markSaved();
         message.textContent='Base YAML saved safely.';
-        confirm.hidden=true;
+        clearConfirm();
+        return true;
       }catch(error){
-        message.textContent=(error.code==='EXTERNAL_CHANGE'?'External modification detected. Nothing was overwritten: ':'Save failed: ')+error.message;
+        message.textContent=(error.code==='EXTERNAL_CHANGE'?
+          'External modification detected. Nothing was overwritten: ':'Save failed: ')+error.message;
+        return false;
       }finally{saving=false;refresh();}
-    });
+    }
+    const save=button('Save Base',()=>void persist());
+    function showConfirm(action,trigger){
+      clearConfirm();
+      const discard=create('button','canvas-control asset-confirm-discard','Discard changes');
+      discard.type='button';
+      discard.onclick=()=>{
+        draft.discard();textarea.value=draft.value;
+        clearConfirm();refresh();
+        action?.();
+      };
+      const saveChanges=create('button','canvas-control asset-confirm-save','Save changes');
+      saveChanges.type='button';
+      saveChanges.onclick=async()=>{if(await persist())action?.();};
+      confirm.replaceChildren(discard,saveChanges);
+      confirm.hidden=false;
+      pendingTrigger=trigger||null;
+      pendingTrigger?.classList.add('asset-exit-pending');
+      saveChanges.focus();
+    }
     button('Discard',()=>{
       if(!draft.dirty){message.textContent='Nothing to discard.';return;}
-      showConfirm('Discard all unsaved edits?',()=>{
-        draft.discard();textarea.value=draft.value;refresh();
-        message.textContent='Unsaved changes discarded.';
-      });
+      showConfirm(()=>{message.textContent='Unsaved changes discarded.';});
     });
-    button('Preview',()=>{
-      if(draft.dirty) showConfirm('Discard unsaved changes and return to preview?',()=>{
-        draft.discard();options.onPreview?.();
-      });
+    const preview=button('Preview',()=>{
+      if(draft.dirty)showConfirm(()=>options.onPreview?.(),preview);
       else options.onPreview?.();
     });
-    function showConfirm(question,yes){
-      confirm.replaceChildren(create('span','',question));
-      const accept=create('button','canvas-control','Discard changes');
-      accept.type='button';accept.onclick=()=>{confirm.hidden=true;yes();};
-      const cancel=create('button','canvas-control','Keep editing');
-      cancel.type='button';cancel.onclick=()=>{confirm.hidden=true;textarea.focus();};
-      confirm.append(accept,cancel);confirm.hidden=false;cancel.focus();
-    }
     function refresh(){
-      save.disabled=saving || !draft.dirty;
+      save.disabled=saving||!draft.dirty;
       root.dataset.dirty=draft.dirty?'true':'false';
-      if(!message.textContent || /^Base YAML · /.test(message.textContent))
+      if(!message.textContent||/^Base YAML · /.test(message.textContent))
         message.textContent='Base YAML · '+(draft.dirty?'unsaved changes':'no unsaved changes');
     }
     textarea.addEventListener('input',()=>{
-      try {draft.replace(textarea.value);refresh();}
+      clearConfirm();
+      try {draft.replace(textarea.value);message.textContent='';refresh();}
       catch(error){message.textContent=error.message;save.disabled=true;}
     });
     function requestClose(){
-      if(saving) return false;
-      if(draft.dirty){showConfirm('Discard unsaved Base YAML changes before closing?',()=>{
-        draft.discard();options.onClose?.();
-      });return false;}
+      if(saving)return false;
+      if(draft.dirty){
+        showConfirm(()=>options.onClose?.(),options.closeButton);
+        return false;
+      }
       return true;
     }
     refresh();
     return {
       root,requestClose,
       get isDirty(){return draft.dirty;},
-      dispose(){disposed=true;},
+      dispose(){disposed=true;clearConfirm();},
       get disposed(){return disposed;}
     };
   }
