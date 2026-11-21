@@ -109,3 +109,35 @@
   color:var(--text);background:var(--panel-alt)!important;
   border-bottom:1px solid var(--line);
 }
+
+/* Fully opaque sticky Base column headers in inline previews AND dialogs.
+   Use solid theme-specific surfaces: a translucent inherited panel lets
+   scrolling rows shine through in the StackEdit paper theme. */
+:root[data-theme="light"] .wiki-bases-viewer,
+:root:not([data-theme]) .wiki-bases-viewer {
+  --bases-sticky-background:#eef3f8;
+  --bases-sticky-border:#aebbc8;
+}
+:root[data-theme="stackedit"] .wiki-bases-viewer {
+  --bases-sticky-background:#f6f6f6;
+  --bases-sticky-border:#bcbcbc;
+}
+:root[data-theme="dark"] .wiki-bases-viewer {
+  --bases-sticky-background:#29384c;
+  --bases-sticky-border:#64748b;
+}
+.wiki-bases-viewer .bases-table-scroll {
+  position:relative;isolation:isolate;
+}
+.wiki-bases-viewer .bases-table {border-collapse:separate;border-spacing:0;}
+.wiki-bases-viewer .bases-table thead th,
+:root[data-theme="stackedit"] .wiki-bases-viewer .bases-table thead th,
+.attachment-dialog.bases-dialog-open .wiki-bases-viewer .bases-table thead th {
+  position:sticky;top:0;z-index:8;
+  background-color:var(--bases-sticky-background,var(--panel-alt))!important;
+  background-image:none!important;
+  background-clip:border-box!important;
+  border-bottom:2px solid var(--bases-sticky-border,var(--line))!important;
+  box-shadow:0 -4px 0 0 var(--bases-sticky-background,var(--panel-alt)),
+    0 1px 0 0 var(--bases-sticky-border,var(--line))!important;
+}
