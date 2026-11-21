@@ -105,7 +105,10 @@ with sync_playwright() as pw:
     inspector=page.locator('.canvas-editor-inspector')
     props=inspector.locator('.canvas-editor-inspector-properties')
     edges=inspector.locator('.canvas-editor-inspector-connections')
-    assert 'TEXT:' in props.inner_text()
+    assert props.locator('.canvas-node-property-top .canvas-prop-id input').input_value()=='a'
+    assert props.locator('.canvas-node-property-top .canvas-prop-type select').input_value()=='text'
+    assert props.locator('.canvas-node-property-top .canvas-prop-label input').count()==1
+    assert props.locator('.canvas-node-property-top .canvas-prop-color input').count()==1
     text_top=props.locator('.canvas-editor-property-top')
     assert text_top.is_visible()
     assert props.locator('.canvas-prop-content textarea').count()==1
@@ -118,10 +121,10 @@ with sync_playwright() as pw:
     assert inspector.locator('.canvas-editor-field input[type="number"]').count()==4
     for fld in inspector.locator('.canvas-editor-field input[type="number"]').all():
         assert fld.bounding_box()['width']<=100,fld.bounding_box()
-    assert inspector.locator('.canvas-editor-edge-list option').count()==1
+    assert inspector.locator('.canvas-editor-edge-list option').count()==2
     assert inspector.locator('.canvas-editor-connection-row button').bounding_box()['width']==inspector.locator('.canvas-editor-delete').bounding_box()['width']
     assert inspector.locator('.canvas-editor-delete').bounding_box()['y']>inspector.locator('.canvas-editor-connection-row button').bounding_box()['y']
-    assert 'Note' in inspector.locator('.canvas-editor-edge-list option').first.inner_text()
+    assert 'a → b' in inspector.locator('.canvas-editor-edge-list option').last.inner_text()
     assert inspector.bounding_box()['height']<=112
     assert inspector.evaluate('(el)=>getComputedStyle(el).overflowY')!='auto'
     first.click()
@@ -138,22 +141,16 @@ with sync_playwright() as pw:
     second.click()
     file_field=inspector.locator('.canvas-prop-content input')
     color_field=inspector.locator('.canvas-prop-color input')
-    # The FILE value is on the same header row as FILE: and COLOR;
-    # compact X/Y/width/height appear below it, never beside the path.
-    assert props.locator('.canvas-editor-property-top .canvas-prop-content input').count()==1
-    assert props.locator('.canvas-editor-properties-grid .canvas-prop-content').count()==0
-    assert props.locator('.canvas-prop-content input').get_attribute('aria-label')=='Canvas file path'
+    # Metadata is on the first line; file contents and coordinates below.
+    assert props.locator('.canvas-node-property-top .canvas-prop-id input').input_value()=='b'
+    assert props.locator('.canvas-node-property-top .canvas-prop-type select').input_value()=='file'
+    assert props.locator('.canvas-editor-properties-grid .canvas-prop-content input').count()==1
     file_box=file_field.bounding_box()
     color_box=color_field.bounding_box()
-    heading_box=props.locator('.canvas-editor-inspector-heading').bounding_box()
-    geometry_box=props.locator('.canvas-prop-x').bounding_box()
-    assert abs(file_box['y']-color_box['y'])<4,(file_box,color_box)
-    assert abs(file_box['y']-heading_box['y'])<12,(file_box,heading_box)
-    assert color_box['x']>file_box['x']+file_box['width'],(file_box,color_box)
-    assert geometry_box['y']>file_box['y']+file_box['height'],(geometry_box,file_box)
+    width_box=inspector.locator('.canvas-prop-width input').bounding_box()
+    assert file_box['y']>color_box['y'],(file_box,color_box)
+    assert file_box['x']>width_box['x']+width_box['width'],(file_box,width_box)
     assert file_box['width']>110,file_box
-
-    assert color_field.bounding_box()['width']<=75,color_field.bounding_box()
     delete_edge=inspector.locator('.canvas-delete-connection').bounding_box()
     delete_card=inspector.locator('.canvas-editor-delete').bounding_box()
     assert abs(delete_edge['width']-delete_card['width'])<=1,(delete_edge,delete_card)
@@ -167,6 +164,18 @@ with sync_playwright() as pw:
     props_width=props.bounding_box()['width']
     edges_width=edges.bounding_box()['width']
     assert 1.8<props_width/edges_width<2.25,(props_width,edges_width)
+    # The selected node sees only its incident connections. Choosing one
+    # switches the left inspector to editable edge metadata.
+    dropdown=inspector.locator('.canvas-editor-edge-list')
+    assert 'a → b' in dropdown.locator('option').last.inner_text()
+    dropdown.select_option('0')
+    assert props.locator('.canvas-edge-property-top .canvas-prop-id input').input_value()=='e1'
+    assert inspector.locator('.canvas-editor-edge-list option').count()==1
+    assert inspector.locator('.canvas-editor-delete').is_disabled()
+    assert not inspector.locator('.canvas-delete-connection').is_disabled()
+    assert page.locator('.canvas-connections > path.canvas-edge-selected').count()==1
+    inspector.locator('.canvas-edge-back').click()
+    assert not inspector.locator('.canvas-editor-delete').is_disabled()
     connect=toolbar.locator('button',has_text='Connect')
     connect.click()
     assert 'canvas-editor-connect-active' in (connect.get_attribute('class') or '')
