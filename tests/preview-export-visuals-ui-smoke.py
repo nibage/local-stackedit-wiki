@@ -108,7 +108,7 @@ with sync_playwright() as pw:
       drawioInner.append(drawio);drawioBody.append(drawioInner);
       drawioSpan.append(drawioHeader,drawioBody);
       drawioParagraph.append(drawioSpan);
-    }""
+    }""")
     assert page.locator('#preview').evaluate('(el)=>getComputedStyle(el).display')=='none' or \
         page.locator('.preview-pane').evaluate('(el)=>getComputedStyle(el).display')=='none'
     exporter='window.LocalWikiPreviewExport.build(document.querySelector("#preview"),'
