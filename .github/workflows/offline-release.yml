@@ -66,6 +66,8 @@ jobs:
         run: python tests/canvas-editor-ui-smoke.py
       - name: Verify condensed Canvas toolbar, inline discard, inspector and selection toggle
         run: python tests/canvas-editor-compact-ui-smoke.py
+      - name: Verify protected Canvas JSON and draw.io XML source editing
+        run: python tests/structured-source-editor-ui-smoke.py
       - name: Verify Canvas pointer dragging, live arrows and resize handles
         run: python tests/canvas-drag-ui-smoke.py
       - name: Verify temporary Bases filters, sorting and column resizing
