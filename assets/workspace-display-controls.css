@@ -94,3 +94,9 @@
   margin-left:0!important;
   margin-right:auto!important;
 }
+
+/* The On/Off label must never move other toolbar controls. */
+.main-area>.format-toolbar #scroll-sync-toggle {
+  box-sizing:border-box;flex:0 0 112px;width:112px;
+  min-width:112px;max-width:112px;text-align:center;white-space:nowrap;
+}
