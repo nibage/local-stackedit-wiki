@@ -176,6 +176,9 @@ with sync_playwright() as pw:
     assert page.locator('.canvas-connections > path.canvas-edge-selected').count()==1
     inspector.locator('.canvas-edge-back').click()
     assert not inspector.locator('.canvas-editor-delete').is_disabled()
+    page.locator('.canvas-connections > path').first.click(force=True)
+    assert props.locator('.canvas-edge-property-top').count()==1
+    inspector.locator('.canvas-edge-back').click()
     connect=toolbar.locator('button',has_text='Connect')
     connect.click()
     assert 'canvas-editor-connect-active' in (connect.get_attribute('class') or '')
