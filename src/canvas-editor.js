@@ -69,7 +69,7 @@
 
   function mount(input, options) {
     const draft = createDraft(input);
-    let fingerprint = options.fingerprint, selected = null, connectFrom = null;
+    let fingerprint = options.fingerprint, selected = null, selectedEdge = null, connectFrom = null;
     let activeViewer = null, disposed = false, saving = false, drag = null;
     const root = make('section','canvas-editor');
     root.tabIndex = -1;
@@ -252,7 +252,7 @@
         if (type==='group') node.label = 'Group';
         doc.nodes.push(node);
       });
-      if (id) {selected = id; render();}
+      if (id) {selected = id; selectedEdge=null; render();}
     }
 
     function field(container, label, value, callback, multiline) {
@@ -276,101 +276,208 @@
       input.type='number';input.step='1';
       input.title=name+' (Canvas units)';
     }
+    function selectConnection(index) {
+      selectedEdge=index;
+      selected=null;
+      connectFrom=null;
+      renderInspector();
+      updateSelectionHighlights();
+      refreshConnectionMode();
+    }
+    function updateSelectionHighlights() {
+      root.querySelectorAll('.canvas-node').forEach(card=>
+        card.classList.toggle('canvas-node-selected',selected===card.dataset.nodeId));
+      root.querySelectorAll('.canvas-connections > path').forEach((path,index)=>{
+        path.classList.toggle('canvas-edge-selected',index===selectedEdge);
+        path.setAttribute('aria-selected',String(index===selectedEdge));
+      });
+    }
+    function labeledChoice(container,label,values,value,onChange) {
+      const wrap=make('label','canvas-editor-field',label);
+      const select=make('select');
+      for(const choice of values) {
+        const option=make('option','',choice);option.value=choice;select.append(option);
+      }
+      select.value=value;
+      select.addEventListener('change',()=>onChange(select.value));
+      wrap.append(select);container.append(wrap);
+      return wrap;
+    }
     function renderInspector() {
       inspector.replaceChildren();
       const data=draft.data;
-      const node=data.nodes.find(n=>n.id===selected);
-      let removeCard=null;
+      if(selected && !data.nodes.some(node=>node.id===selected))selected=null;
+      if(selectedEdge!==null && !data.edges[selectedEdge])selectedEdge=null;
+      const node=data.nodes.find(item=>item.id===selected);
+      const edge=selectedEdge===null?null:data.edges[selectedEdge];
       const properties=make('section','canvas-editor-inspector-properties');
-      const heading=make('strong','canvas-editor-inspector-heading',
-        node?node.type.toUpperCase()+':':'Card:');
-      if (node) heading.title=node.id;
-      if (!node) {
-        properties.append(heading);
-        properties.append(make('p','canvas-editor-unselected',
-          'Select a card to edit · click it again to unselect'));
-      } else {
-        // Layout follows the supplied new.png: the selected type, a wide
-        // FILE/LINK/GROUP field and compact COLOR share the top line. Geometry
-        // occupies two short rows beneath it. TEXT has a larger two-row editor
-        // alongside geometry instead of pretending that file nodes have text.
-        const top=make('div','canvas-editor-property-top canvas-property-type-'+node.type);
-        top.append(heading);
-        const grid=make('div','canvas-editor-properties-grid canvas-properties-'+node.type+
-          (node.type==='text'?' canvas-properties-multiline':''));
-        for (const name of ['x','width','y','height']) numberField(grid,node,name);
-        const property={text:'text',file:'file',link:'url',group:'label'}[node.type];
-        const content=field(node.type==='text'?grid:top,property,node[property],value=>{
-          if (property==='file' && value && !global.LocalWikiCanvas.canonicalPath(value)) {
-            status('File paths must stay inside the selected wiki folder.'); return;
+      const top=make('div','canvas-editor-property-top');
+      const grid=make('div','canvas-editor-properties-grid');
+      if(node) {
+        top.classList.add('canvas-node-property-top');
+        const id=field(top,'id',node.id,value=>{
+          const next=value.trim();
+          if(!next || data.nodes.some(item=>item.id===next && item.id!==node.id)) {
+            status('Card ID cannot be empty or duplicated.');return;
           }
-          change(doc=>{doc.nodes.find(n=>n.id===node.id)[property]=value;});
-        },property==='text');
-        content.classList.add('canvas-prop-content');
-        if (node.type!=='text') {
-          // The FILE:/LINK:/GROUP: heading already identifies this field.
-          // Avoid a second redundant lowercase label but keep its input named.
-          content.firstChild.textContent='';
-          content.querySelector('input')?.setAttribute('aria-label',
-            {file:'Canvas file path',link:'Canvas link URL',group:'Canvas group label'}[node.type]);
-        }
+          const old=node.id;
+          selected=next;
+          try {
+            draft.change(doc=>{
+              const target=doc.nodes.find(item=>item.id===old);
+              target.id=next;
+              for(const link of doc.edges) {
+                if(link.fromNode===old)link.fromNode=next;
+                if(link.toNode===old)link.toNode=next;
+              }
+            });
+            clearExitChoice();render();
+          } catch(error) {selected=old;status(error.message);}
+        });
+        id.classList.add('canvas-prop-id');
+        const type=labeledChoice(top,'type',['text','file','link','group'],node.type,value=>
+          change(doc=>{
+            const target=doc.nodes.find(item=>item.id===node.id);
+            target.type=value;
+            if(value==='text' && typeof target.text!=='string')target.text='';
+            if(value==='file' && typeof target.file!=='string')target.file='';
+            if(value==='link' && typeof target.url!=='string')target.url='';
+            if(value==='group' && typeof target.label!=='string')target.label='';
+          }));
+        type.classList.add('canvas-prop-type');
+        const label=field(top,'label',node.label||'',value=>
+          change(doc=>{const target=doc.nodes.find(item=>item.id===node.id);
+            if(value)target.label=value;else delete target.label;
+          }));
+        label.classList.add('canvas-prop-label');
         const color=field(top,'color',node.color||'',value=>{
-          if (value && !/^(?:[1-6]|#[0-9a-f]{3}|#[0-9a-f]{6})$/i.test(value)) {
-            status('Use preset 1–6 or a hex color.'); return;
+          if(value && !/^(?:[1-6]|#[0-9a-f]{3}|#[0-9a-f]{6})$/i.test(value)) {
+            status('Use preset 1–6 or a hex color.');return;
           }
           change(doc=>{
-            const target=doc.nodes.find(n=>n.id===node.id);
+            const target=doc.nodes.find(item=>item.id===node.id);
             if(value)target.color=value;else delete target.color;
           });
         });
         color.classList.add('canvas-prop-color');
-        color.querySelector('input').title='Preset 1–6 or hex (e.g. #1c87a6)';
         color.querySelector('input').maxLength=7;
-        const remove=make('button','canvas-control canvas-editor-delete','Delete card');
-        remove.type='button';
-        remove.onclick=()=>{
-          const id=selected;
-          change(doc=>{
-            doc.nodes=doc.nodes.filter(n=>n.id!==id);
-            doc.edges=doc.edges.filter(edge=>edge.fromNode!==id && edge.toNode!==id);
-          });
-          selected=null;
-          render();
-        };
-        removeCard=remove;
+        grid.classList.add('canvas-properties-'+node.type);
+        if(node.type==='text')grid.classList.add('canvas-properties-multiline');
+        for(const name of ['x','width','y','height'])numberField(grid,node,name);
+        const property={text:'text',file:'file',link:'url'}[node.type];
+        if(property) {
+          const content=field(grid,property,node[property],value=>{
+            if(property==='file' && value && !global.LocalWikiCanvas.canonicalPath(value)){
+              status('File paths must stay inside the selected wiki folder.');return;
+            }
+            change(doc=>{doc.nodes.find(item=>item.id===node.id)[property]=value;});
+          },property==='text');
+          content.classList.add('canvas-prop-content');
+        }
         properties.append(top,grid);
+      } else if(edge) {
+        top.classList.add('canvas-edge-property-top');
+        const id=field(top,'id',edge.id||'',value=>{
+          const next=value.trim();
+          if(next && data.edges.some((e,index)=>index!==selectedEdge && e.id===next)){
+            status('Connection ID must be unique.');return;
+          }
+          change(doc=>{
+            if(next)doc.edges[selectedEdge].id=next;
+            else delete doc.edges[selectedEdge].id;
+          });
+        });
+        id.classList.add('canvas-prop-id');
+        const label=field(top,'label',edge.label||'',value=>
+          change(doc=>{doc.edges[selectedEdge].label=value;}));
+        label.classList.add('canvas-prop-label');
+        const color=field(top,'color',edge.color||'',value=>{
+          if(value && !/^(?:[1-6]|#[0-9a-f]{3}|#[0-9a-f]{6})$/i.test(value)){
+            status('Use preset 1–6 or a hex color.');return;
+          }
+          change(doc=>{if(value)doc.edges[selectedEdge].color=value;
+            else delete doc.edges[selectedEdge].color;});
+        });
+        color.classList.add('canvas-prop-color');
+        grid.classList.add('canvas-properties-edge');
+        for(const [name,labelText] of [['fromNode','from'],['toNode','to']]){
+          const fieldWrap=labeledChoice(grid,labelText,data.nodes.map(n=>n.id),edge[name],value=>
+            change(doc=>{doc.edges[selectedEdge][name]=value;}));
+          fieldWrap.classList.add('canvas-prop-'+labelText);
+        }
+        for(const [name,labelText] of [['fromSide','from side'],['toSide','to side']]){
+          const fieldWrap=labeledChoice(grid,labelText,['','top','right','bottom','left'],edge[name]||'',value=>
+            change(doc=>{if(value)doc.edges[selectedEdge][name]=value;
+              else delete doc.edges[selectedEdge][name];}));
+          fieldWrap.classList.add('canvas-prop-'+name);
+        }
+        properties.append(top,grid);
+      } else {
+        properties.append(make('strong','canvas-editor-inspector-heading','Card / connection:'));
+        properties.append(make('p','canvas-editor-unselected',
+          'Select a card or click a connection line to inspect it'));
       }
       const connections=make('section','canvas-editor-inspector-connections');
       connections.append(make('strong','canvas-editor-inspector-heading','Connections:'));
       const row=make('div','canvas-editor-connection-row');
-      if (data.edges.length) {
-        const nodeLabel=id=>{
-          const item=data.nodes.find(n=>n.id===id);
-          if (!item) return id;
-          const title={text:item.text,file:item.file,link:item.url,group:item.label}[item.type];
-          const first=typeof title==='string'?title.split('\n')[0].trim():'';
-          return (first||item.type).slice(0,64);
-        };
+      const available=data.edges.map((edge,index)=>({edge,index})).filter(({edge,index})=>
+        selectedEdge!==null ? index===selectedEdge :
+        !!selected && (edge.fromNode===selected || edge.toNode===selected));
+      if(available.length){
         const select=make('select','canvas-editor-edge-list');
         select.setAttribute('aria-label','Choose a Canvas connection');
-        data.edges.forEach((edge,index)=>{
-          const item=make('option','',nodeLabel(edge.fromNode)+' → '+nodeLabel(edge.toNode));
+        if(selectedEdge===null){
+          const empty=make('option','','Select connection…');
+          empty.value='';select.append(empty);
+        }
+        available.forEach(({edge,index})=>{
+          const item=make('option','',edge.fromNode+' → '+edge.toNode);
           item.value=String(index);
-          item.title=edge.fromNode+' → '+edge.toNode;
+          item.title=(edge.id||'')+' · '+edge.fromNode+' → '+edge.toNode;
           select.append(item);
+        });
+        select.value=selectedEdge===null?'':String(selectedEdge);
+        select.addEventListener('change',()=>{
+          if(select.value!=='')selectConnection(Number(select.value));
         });
         const removeEdge=make('button','canvas-control canvas-delete-connection','Delete connection');
         removeEdge.type='button';
-        removeEdge.onclick=()=>change(doc=>{doc.edges.splice(Number(select.value),1);});
+        removeEdge.onclick=()=>{
+          const index=selectedEdge!==null?selectedEdge:Number(select.value);
+          if(!Number.isInteger(index) || index<0)return;
+          selectedEdge=null;
+          change(doc=>{doc.edges.splice(index,1);});
+        };
+        removeEdge.disabled=selectedEdge===null;
         row.append(select,removeEdge);
       } else {
-        row.append(make('span','canvas-editor-no-connections','No connections'));
+        row.append(make('span','canvas-editor-no-connections',
+          selected?'No connections':edge?'No connection':'Select a card'));
         const inactive=make('button','canvas-control canvas-delete-connection','Delete connection');
         inactive.type='button';inactive.disabled=true;
         row.append(inactive);
       }
       connections.append(row);
-      if(removeCard)connections.append(removeCard);
+      const removeCard=make('button','canvas-control canvas-editor-delete','Delete card');
+      removeCard.type='button';
+      removeCard.disabled=!node;
+      removeCard.onclick=()=>{
+        if(!selected)return;
+        const id=selected;selected=null;selectedEdge=null;
+        change(doc=>{
+          doc.nodes=doc.nodes.filter(item=>item.id!==id);
+          doc.edges=doc.edges.filter(link=>link.fromNode!==id && link.toNode!==id);
+        });
+      };
+      connections.append(removeCard);
+      if(edge){
+        const back=make('button','canvas-control canvas-edge-back','Back to card');
+        back.type='button';back.addEventListener('click',()=>{
+          selected=data.nodes.some(n=>n.id===edge.fromNode)?edge.fromNode:null;
+          selectedEdge=null;renderInspector();updateSelectionHighlights();
+        });
+        connections.append(back);
+      }
       inspector.append(properties,connections);
     }
 
@@ -407,8 +514,8 @@
         card.classList.toggle('canvas-node-selected',selected===node.id);
         let suppressClick=false;
         const updateSelected=()=>{
-          viewer.querySelectorAll('.canvas-node').forEach(el=>
-            el.classList.toggle('canvas-node-selected',el.dataset.nodeId===selected));
+          selectedEdge=null;
+          updateSelectionHighlights();
           renderInspector();
         };
         card.addEventListener('click',event=>{
@@ -426,6 +533,7 @@
             else status('Choose a different target card.');
           } else {
             selected=selected===node.id?null:node.id;
+            selectedEdge=null;
             updateSelected();
           }
         });
@@ -510,16 +618,28 @@
         resize.addEventListener('pointercancel',finish);
       });
       board.replaceChildren(viewer);
+      viewer.querySelectorAll('.canvas-connections > path').forEach((line,index)=>{
+        line.dataset.edgeIndex=String(index);
+        line.setAttribute('role','button');
+        line.setAttribute('tabindex','0');
+        line.setAttribute('aria-label','Select connection '+data.edges[index].fromNode+' to '+data.edges[index].toNode);
+        line.addEventListener('click',event=>{event.stopPropagation();selectConnection(index);});
+        line.addEventListener('keydown',event=>{
+          if(event.key==='Enter' || event.key===' '){
+            event.preventDefault();event.stopPropagation();selectConnection(index);
+          }
+        });
+      });
       const viewport=viewer.querySelector('.canvas-viewport');
       viewport.addEventListener('click',event=>{
         if(event.target.closest('.canvas-node'))return;
-        if(!connectFrom&&selected){selected=null;renderInspector();
-          viewer.querySelectorAll('.canvas-node').forEach(card=>
-            card.classList.remove('canvas-node-selected'));}
+        if(!connectFrom&&(selected||selectedEdge!==null)){
+          selected=null;selectedEdge=null;renderInspector();updateSelectionHighlights();}
       });
       renderInspector();
       refreshButtons();
       refreshConnectionMode();
+      updateSelectionHighlights();
     }
     root.addEventListener('pointerdown',()=>{ if(!warning.hidden) clearExitChoice(); },true);
     root.addEventListener('input',()=>{ if(!warning.hidden) clearExitChoice(); },true);
