@@ -81,6 +81,12 @@ with sync_playwright() as pw:
     assert '<!DOCTYPE' not in page.evaluate("window.mockWiki.entries.get('diagram.drawio').body")
     page.locator('#attachment-close').click()
     assert page.locator('#attachment-dialog').evaluate('(el)=>el.open')
+    confirmation=page.locator('.asset-source-editor .bases-edit-footer .bases-edit-confirm')
+    assert confirmation.is_visible()
+    assert confirmation.locator('button').count()==2
+    assert confirmation.inner_text().strip()=='Discard changes\nSave changes'
+    assert confirmation.locator('.asset-confirm-save').count()==1
+    assert 'asset-exit-pending' in (page.locator('#attachment-close').get_attribute('class') or '')
     page.locator('.asset-source-editor .bases-edit-confirm button',has_text='Discard changes').click()
     page.wait_for_function("!document.querySelector('#attachment-dialog').open")
     assert page.evaluate("window.mockWiki.entries.get('Readme.md').body")==original_note
