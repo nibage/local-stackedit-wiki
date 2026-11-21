@@ -598,3 +598,89 @@
   }
   .attachment-dialog.canvas-dialog-open > .canvas-editor-confirm {flex-wrap:wrap;}
 }
+
+/* Canvas node metadata: ID | type | label | color, with geometry below. */
+.canvas-editor .canvas-editor-property-top.canvas-node-property-top {
+  display:grid;grid-template-columns:minmax(110px,1.25fr) minmax(110px,.8fr)
+    minmax(145px,1.75fr) minmax(104px,.75fr);
+  grid-template-rows:27px;align-items:center;gap:8px;width:100%;min-width:0;
+}
+.canvas-editor .canvas-editor-property-top.canvas-edge-property-top {
+  display:grid;grid-template-columns:minmax(125px,1.1fr) minmax(160px,2fr)
+    minmax(105px,.8fr);grid-template-rows:27px;gap:8px;align-items:center;
+}
+.canvas-editor .canvas-node-property-top .canvas-editor-field,
+.canvas-editor .canvas-edge-property-top .canvas-editor-field {
+  grid-area:auto;min-width:0;max-width:none;width:auto;
+}
+.canvas-editor .canvas-node-property-top .canvas-prop-id {grid-column:1;}
+.canvas-editor .canvas-node-property-top .canvas-prop-type {grid-column:2;}
+.canvas-editor .canvas-node-property-top .canvas-prop-label {grid-column:3;}
+.canvas-editor .canvas-node-property-top .canvas-prop-color {grid-column:4;}
+.canvas-editor .canvas-edge-property-top .canvas-prop-id {grid-column:1;}
+.canvas-editor .canvas-edge-property-top .canvas-prop-label {grid-column:2;}
+.canvas-editor .canvas-edge-property-top .canvas-prop-color {grid-column:3;}
+.canvas-editor .canvas-node-property-top .canvas-prop-color,
+.canvas-editor .canvas-edge-property-top .canvas-prop-color {
+  max-width:none;width:auto;
+}
+.canvas-editor .canvas-node-property-top .canvas-prop-color input,
+.canvas-editor .canvas-edge-property-top .canvas-prop-color input {max-width:none;width:100%;}
+.canvas-editor .canvas-editor-field select {
+  flex:1 1 0;min-width:0;width:100%;height:27px;
+  box-sizing:border-box;padding:3px 4px;border:1px solid var(--line);
+  border-radius:5px;font-family:inherit;font-size:11px;
+  background:var(--panel);color:var(--text);
+}
+.canvas-editor .canvas-editor-properties-grid.canvas-properties-file,
+.canvas-editor .canvas-editor-properties-grid.canvas-properties-link {
+  grid-template-areas:"x width content" "y height content";
+}
+.canvas-editor .canvas-editor-properties-grid.canvas-properties-group {
+  grid-template-areas:"x width ." "y height .";
+}
+.canvas-editor .canvas-editor-properties-grid.canvas-properties-edge {
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-rows:27px;
+  grid-template-areas:"from to fromside toside";
+  align-items:center;gap:7px;
+}
+.canvas-editor .canvas-properties-edge .canvas-prop-from {grid-area:from;}
+.canvas-editor .canvas-properties-edge .canvas-prop-to {grid-area:to;}
+.canvas-editor .canvas-properties-edge .canvas-prop-fromSide {grid-area:fromside;}
+.canvas-editor .canvas-properties-edge .canvas-prop-toSide {grid-area:toside;}
+.canvas-editor .canvas-editor-inspector-connections>.canvas-control.canvas-edge-back {
+  align-self:flex-end;padding:3px 7px;font-size:11px;
+}
+.canvas-editor .canvas-editor-inspector-connections .canvas-editor-delete:disabled {opacity:.45;cursor:not-allowed;}
+.canvas-editor-board .canvas-connections > path {
+  pointer-events:stroke;cursor:pointer;
+}
+.canvas-editor-board .canvas-connections > path:hover,
+.canvas-editor-board .canvas-connections > path.canvas-edge-selected {
+  stroke:#58a36a;stroke-width:5px;filter:drop-shadow(0 0 2px #58a36a77);
+}
+@media(max-width:900px) {
+  .canvas-editor .canvas-editor-property-top.canvas-node-property-top {
+    grid-template-columns:minmax(105px,1fr) minmax(96px,.7fr)
+      minmax(135px,1.5fr) minmax(105px,.8fr);
+  }
+}
+@media(max-width:590px) {
+  .canvas-editor .canvas-editor-property-top.canvas-node-property-top {
+    grid-template-columns:minmax(95px,1fr) minmax(95px,1fr);
+    grid-template-rows:27px 27px;
+  }
+  .canvas-editor .canvas-node-property-top .canvas-prop-label {grid-column:1;grid-row:2;}
+  .canvas-editor .canvas-node-property-top .canvas-prop-color {grid-column:2;grid-row:2;justify-self:stretch;}
+  .canvas-editor .canvas-editor-property-top.canvas-edge-property-top {
+    grid-template-columns:minmax(105px,1fr) minmax(130px,2fr);
+    grid-template-rows:27px 27px;
+  }
+  .canvas-editor .canvas-edge-property-top .canvas-prop-color {grid-column:2;grid-row:2;}
+  .canvas-editor .canvas-editor-properties-grid.canvas-properties-edge {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-rows:27px 27px;
+    grid-template-areas:"from to" "fromside toside";
+  }
+}

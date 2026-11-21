@@ -1355,12 +1355,16 @@
     }
   }
   async function openIndexIfPresent() {
-    // Only a wiki-root index.md is a start page. Do not guess another note
-    // if there is no index, and never replace a note the user already opened.
-    if (activePath || editor.getValue() || operations.isBusy()) return;
-    const index=bridge.getFilePaths().find(path=>
-      !path.includes('/') && path.toLocaleLowerCase()==='index.md');
-    if (index) await selectFile(index);
+    // Root index.md wins. A single nested index.md is a safe fallback for
+    // vaults whose actual notes live one directory below the opened folder.
+    // Ambiguous matches never cause an arbitrary note to be opened.
+    if(activePath || editor.getValue())return false;
+    const paths=bridge.getFilePaths();
+    const name=path=>path.split('/').at(-1).toLocaleLowerCase('cs');
+    const indexes=paths.filter(path=>name(path)==='index.md');
+    const index=indexes.find(path=>!path.includes('/'))||
+      (indexes.length===1?indexes[0]:null);
+    return index && !operations.isBusy()?await selectFile(index):false;
   }
   function invalidateWikiIndex() {
     wikiIndex.invalidate(); indexPromise = null;
@@ -1951,6 +1955,77 @@
     try { await recent.remember(handle); }
     catch (err) { notice('Wiki opened, but remembering it failed: ' + err.message, 'error'); }
   }
+  const recentMenu=$('recent-folder-options');
+  const recentToggle=$('recent-folder-toggle');
+  let recentMenuRequest=0;
+  function closeRecentFolderMenu(){
+    recentMenu.hidden=true;recentToggle.setAttribute('aria-expanded','false');
+    recentMenuRequest++;
+  }
+  async function showRecentFolderMenu(){
+    if(!recentMenu.hidden){closeRecentFolderMenu();return;}
+    const request=++recentMenuRequest;
+    recentMenu.hidden=false;
+    recentToggle.setAttribute('aria-expanded','true');
+    recentMenu.replaceChildren();
+    const loading=document.createElement('button');
+    loading.type='button';loading.disabled=true;loading.textContent='Loading recent folders…';
+    recentMenu.append(loading);
+    try {
+      const folders=await recent.recentFolders();
+      if(request!==recentMenuRequest)return;
+      recentMenu.replaceChildren();
+      if(!folders.length) {
+        const none=document.createElement('button');
+        none.type='button';none.disabled=true;none.textContent='No recent wiki folders';
+        recentMenu.append(none);return;
+      }
+      for(const {name,handle} of folders){
+        const item=document.createElement('button');
+        item.type='button';item.setAttribute('role','menuitem');
+        item.textContent=name;item.title=name;
+        item.addEventListener('click',async()=>{
+          closeRecentFolderMenu();
+          if(!confirmDiscard() || operations.isBusy())return;
+          try {
+            // Ask again if the browser revoked a previous folder grant.
+            const readOnly=ui.readonlyToggle.checked;
+            const writable=!readOnly && await recent.ensurePermission(handle,true);
+            const readable=writable || await recent.ensurePermission(handle,true,true);
+            if(!readable){
+              notice('Access to this wiki folder was not granted.','error');return;
+            }
+            if(!beginOperation('open'))return;
+            let opened=false;
+            try{
+              applyOpen(await bridge.openExisting(handle,showScanProgress,!writable));
+              opened=true;
+            } finally {endOperation('open');}
+            if(opened){
+              await openIndexIfPresent();
+              await rememberCurrent();
+            }
+          }catch(error){
+            notice('Cannot open recent wiki: '+error.message,'error');
+          }
+        });
+        recentMenu.append(item);
+      }
+    }catch(error){
+      if(request!==recentMenuRequest)return;
+      recentMenu.replaceChildren();
+      const message=document.createElement('button');
+      message.type='button';message.disabled=true;message.textContent='Folder history unavailable';
+      message.title=error.message;recentMenu.append(message);
+    }
+  }
+  recentToggle.addEventListener('click',()=>void showRecentFolderMenu());
+  recentMenu.addEventListener('keydown',event=>{
+    if(event.key==='Escape'){event.preventDefault();closeRecentFolderMenu();recentToggle.focus();}
+  });
+  document.addEventListener('pointerdown',event=>{
+    if(!event.target.closest('.wiki-folder-picker'))closeRecentFolderMenu();
+  });
   async function restoreQuietly() {
     try {
       const handle = await recent.restoreHandle();

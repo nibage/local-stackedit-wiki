@@ -164,3 +164,36 @@
   :root[data-theme] .pane .CodeMirror-lines {padding-left:21px;padding-right:21px;}
   :root[data-theme="stackedit"] #preview.markdown-preview {font-size:17px;}
 }
+
+/* Folder history is opt-in navigation: last eight directory handles stay
+   local to this installation and require Chrome's permission to reopen. */
+.topbar .wiki-folder-picker {display:flex;align-items:stretch;flex:none;min-width:0;}
+.topbar .wiki-folder-picker #open-folder {border-radius:6px 0 0 6px;}
+.topbar .wiki-recent-folders {position:relative;display:flex;align-items:stretch;}
+:root[data-theme] .topbar .wiki-recent-folders #recent-folder-toggle {
+  box-sizing:border-box;width:25px;min-width:25px;padding:3px 5px;margin-left:-1px;
+  border:1px solid var(--line);border-radius:0 6px 6px 0;
+  color:var(--text);background:var(--panel);font-size:12px;
+}
+:root[data-theme] .topbar .wiki-recent-folders #recent-folder-toggle:hover,
+:root[data-theme] .topbar .wiki-recent-folders #recent-folder-toggle[aria-expanded="true"] {
+  border-color:#58a36a;background:color-mix(in srgb,#58a36a 12%,var(--panel));
+}
+.topbar .wiki-recent-folders #recent-folder-options[hidden] {display:none!important;}
+:root[data-theme] .topbar #recent-folder-options {
+  box-sizing:border-box;display:flex;flex-direction:column;
+  position:absolute;right:0;top:calc(100% + 5px);z-index:90;
+  min-width:200px;max-width:min(340px,calc(100vw - 24px));
+  max-height:320px;overflow:auto;padding:4px;gap:2px;
+  border:1px solid var(--line);border-radius:7px;
+  background:var(--panel);box-shadow:0 8px 24px #0003;
+}
+:root[data-theme] .topbar #recent-folder-options button {
+  box-sizing:border-box;min-width:0;width:100%;
+  padding:8px 9px;text-align:left;
+  border:0;border-radius:5px;background:transparent;color:var(--text);
+  font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+:root[data-theme] .topbar #recent-folder-options button:hover:not(:disabled) {
+  background:color-mix(in srgb,#58a36a 13%,var(--panel));
+}

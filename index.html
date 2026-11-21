@@ -40,7 +40,13 @@
     <div class="brand"><span class="brand-icon">W</span><div class="brand-title"><strong>Local StackEdit Wiki</strong><small>Offline Markdown wiki</small></div><div class="file-title" title="No note open"><strong id="filename" title="No note open">No note open</strong><span id="dirty" aria-live="polite"></span></div><div id="notice" class="notice" role="status" aria-live="polite" hidden></div></div>
     <div class="actions">
       <label class="readonly-option" title="Open the selected folder without write permission"><input id="read-only-toggle" type="checkbox"> Open read-only</label>
-      <button id="open-folder" class="primary" type="button">Open folder</button>
+      <div class="wiki-folder-picker">
+        <button id="open-folder" class="primary" type="button">Open folder</button>
+        <div class="wiki-recent-folders">
+          <button id="recent-folder-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="recent-folder-options" aria-label="Recently opened wiki folders" title="Recently opened wiki folders">▾</button>
+          <div id="recent-folder-options" role="menu" aria-label="Recently opened wiki folders" hidden></div>
+        </div>
+      </div>
       <input id="directory-input" type="file" webkitdirectory directory multiple hidden>
       <label class="theme-label" for="theme-select">Theme <select id="theme-select" aria-label="Color theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option><option value="stackedit">StackEdit</option></select></label>
     </div>
