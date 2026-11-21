@@ -56,6 +56,17 @@ with sync_playwright() as pw:
     page.wait_for_function("!document.querySelector('#preview-export-toggle').disabled")
     # Export immediately. The three structured embeds may still be loading;
     # the export must await the actual asynchronous render promises.
+    page.evaluate("""() => {
+      const original=window.LocalWikiPreviewExport.build;
+      window.LocalWikiPreviewExport.build=async(...args)=>{
+        window.__exportSnapshotDiagnostics={
+          bases:document.querySelector('#preview .wiki-bases-viewer')?.textContent?.slice(-500),
+          rows:document.querySelectorAll('#preview .bases-table tbody tr').length,
+          embeds:document.querySelectorAll('#preview .wiki-structured-embed').length
+        };
+        return original(...args);
+      };
+    }""")
     page.locator('#preview-export-toggle').click()
     with page.expect_download() as generated:
         page.locator('#preview-export-html').click()
@@ -73,8 +84,10 @@ with sync_playwright() as pw:
       'fallback':exported.find('Cannot show Bases'),
       'loading':'Loading local' in exported
     },flush=True)
-    marker=exported.find('bases-table')
-    print('EXPORT TABLE REGION',repr(exported[max(0,marker-250):marker+1800]),flush=True)
+    print('BUILD-TIME LIVE STATE',page.evaluate('window.__exportSnapshotDiagnostics'),flush=True)
+    marker=exported.find('Obsidian Bases')
+    print('EXPORT BASES MARKUP',repr(exported[max(0,marker-250):marker+3000]),flush=True)
+    print('EXPORTED TABLE TAG COUNT',exported.count('<table'),flush=True)
     assert 'Canvas card visible in export' in exported, 'Canvas was empty'
     assert 'Completed' in exported and 'bases-table' in exported, 'Bases was empty'
     assert 'drawio-graph' in exported and 'wiki-drawio-viewer' in exported, 'draw.io was empty'
