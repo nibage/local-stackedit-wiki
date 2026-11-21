@@ -17,7 +17,7 @@
     }else throw new Error('Unsupported source editor kind.');
     return true;
   }
-  function mount(source,{kind,fingerprint,onSave,onPreview,onClose}={}){
+  function mount(source,{kind,fingerprint,onSave,onPreview,onClose,closeButton}={}){
     validate(source,kind);
     const root=document.createElement('section');
     root.className='bases-source-editor asset-source-editor';
@@ -38,8 +38,17 @@
     message.setAttribute('role','status');
     const confirm=document.createElement('div');
     confirm.className='bases-edit-confirm';confirm.hidden=true;
-    root.append(hint,toolbar,textarea,message,confirm);
+    const footer=document.createElement('div');
+    footer.className='bases-edit-footer';
+    footer.append(message,confirm);
+    root.append(hint,toolbar,textarea,footer);
     let saved=source,disposed=false,saving=false,actualFingerprint=fingerprint;
+    let pendingTrigger=null;
+    function clearConfirm(){
+      confirm.hidden=true;
+      pendingTrigger?.classList.remove('asset-exit-pending');
+      pendingTrigger=null;
+    }
     const dirty=()=>textarea.value!==saved;
     function button(label,fn){
       const el=document.createElement('button');
@@ -62,7 +71,7 @@
         const result=await onSave(textarea.value,actualFingerprint);
         actualFingerprint=result.fingerprint;
         saved=textarea.value;
-        confirm.hidden=true;
+        clearConfirm();
         message.textContent=title+' saved safely.';
         return true;
       }catch(error){
@@ -72,31 +81,39 @@
       }finally{saving=false;update();}
     }
     const save=button('Save '+title,()=>void persist());
-    function askBeforeLeaving(action){
+    function askBeforeLeaving(action,trigger){
       if(saving)return false;
       if(!dirty()){action();return true;}
-      confirm.replaceChildren();
-      const prompt=document.createElement('span');
-      prompt.textContent='Save or discard unsaved '+title+' changes?';
+      clearConfirm();
       const discard=document.createElement('button');
-      discard.type='button';discard.className='canvas-control';
+      discard.type='button';discard.className='canvas-control asset-confirm-discard';
       discard.textContent='Discard changes';
-      discard.onclick=()=>{textarea.value=saved;update();confirm.hidden=true;action();};
+      discard.onclick=()=>{
+        textarea.value=saved;
+        clearConfirm();message.textContent='';update();
+        action();
+      };
       const saveExit=document.createElement('button');
-      saveExit.type='button';saveExit.className='canvas-control asset-source-confirm-save';
+      saveExit.type='button';saveExit.className='canvas-control asset-confirm-save';
       saveExit.textContent='Save changes';
       saveExit.onclick=async()=>{if(await persist())action();};
-      const keep=document.createElement('button');
-      keep.type='button';keep.className='canvas-control';
-      keep.textContent='Keep editing';
-      keep.onclick=()=>{confirm.hidden=true;textarea.focus();};
-      confirm.append(prompt,discard,saveExit,keep);confirm.hidden=false;
+      confirm.replaceChildren(discard,saveExit);
+      confirm.hidden=false;
+      pendingTrigger=trigger||null;
+      pendingTrigger?.classList.add('asset-exit-pending');
       saveExit.focus();
       return false;
     }
-    button('Discard',()=>{if(dirty())askBeforeLeaving(()=>{message.textContent='Unsaved changes discarded.';});});
-    button('Preview',()=>{askBeforeLeaving(()=>onPreview?.());});
-    textarea.addEventListener('input',()=>{confirm.hidden=true;message.textContent='';update();});
+    button('Discard',()=>{
+      if(dirty())askBeforeLeaving(()=>{message.textContent='Unsaved changes discarded.';});
+      else message.textContent='Nothing to discard.';
+    });
+    const preview=button('Preview',()=>{
+      askBeforeLeaving(()=>onPreview?.(),preview);
+    });
+    textarea.addEventListener('input',()=>{
+      clearConfirm();message.textContent='';update();
+    });
     update();
     return {
       root,validate,
@@ -104,10 +121,10 @@
       requestClose(){
         if(saving)return false;
         if(!dirty())return true;
-        askBeforeLeaving(()=>onClose?.());
+        askBeforeLeaving(()=>onClose?.(),closeButton);
         return false;
       },
-      dispose(){disposed=true;},
+      dispose(){disposed=true;clearConfirm();},
       get disposed(){return disposed;}
     };
   }
