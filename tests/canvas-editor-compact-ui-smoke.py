@@ -190,6 +190,14 @@ with sync_playwright() as pw:
     page.locator('#attachment-close').click()
     assert page.locator('#attachment-dialog').evaluate('(el)=>el.open')
     warning=page.locator('#attachment-dialog>.canvas-editor-confirm')
+    print('CANVAS CONFIRM DEBUG',page.evaluate("""() => {
+      const w=document.querySelector('#attachment-dialog>.canvas-editor-confirm');
+      const root=document.querySelector('.canvas-editor'),dialog=document.querySelector('#attachment-dialog');
+      return {exists:!!w,hidden:w?.hidden,text:w?.textContent,display:w&&getComputedStyle(w).display,
+        rect:w?.getBoundingClientRect().toJSON(),children:w?.children.length,
+        dialogOpen:dialog.open,dirty:root?.dataset.dirty,
+        closeMarked:document.querySelector('#attachment-close')?.className};
+    }"""),flush=True)
     assert warning.is_visible()
     assert warning.locator('button').count()==2
     assert warning.inner_text().strip()=='Discard changes\nSave changes',warning.inner_text()
