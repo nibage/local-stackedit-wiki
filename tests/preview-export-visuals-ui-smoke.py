@@ -146,7 +146,7 @@ with sync_playwright() as pw:
     assert printed.locator('.visualization-mermaid svg').bounding_box()['width']>=400
     assert dims['scroll']<=1445,dims
     assert printed.locator('.bases-table').evaluate('(el)=>getComputedStyle(el).tableLayout')=='auto'
-    assert printed.locator('pre').evaluate('(el)=>getComputedStyle(el).whiteSpace')=='pre-wrap'
+    assert printed.locator('pre code').last.locator('..').evaluate('(el)=>getComputedStyle(el).whiteSpace')=='pre-wrap'
     pdf=printed.pdf(print_background=True,format='A4',prefer_css_page_size=True)
     assert pdf.startswith(b'%PDF') and len(pdf)>4000,len(pdf)
     assert not errors,errors
