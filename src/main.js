@@ -969,6 +969,7 @@
         const lineEnding = /\r\n/.test(source) ? '\r\n' : '\n';
         const editor = window.LocalWikiBasesEditor.mount(source.replace(/\r\n?/g,'\n'), {
           fingerprint:snapshot.fingerprint,
+          closeButton:$('attachment-close'),
           onSave:async (content,expected) => {
             if (operations.isBusy()) throw new Error('Finish the current wiki operation before saving Bases.');
             const bytes=(snapshot.hasBOM ? '\uFEFF' : '')+content.replace(/\n/g,lineEnding);
