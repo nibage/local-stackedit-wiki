@@ -642,7 +642,11 @@
       refreshConnectionMode();
       updateSelectionHighlights();
     }
-    root.addEventListener('pointerdown',()=>{ if(!warning.hidden) clearExitChoice(); },true);
+    root.addEventListener('pointerdown',event=>{
+      // Confirm buttons now live INSIDE the editor's status line: do not
+      // dismiss their own click during the capture phase.
+      if(!warning.hidden && !warning.contains(event.target))clearExitChoice();
+    },true);
     root.addEventListener('input',()=>{ if(!warning.hidden) clearExitChoice(); },true);
     root.addEventListener('keydown',event=>{
       if(event.key==='Escape' && connectFrom) {
