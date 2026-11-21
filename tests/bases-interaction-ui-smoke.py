@@ -33,7 +33,8 @@ with sync_playwright() as pw:
         file('example.base',base),
         file('One.md','---\\nstatus: done\\nscore: 8\\n---\\n# One'),
         file('Two.md','---\\nstatus: planned\\nscore: 3\\n---\\n# Two'),
-        file('Three.md','---\\nstatus: done\\nscore: 6\\n---\\n# Three')
+        file('Three.md','---\\nstatus: done\\nscore: 6\\n---\\n# Three'),
+        file('Embed.md','# Embedded Base\\n![[example.base]]')
       ].map(f=>[f.name,f]));
       window.mockWiki={name:'Wiki',kind:'directory',entries,
         async *values(){yield* entries.values()},
@@ -117,6 +118,17 @@ with sync_playwright() as pw:
     page.locator('#theme-select').select_option('light')
     light=header.evaluate('el=>({bg:getComputedStyle(el).backgroundColor,border:getComputedStyle(el).borderBottomWidth})')
     assert light['bg']=='rgb(238, 243, 248)' and light['border']=='2px',light
+    page.locator('#attachment-close').click()
+    page.locator('.tree-row[aria-label="Embed.md"]').click()
+    inline=page.locator('#preview .wiki-bases-viewer .bases-table thead th').first
+    inline.wait_for()
+    inline_scroll=page.locator('#preview .bases-table-scroll')
+    inline_scroll.evaluate("(el)=>{el.style.maxHeight='60px';el.scrollTop=45;}")
+    assert inline.evaluate("(el)=>getComputedStyle(el).backgroundColor")=='rgb(238, 243, 248)'
+    assert inline.evaluate("(el)=>getComputedStyle(el).borderBottomWidth")=='2px'
+    page.locator('#theme-select').select_option('stackedit')
+    assert inline.evaluate("(el)=>getComputedStyle(el).backgroundColor")=='rgb(246, 246, 246)'
+    assert inline.evaluate("(el)=>getComputedStyle(el).borderBottomWidth")=='2px'
     assert not errors,errors
     browser.close()
     print('PASS: Bases temporary filters, sort, widths, multi-view and no source writes')
