@@ -260,7 +260,7 @@
       outer.style.cssText='position:relative!important;box-sizing:border-box!important;'+
         'width:'+Math.ceil(w*scale)+'px!important;max-width:100%!important;'+
         'height:'+Math.ceil(h*scale)+'px!important;min-height:0!important;'+
-        'overflow:visible!important;margin:0 auto 12px!important;';
+        'overflow:visible!important;display:block!important;margin:0 auto 12px!important;';
       board.style.setProperty('position','absolute','important');
       board.style.setProperty('top','0','important');
       board.style.setProperty('left','0','important');
@@ -362,6 +362,44 @@
       }catch(_){ /* Keep the non-raster canvas fallback if extraction is blocked. */ }
     }
     flattenVisualsForDocument(cloned,theme,layoutWidth,visualMetrics);
+    // Live interactive attachment wrappers create a redundant grey placeholder
+    // before the static Canvas / Base / draw.io visual in standalone exports.
+    // Keep only the actual rendered viewer, which retains inline media & CSS.
+    for(const embed of Array.from(cloned.querySelectorAll('.wiki-structured-embed'))) {
+      const visual=embed.querySelector('.wiki-canvas-viewer,.wiki-drawio-viewer,.wiki-bases-viewer');
+      if(!visual)continue;
+      const clean=cloned.ownerDocument.createElement('section');
+      clean.className='wiki-export-structured';
+      clean.style.cssText='display:block!important;position:relative!important;'+
+        'box-sizing:border-box!important;width:100%!important;max-width:100%!important;'+
+        'margin:14px auto!important;padding:0!important;'+
+        'background:transparent!important;border:0!important;'+
+        'height:auto!important;min-height:0!important;overflow:visible!important;';
+      clean.append(visual);
+      embed.replaceWith(clean);
+    }
+    // Browsers may snapshot the closed <details> at zero intrinsic height.
+    // Restore native disclosure behavior so YAML expands correctly offline.
+    for(const details of cloned.querySelectorAll('details.obsidian-properties')){
+      for(const key of ['height','max-height','min-height','overflow','overflow-x','overflow-y'])
+        details.style.removeProperty(key);
+      details.style.setProperty('height','auto','important');
+      details.style.setProperty('overflow','visible','important');
+      const summary=details.querySelector(':scope > summary');
+      if(summary){
+        summary.style.setProperty('display','list-item','important');
+        summary.style.setProperty('height','auto','important');
+        summary.style.setProperty('overflow','visible','important');
+        summary.style.setProperty('cursor','pointer','important');
+      }
+      for(const content of details.querySelectorAll('pre')){
+        content.style.setProperty('display','block','important');
+        content.style.setProperty('height','auto','important');
+        content.style.setProperty('max-height','none','important');
+        content.style.setProperty('overflow','visible','important');
+        content.style.setProperty('white-space','pre-wrap','important');
+      }
+    }
     // Bases uses buttons for interactive row navigation. Removing every
     // button from a standalone document erased the corresponding note names.
     // Keep their plain, non-interactive labels in exported tables.
@@ -377,7 +415,9 @@
       cloned.style.setProperty('background-color','#fff','important');
       cloned.style.setProperty('color','#252c34','important');
     }
-    cloned.querySelectorAll(REMOVE).forEach(node=>node.remove());
+    cloned.querySelectorAll(REMOVE+',.drawio-tabs,.drawio-controls,.drawio-summary,'+
+      '.bases-tabs,.bases-intro,.bases-status,.structured-embed-header,'+
+      '.canvas-controls,.canvas-summary').forEach(node=>node.remove());
     // Reject remaining references that would require an external resource, while
     // preserving anchors, gradient markers and SVG clip-path IDs.
     for (const element of cloned.querySelectorAll('*')) {
@@ -407,6 +447,15 @@
       '.wiki-export-preview{margin:0 auto;max-width:100%;width:'+width+'px;'+
       'height:auto!important;min-height:0!important;overflow:visible!important;flex:none!important;}'+
       '.wiki-export-preview .visualization{overflow:visible!important;}'+
+      '.wiki-export-preview .wiki-export-structured{background:transparent!important;'+
+      'border:0!important;padding:0!important;overflow:visible!important;}'+
+      '.wiki-export-preview details.obsidian-properties{height:auto!important;'+
+      'max-height:none!important;overflow:visible!important;}'+
+      '.wiki-export-preview details.obsidian-properties>summary{display:list-item!important;'+
+      'height:auto!important;overflow:visible!important;cursor:pointer!important;}'+
+      '.wiki-export-preview details.obsidian-properties pre{display:block!important;'+
+      'height:auto!important;max-height:none!important;white-space:pre-wrap!important;'+
+      'overflow:visible!important;}'+
       'img,svg{max-width:100%;}'+
       /* StackEdit-like printed article: centred ~470pt reading column,
          12pt body text and generous headings. Inline snapshots use fixed
