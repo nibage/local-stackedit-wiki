@@ -76,6 +76,38 @@ with sync_playwright() as pw:
           '<td>'+('Text that must wrap '.repeat(8))+'</td><td>Right column</td></tr></tbody></table></div>'+
         '<pre><code>'+('averyverylongunbrokentoken'.repeat(30))+'</code></pre>'+
         '<h2>After all graphical content</h2><p>Last paragraph is not clipped.</p>';
+      // Recreate the REAL renderer DOM (as found in Bases-Zaznam-Hotovo.html):
+      // fixed-height <p><span class="wiki-structured-embed">...</span></p>
+      // with nested <div>s. Building nodes instead of parsing HTML is
+      // important because a string parser would silently reparent <div>s.
+      const details=preview.querySelector('details.obsidian-properties');
+      details.style.height='36px'; // recorded CLOSED computed height
+      details.querySelector('pre').style.height='83px';
+      const canvasEmbed=preview.querySelector('.wiki-structured-embed');
+      const canvasSpan=document.createElement('span');
+      canvasSpan.className=canvasEmbed.className;
+      canvasSpan.style.cssText='display:block;height:583px;background:#f7f8fa;';
+      while(canvasEmbed.firstChild)canvasSpan.append(canvasEmbed.firstChild);
+      const canvasParagraph=document.createElement('p');
+      canvasParagraph.style.cssText='height:583px;margin:18px 0;';
+      canvasEmbed.replaceWith(canvasParagraph);
+      canvasParagraph.append('Text before canvas ',canvasSpan,' text after canvas');
+      const drawio=preview.querySelector('.wiki-drawio-viewer');
+      const drawioParagraph=document.createElement('p');
+      drawioParagraph.style.cssText='height:583px;margin:18px 0;';
+      const drawioSpan=document.createElement('span');
+      drawioSpan.className='wiki-attachment-embed wiki-structured-embed';
+      drawioSpan.style.cssText='display:block;height:583px;background:#f7f8fa;';
+      const drawioHeader=document.createElement('div');
+      drawioHeader.className='structured-embed-header';
+      drawioHeader.textContent='Attachments/example.drawio';
+      const drawioBody=document.createElement('div');
+      drawioBody.className='structured-embed-body';
+      const drawioInner=document.createElement('div');
+      drawio.replaceWith(drawioParagraph);
+      drawioInner.append(drawio);drawioBody.append(drawioInner);
+      drawioSpan.append(drawioHeader,drawioBody);
+      drawioParagraph.append(drawioSpan);
     }""")
     assert page.locator('#preview').evaluate('(el)=>getComputedStyle(el).display')=='none' or \
         page.locator('.preview-pane').evaluate('(el)=>getComputedStyle(el).display')=='none'
@@ -95,8 +127,10 @@ with sync_playwright() as pw:
         assert 'wiki-export-static-graph' in text
         assert 'Interactive grey wrapper' not in text
         assert 'wiki-attachment-embed' not in text
-        assert 'wiki-export-structured' in text
+        assert text.count('wiki-export-structured')>=2
+        assert 'Text before canvas' in text and 'text after canvas' in text
         assert '<summary' in text
+        assert 'height: 583px' not in text and 'height:583px' not in text
         assert 'scale(' in text
         assert 'translate(-120px,-60px)' not in text
         assert 'blob:' not in text
@@ -113,6 +147,18 @@ with sync_playwright() as pw:
     disclosure.locator('summary').click()
     assert disclosure.evaluate('(el)=>el.open')
     assert disclosure.locator('pre').bounding_box()['height']>20
+    # Opening YAML must increase the native details height AND push the
+    # heading down: the original fixed 36px panel overlapped the heading.
+    detail_box=disclosure.bounding_box()
+    next_element_top=disclosure.evaluate('(el)=>el.nextElementSibling.getBoundingClientRect().top')
+    assert detail_box['height']>100,detail_box
+    assert next_element_top>=detail_box['y']+detail_box['height'],(detail_box,next_element_top)
+    assert html_page.locator('p:has(.wiki-export-structured)').count()==0
+    assert html_page.locator('.wiki-export-structured').count()==2
+    drawio_box=html_page.locator('.wiki-export-structured:has(.wiki-drawio-viewer)').bounding_box()
+    svg_box=html_page.locator('.wiki-drawio-viewer > svg').bounding_box()
+    assert drawio_box['height']<svg_box['height']+40,(drawio_box,svg_box)
+    assert abs(drawio_box['y']-svg_box['y'])<25,(drawio_box,svg_box)
     graph=html_page.locator('.wiki-export-static-graph').bounding_box()
     main=html_page.locator('main').bounding_box()
     assert abs(graph['x']+graph['width']/2-main['x']-main['width']/2)<18,(graph,main)
