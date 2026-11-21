@@ -132,6 +132,7 @@
 .wiki-bases-viewer .bases-table {border-collapse:separate;border-spacing:0;}
 .wiki-bases-viewer .bases-table thead th,
 :root[data-theme="stackedit"] .wiki-bases-viewer .bases-table thead th,
+:root[data-theme="stackedit"] .attachment-dialog.bases-dialog-open .wiki-bases-viewer .bases-table thead th,
 .attachment-dialog.bases-dialog-open .wiki-bases-viewer .bases-table thead th {
   position:sticky;top:0;z-index:8;
   background:var(--bases-sticky-background,var(--panel-alt))!important;
