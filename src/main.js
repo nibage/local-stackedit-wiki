@@ -896,6 +896,7 @@
         const raw = JSON.parse(snapshot.text.replace(/^\uFEFF/,''));
         const canvasEditor = window.LocalWikiCanvasEditor.mount(raw, {
           fingerprint:snapshot.fingerprint,
+          closeButton:$('attachment-close'),
           readImage:async target => {
             if (!bridge.hasAsset(target) || !types.isImage(target)) return null;
             const image=await bridge.readAsset(target);
@@ -927,6 +928,7 @@
         viewer.querySelector('.wiki-canvas-viewer')?.dispose?.();
         activeCanvasEditor=canvasEditor;
         viewer.replaceChildren(canvasEditor.root);
+        dialog.querySelector('.dialog-actions').before(canvasEditor.confirmation);
         canvasInfo.replaceChildren();
         canvasInfo.hidden=true;
         $('attachment-insert').before(canvasEditor.previewButton);
