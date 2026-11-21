@@ -66,7 +66,7 @@ test('Canvas asset snapshot writes only with a current fingerprint and permissio
   assert.notEqual(saved.fingerprint,snapshot.fingerprint);
   await assert.rejects(()=>api.writeAsset('draft.canvas','overwrite',snapshot.fingerprint),e=>e.code==='EXTERNAL_CHANGE');
   assert.equal(JSON.parse(canvas.contents).draft,1);
-  await assert.rejects(()=>api.writeAsset('diagram.drawio','X','anything'),/only writes .canvas/);
+  await assert.rejects(()=>api.writeAsset('diagram.drawio','X','anything'),e=>e.code==='EXTERNAL_CHANGE');
   assert.equal(other.contents,'untouched');
 });
 test('read-only Canvas snapshot cannot be committed',async()=>{
@@ -79,7 +79,7 @@ test('read-only Canvas snapshot cannot be committed',async()=>{
   assert.equal(canvas.contents,text);
 });
 
-test('Base YAML asset snapshots protect writes, disallow draw.io and read-only writes',async()=>{
+test('Base YAML snapshots protect writes, reject missing assets and read-only writes',async()=>{
   const yaml='views:\n  - type: table\n    name: Notes\n';
   const base=new MockFile('views.base',yaml);
   const api=setup(new MockDir('Wiki',[base]));
@@ -90,9 +90,29 @@ test('Base YAML asset snapshots protect writes, disallow draw.io and read-only w
   assert.match(base.contents,/All notes/);
   await assert.rejects(()=>api.writeAsset('views.base','corrupt',snapshot.fingerprint),e=>e.code==='EXTERNAL_CHANGE');
   assert.match(base.contents,/All notes/);
-  await assert.rejects(()=>api.writeAsset('diagram.drawio','x','missing'),/only writes/);
+  await assert.rejects(()=>api.writeAsset('diagram.drawio','x','missing'),/permission is missing/);
   const ro=setup(new MockDir('Wiki',[base]));
   await ro.openExisting(new MockDir('Wiki',[base]),()=>{},true);
   const after=await ro.readAssetSnapshot('views.base');
   await assert.rejects(()=>ro.writeAsset('views.base','x',after.fingerprint),/read-only/);
+});
+
+test('draw.io source snapshots allow only fingerprint-guarded writes in writable mode',async()=>{
+  const xml='<?xml version="1.0"?><mxfile><diagram name="Page"><mxGraphModel/></diagram></mxfile>';
+  const file=new MockFile('diagram.drawio',xml);
+  const api=setup(new MockDir('Wiki',[file]));
+  await api.openWritable();
+  const snapshot=await api.readAssetSnapshot('diagram.drawio');
+  assert.equal(snapshot.text,xml);
+  const updated=xml.replace('Page','Updated');
+  const result=await api.writeAsset('diagram.drawio',updated,snapshot.fingerprint);
+  assert.equal(file.contents,updated);
+  assert.notEqual(result.fingerprint,snapshot.fingerprint);
+  await assert.rejects(()=>api.writeAsset('diagram.drawio','overwrite',snapshot.fingerprint),
+    error=>error.code==='EXTERNAL_CHANGE');
+  assert.equal(file.contents,updated);
+  const ro=setup(new MockDir('Wiki',[file]));
+  await ro.openExisting(new MockDir('Wiki',[file]),()=>{},true);
+  const roSnapshot=await ro.readAssetSnapshot('diagram.drawio');
+  await assert.rejects(()=>ro.writeAsset('diagram.drawio','x',roSnapshot.fingerprint),/read-only/);
 });
