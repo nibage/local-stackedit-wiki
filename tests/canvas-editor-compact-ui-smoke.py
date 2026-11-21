@@ -162,26 +162,53 @@ with sync_playwright() as pw:
     assert page.locator('#attachment-dialog .dialog-actions .canvas-preview-exit').count()==1
     assert page.locator('.canvas-editor>.canvas-editor-meta').bounding_box()['y']>inspector.bounding_box()['y']
 
+    # The entire right pane has one third of inspector width.
+    bounds=inspector.bounding_box()
+    right=edges.bounding_box()
+    ratio=right['width']/bounds['width']
+    assert .30<=ratio<=.36,(bounds,right,ratio)
+    # The disabled delete button aligns with Delete card even without edges.
+    page.locator('.canvas-editor-edge-list').select_option('0')
+    inspector.locator('.canvas-delete-connection').click()
+    assert inspector.locator('.canvas-delete-connection').is_disabled()
+    without=inspector.locator('.canvas-delete-connection').bounding_box()
+    bottom=inspector.locator('.canvas-editor-delete').bounding_box()
+    assert abs(without['x']-bottom['x'])<=2,(without,bottom)
+    # Small Width/Height fields share the same horizontal coordinate.
+    w=inspector.locator('.canvas-prop-width input').bounding_box()
+    h=inspector.locator('.canvas-prop-height input').bounding_box()
+    assert 30<w['width']<=50 and abs(w['x']-h['x'])<2,(w,h)
+    toolbar.locator('button',has_text='Connect').click()
+    connect=toolbar.locator('.canvas-connect-action')
+    assert connect.get_attribute('aria-pressed')=='true'
+    assert connect.evaluate('(el)=>getComputedStyle(el).borderColor')=='rgb(88, 163, 106)'
+    assert page.locator('.canvas-node[data-node-id="a"]').evaluate('(el)=>getComputedStyle(el).cursor')=='alias'
+    connect.click()
+    assert connect.get_attribute('aria-pressed')=='false'
     toolbar.locator('button',has_text='+ Group').click()
     assert 'unsaved changes' in save.inner_text()
     page.locator('#attachment-close').click()
     assert page.locator('#attachment-dialog').evaluate('(el)=>el.open')
-    warning=toolbar.locator('.canvas-editor-confirm')
+    warning=page.locator('#attachment-dialog>.canvas-editor-confirm')
     assert warning.is_visible()
     assert warning.locator('button').count()==2
-    assert warning.inner_text().strip()=='Discard changes\nKeep editing',warning.inner_text()
-    assert warning.bounding_box()['x']>buttons.bounding_box()['x']
-    assert abs(warning.bounding_box()['y']-buttons.bounding_box()['y'])<12
-    assert not zoom.is_visible(),'Zoom should give room to confirmation buttons'
-    assert not save.is_visible(),'Save/status should give room to confirmation buttons'
-    assert toolbar.bounding_box()['height']<49,'Confirmation must not add a toolbar row'
-    warning.locator('button',has_text='Keep editing').click()
-    assert zoom.is_visible()
-    assert save.is_visible()
+    assert warning.inner_text().strip()=='Discard changes\nSave changes',warning.inner_text()
+    assert warning.bounding_box()['y']<page.locator('#attachment-close').bounding_box()['y']
+    assert page.locator('#attachment-close').evaluate('(el)=>el.classList.contains("canvas-exit-pending")')
+    assert warning.locator('.canvas-confirm-save').evaluate('(el)=>getComputedStyle(el).borderColor')=='rgb(88, 163, 106)'
+    assert zoom.is_visible() and save.is_visible()
+    # Continuing editing clears confirmation and Close step highlighting.
+    toolbar.locator('button',has_text='+ Text').click()
     assert not warning.is_visible()
+    assert not page.locator('#attachment-close').evaluate('(el)=>el.classList.contains("canvas-exit-pending")')
+    # Preview indicates the Preview step while guarding unsaved data.
+    page.locator('.canvas-preview-exit').click()
+    assert warning.is_visible()
+    assert page.locator('.canvas-preview-exit').evaluate('(el)=>el.classList.contains("canvas-exit-pending")')
+    warning.locator('button',has_text='Save changes').click()
+    page.wait_for_function("document.querySelector('.canvas-editor')===null")
+    assert page.locator('#attachment-edit-canvas').is_visible()
     page.locator('#attachment-close').click()
-    warning.locator('button',has_text='Discard changes').click()
-    page.wait_for_function("!document.querySelector('#attachment-dialog').open")
     assert not errors,errors
     print('PASS: Canvas compact chrome, path status, zoom, icons, inspector, deselection and inline discard')
     browser.close()
