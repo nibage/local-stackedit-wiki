@@ -26,6 +26,14 @@ jobs:
           python tests/demo-english-paths.test.py
       - name: Download and validate pinned renderers; build complete ZIP
         run: python tools/build-offline-release.py --output local-stackedit-wiki-offline.zip
+      - name: Temporary CI debug runtime and tests bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-stackedit-wiki-debug-source
+          path: |
+            local-stackedit-wiki-offline.zip
+            tests/
+          retention-days: 1
       - name: Install Chromium for actual renderer smoke tests
         run: |
           python -m pip install playwright==1.55.0
