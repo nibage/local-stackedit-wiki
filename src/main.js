@@ -17,6 +17,7 @@
   let inlineDraft = null, imageDialogURL = null, attachmentDialogURL = null, pendingMovePath = null;
   let activeCanvasEditor = null;
   let activeBaseEditor = null;
+  let activeAssetSourceEditor = null;
   let selectedFolder = '', treeClickTimer = null, lastTreeSelection = null;
   let moveEnabled = false, deleteEnabled = false, draggedPath = null, draggedKind = null;
   let noticeTimer = null, autosaveBlocked = null;
@@ -875,6 +876,8 @@
     $('attachment-dialog-canvas-info').hidden=true;
     activeBaseEditor?.dispose?.();
     activeBaseEditor = null;
+    activeAssetSourceEditor?.dispose?.();
+    activeAssetSourceEditor = null;
     const dialog = $('attachment-dialog');
     const viewer = $('attachment-dialog-viewer');
     viewer.querySelector('.wiki-canvas-viewer')?.dispose?.();
@@ -894,6 +897,58 @@
     const editCanvas = $('attachment-edit-canvas');
     editCanvas.hidden = types.kind(path) !== 'canvas' || bridge.getMode() !== 'readwrite';
     editCanvas.disabled = operations.isBusy();
+    const editCanvasSource=$('attachment-edit-canvas-source');
+    const editDrawioSource=$('attachment-edit-drawio-source');
+    editCanvasSource.hidden=true;
+    editCanvasSource.disabled=operations.isBusy();
+    editDrawioSource.hidden=types.kind(path)!=='drawio'||bridge.getMode()!=='readwrite';
+    editDrawioSource.disabled=operations.isBusy();
+    async function showStructuredSource(kind){
+      if(activeAssetSourceEditor||operations.isBusy()||bridge.getMode()!=='readwrite')return;
+      if(activeCanvasEditor?.isDirty){
+        notice('Save or discard Canvas changes before editing the underlying JSON.','error');
+        return;
+      }
+      const action=kind==='canvas'?editCanvasSource:editDrawioSource;
+      action.disabled=true;
+      try{
+        const snapshot=await bridge.readAssetSnapshot(path);
+        if(!dialog.open||$('attachment-dialog-path').textContent!==path)return;
+        const source=snapshot.text.replace(/^\uFEFF/,'');
+        const lineEnding=/\r\n/.test(source)?'\r\n':'\n';
+        const editor=window.LocalWikiAssetSourceEditor.mount(source.replace(/\r\n?/g,'\n'),{
+          kind,fingerprint:snapshot.fingerprint,
+          onSave:async(body,expected)=>{
+            if(operations.isBusy())throw new Error('Finish the current wiki operation before saving source.');
+            const content=(snapshot.hasBOM?'\uFEFF':'')+body.replace(/\n/g,lineEnding);
+            return bridge.writeAsset(path,content,expected);
+          },
+          onPreview:async()=>{
+            activeAssetSourceEditor?.dispose?.();activeAssetSourceEditor=null;
+            const file=await bridge.readAsset(path);
+            const display=await attachmentTextPreview(file,path);
+            if(dialog.open&&$('attachment-dialog-path').textContent===path){
+              viewer.replaceChildren(display);
+              editCanvas.hidden=kind!=='canvas';
+              editCanvasSource.hidden=true;
+              editDrawioSource.hidden=kind!=='drawio';
+              $('attachment-insert').disabled=bridge.getMode()!=='readwrite'||!activePath||operations.isBusy();
+            }else display.querySelector('.wiki-canvas-viewer,.wiki-drawio-viewer')?.dispose?.();
+          },
+          onClose:()=>dialog.close()
+        });
+        activeCanvasEditor?.dispose?.();activeCanvasEditor=null;
+        activeAssetSourceEditor=editor;
+        viewer.querySelector('.wiki-canvas-viewer,.wiki-drawio-viewer')?.dispose?.();
+        viewer.replaceChildren(editor.root);
+        editCanvas.hidden=true;editCanvasSource.hidden=true;editDrawioSource.hidden=true;
+        $('attachment-insert').disabled=true;
+      }catch(error){
+        notice('Cannot edit source: '+error.message,'error');
+      }finally{action.disabled=false;}
+    }
+    editCanvasSource.onclick=()=>void showStructuredSource('canvas');
+    editDrawioSource.onclick=()=>void showStructuredSource('drawio');
     editCanvas.onclick = async () => {
       if (activeCanvasEditor || bridge.getMode() !== 'readwrite' || operations.isBusy()) return;
       editCanvas.disabled = true;
@@ -929,6 +984,7 @@
             if (dialog.open && $('attachment-dialog-path').textContent===path) {
               viewer.replaceChildren(display);
               editCanvas.hidden=false;
+              editCanvasSource.hidden=true;
             } else display.querySelector('.wiki-canvas-viewer')?.dispose?.();
           },
           onClose:() => dialog.close()
@@ -940,6 +996,7 @@
         canvasInfo.hidden=true;
         $('attachment-insert').before(canvasEditor.previewButton);
         editCanvas.hidden=true;
+        editCanvasSource.hidden=false;
       } catch (error) {
         viewer.textContent='Cannot edit Canvas: '+error.message+' The file has not been changed.';
       } finally { editCanvas.disabled=false; }
@@ -1011,17 +1068,23 @@
   $('attachment-close').addEventListener('click', () => {
     if (activeCanvasEditor && !activeCanvasEditor.requestClose()) return;
     if (activeBaseEditor && !activeBaseEditor.requestClose()) return;
+    if (activeAssetSourceEditor && !activeAssetSourceEditor.requestClose()) return;
     $('attachment-dialog').close();
   });
   $('attachment-dialog').addEventListener('cancel', event => {
     if (activeCanvasEditor && !activeCanvasEditor.requestClose()) event.preventDefault();
     if (activeBaseEditor && !activeBaseEditor.requestClose()) event.preventDefault();
+    if (activeAssetSourceEditor && !activeAssetSourceEditor.requestClose()) event.preventDefault();
   });
   $('attachment-dialog').addEventListener('close', () => {
     activeCanvasEditor?.dispose?.();
     activeCanvasEditor = null;
     activeBaseEditor?.dispose?.();
     activeBaseEditor = null;
+    activeAssetSourceEditor?.dispose?.();
+    activeAssetSourceEditor = null;
+    $('attachment-edit-canvas-source').hidden=true;
+    $('attachment-edit-drawio-source').hidden=true;
     $('attachment-edit-base').hidden = true;
     $('attachment-edit-canvas').hidden = true;
     $('attachment-dialog-viewer').querySelector('.wiki-canvas-viewer')?.dispose?.();

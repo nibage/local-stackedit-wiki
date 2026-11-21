@@ -106,7 +106,33 @@ with sync_playwright() as pw:
     assert abs(start['y']-now['y'])<=2,(start,now)
     assert moved_row['y']<first_row['y']-10,(first_row,moved_row)
     assert header.evaluate('(el)=>getComputedStyle(el).position')=='sticky'
-    assert header.evaluate('(el)=>getComputedStyle(el).backgroundColor')!='rgba(0, 0, 0, 0)'
+    opaque=header.evaluate("""el=>{
+      const cs=getComputedStyle(el),bg=cs.backgroundColor;
+      return {background:bg,border:cs.borderBottomWidth,
+        borderColor:cs.borderBottomColor,shadow:cs.boxShadow};
+    }""")
+    assert opaque['background']=='rgb(246, 246, 246)',opaque
+    assert opaque['border']=='2px',opaque
+    assert opaque['shadow']!='none',opaque
+    page.locator('#theme-select').select_option('light')
+    light=header.evaluate('el=>({bg:getComputedStyle(el).backgroundColor,border:getComputedStyle(el).borderBottomWidth})')
+    assert light['bg']=='rgb(238, 243, 248)' and light['border']=='2px',light
+    page.locator('#attachment-close').click()
+    page.evaluate("""() => {
+      const note=window.mockWiki.entries.get('Three.md');
+      note.body+='\\n\\n![[example.base]]';
+      note.lastModified++;
+    }""")
+    page.locator('.tree-row[aria-label="Three.md"]').click()
+    inline=page.locator('#preview .wiki-bases-viewer .bases-table thead th').first
+    inline.wait_for()
+    inline_scroll=page.locator('#preview .bases-table-scroll')
+    inline_scroll.evaluate("(el)=>{el.style.maxHeight='60px';el.scrollTop=45;}")
+    assert inline.evaluate("(el)=>getComputedStyle(el).backgroundColor")=='rgb(238, 243, 248)'
+    assert inline.evaluate("(el)=>getComputedStyle(el).borderBottomWidth")=='2px'
+    page.locator('#theme-select').select_option('stackedit')
+    assert inline.evaluate("(el)=>getComputedStyle(el).backgroundColor")=='rgb(246, 246, 246)'
+    assert inline.evaluate("(el)=>getComputedStyle(el).borderBottomWidth")=='2px'
     assert not errors,errors
     browser.close()
     print('PASS: Bases temporary filters, sort, widths, multi-view and no source writes')
