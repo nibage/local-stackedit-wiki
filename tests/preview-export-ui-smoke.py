@@ -79,11 +79,20 @@ with sync_playwright() as pw:
     assert page.locator('.preview-pane').bounding_box()['height']==pane_height_before
 
     page.locator('#preview-export-toggle').click()
-    with page.expect_download() as capture:
+    # HTML no longer downloads immediately. A user can inspect the rendered
+    # standalone document in a new tab, then explicitly download from there.
+    with context.expect_page() as new_html_tab:
         page.locator('#preview-export-html').click()
+    html_tab=new_html_tab.value
+    html_tab.wait_for_function("document.querySelector('.wiki-html-preview-toolbar a[download]') !== null")
+    assert html_tab.locator('main h1').first.inner_text()=='Preview export heading'
+    assert html_tab.locator('.wiki-html-preview-toolbar a').inner_text()=='Download HTML'
+    with html_tab.expect_download() as capture:
+        html_tab.locator('.wiki-html-preview-toolbar a[download]').click()
     download=capture.value
     assert download.suggested_filename=='Preview.html'
     exported=Path(download.path()).read_text(encoding='utf-8')
+    html_tab.close()
     assert 'Preview export heading' in exported
     assert 'Hello' in exported and 'world' in exported
     assert 'data:image/png;base64,' in exported

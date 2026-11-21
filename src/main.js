@@ -494,6 +494,7 @@
   }
   async function loadImages(imageNodes, sourcePath, sequence) {
     for (const img of imageNodes) {
+      img.dataset.exportPending='true';
       const raw = img.dataset.localSource;
       let path = null;
       if (raw && raw.startsWith('obsidian-asset:')) {
@@ -536,6 +537,7 @@
         if (sequence !== renderSequence) return;
         img.addEventListener('load', queuePreviewPositionRestore, {once:true});
         img.src = url;
+        delete img.dataset.exportPending;
         img.title = path;
       } catch (_) {
         if (sequence === renderSequence) img.replaceWith(document.createTextNode(`[unable to load image: ${raw}]`));
@@ -548,17 +550,20 @@
     let structuredCount = 0;
     for (const placeholder of nodes || []) {
       if (sequence !== renderSequence) return;
+      placeholder.dataset.exportPending='true';
       let path;
       try { path = resolveAttachment(placeholder.dataset.localAttachment || '', sourcePath, true); }
       catch (_) { path = null; }
       if (!path || !bridge.hasAsset(path)) {
-        placeholder.textContent = '[attachment missing or ambiguous]'; continue;
+        placeholder.textContent = '[attachment missing or ambiguous]';
+        delete placeholder.dataset.exportPending; continue;
       }
       try {
         const kind = types.kind(path);
         if (['canvas','base','drawio'].includes(kind)) {
           if (++structuredCount > MAX_INLINE_STRUCTURED) {
             placeholder.textContent = 'Too many structured embeds (maximum six per note).';
+            delete placeholder.dataset.exportPending;
             continue;
           }
           const header = document.createElement('div');
@@ -582,6 +587,7 @@
             disposeStructured(content); return;
           }
           body.replaceChildren(content);
+          delete placeholder.dataset.exportPending;
           continue;
         }
         const file = await bridge.readAsset(path);
@@ -591,7 +597,9 @@
         const media = attachmentMedia(path, file, url);
         if (media) placeholder.replaceChildren(label, media);
         else placeholder.textContent = '[unsupported attachment]';
+        delete placeholder.dataset.exportPending;
       } catch (error) {
+        delete placeholder.dataset.exportPending;
         if (sequence === renderSequence && placeholder.isConnected) {
           placeholder.textContent = '[attachment failed to load: '+(error?.message||'unknown error')+']';
         }
@@ -1634,12 +1642,17 @@
     // A pending 3-second debounce must never produce an outdated export.
     if (renderTimer) renderPreview(true);
     await exporter.waitForReady(ui.preview,()=>$('render-status').textContent.includes('Rendering:'));
+    // MathJax typesetting is asynchronous and must be fully committed before
+    // cloning the DOM; otherwise the standalone export may contain raw TeX.
+    if (window.MathJax?.Hub?.Queue) {
+      await new Promise(resolve=>window.MathJax.Hub.Queue(resolve));
+    }
     if (!activePath || activePath!==path)
       throw new Error('The selected note changed during export. Please retry.');
     const html=await exporter.build(ui.preview,{title:basename(path),theme:kind==='pdf'?'light':'current'});
     if (kind==='html') {
-      exporter.downloadHtml(html,exporter.fileName(path,'html'));
-      notice('Standalone HTML downloaded with inline styles and local preview assets.','success');
+      exporter.showHtmlPreview(html,popup,exporter.fileName(path,'html'));
+      notice('HTML opened in a new tab. Use Download HTML there to save the standalone file.','success');
     } else {
       await exporter.printHtml(html,popup);
       notice('In the print dialog, choose Save as PDF. PDF always uses the light theme; the app theme stays unchanged.','success');
@@ -1650,9 +1663,12 @@
     if (!activePath || previewExporting) return;
     const path=activePath;
     let popup=null;
-    if (kind==='pdf') {
-      try {popup=window.LocalWikiPreviewExport.openPrintWindow();}
-      catch(error){notice('Cannot open PDF preview: '+error.message,'error');return;}
+    try {
+      popup=window.LocalWikiPreviewExport.openPrintWindow(
+        kind==='html'?'Preparing HTML preview…':'Preparing PDF preview…');
+    } catch(error) {
+      notice('Cannot open '+kind.toUpperCase()+' preview: '+error.message,'error');
+      return;
     }
     previewExporting=true;updatePreviewExportEnabled();
     void exportRenderedPreview(kind,popup,path).catch(error=>{

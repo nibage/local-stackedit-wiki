@@ -204,6 +204,11 @@
   // external URLs, and translate within-note heading links to PDF/HTML #ids.
   function normalizeDocumentLinks(root,title) {
     const headings=Array.from(root.querySelectorAll('h1,h2,h3,h4,h5,h6'));
+    // The editor assigns stable wiki-heading-* ids, which print to PDF as
+    // actual internal destinations. Keep those ids rather than text-only TOC.
+    headings.forEach((heading,index)=>{
+      if(!heading.id) heading.id='wiki-export-heading-'+index;
+    });
     function normalized(value) {
       try {value=decodeURIComponent(value);}catch(_){}
       return String(value).replace(/^#+/,'').normalize('NFC').trim().toLocaleLowerCase()
@@ -218,14 +223,15 @@
       const raw=anchor.getAttribute('href')||'';
       let target=null;
       if (raw.startsWith('#')) target=toHeading(raw.slice(1));
-      if (/^wiki:/i.test(raw)) {
-        let spec=raw.slice(5);
+      if (/^wiki:/i.test(raw) || /^[^:#?]+\.md(?:arkdown)?#/i.test(raw)) {
+        let spec=/^wiki:/i.test(raw)?raw.slice(5):raw;
         try {spec=decodeURIComponent(spec);}catch(_){}
         const split=spec.indexOf('#');
         const file=split>=0?spec.slice(0,split):spec;
         const section=split>=0?spec.slice(split+1):'';
         const page=String(title).replace(/\.(?:md|markdown)$/i,'');
-        if (section && (!file || normalized(file.replace(/\.(?:md|markdown)$/i,''))===normalized(page)))
+        const name=file.split('/').pop().replace(/\.(?:md|markdown)$/i,'');
+        if (section && (!file || normalized(name)===normalized(page)))
           target=toHeading(section);
       }
       if (target) anchor.setAttribute('href','#'+target);
@@ -233,12 +239,12 @@
     }
   }
 
-  function flattenVisualsForDocument(cloned,theme) {
+  function flattenVisualsForDocument(cloned,theme,layoutWidth,visualMetrics) {
     // Existing preview viewers are interactive panning/zooming widgets. A
-    // serialized HTML/PDF needs a static print-sized graph, not a cropped
-    // viewport with a camera transform and fixed, overflowing dimensions.
-    const maxWidth=theme==='light'?620:870;
-    const maxHeight=theme==='light'?730:1050;
+    // serialized HTML/PDF needs static geometry without the user's pan/zoom.
+    // For HTML, use the actual preview width; for A4, fit the printable column.
+    const maxWidth=theme==='light'?620:Math.max(760,layoutWidth||900);
+    const maxHeight=theme==='light'?950:Infinity;
     const fit=(width,height)=>{
       const w=Number.isFinite(width)&&width>0?width:650;
       const h=Number.isFinite(height)&&height>0?height:400;
@@ -276,14 +282,22 @@
       viewer.style.cssText='display:block!important;max-width:100%!important;'+
         'width:100%!important;height:auto!important;overflow:visible!important;';
     }
+    let diagramIndex=0;
     for(const svg of cloned.querySelectorAll(
       '.visualization svg, .wiki-drawio-viewer>svg')){
       // Do not alter Canvas connection-layer coordinates; scaling the entire
       // board retains pixel-perfect card positions and arrow endpoints.
       if(svg.closest('.wiki-export-static-graph'))continue;
       const box=svg.getAttribute('viewBox')?.split(/[\s,]+/).map(Number)||[];
-      const w=parseFloat(svg.getAttribute('width'))||box[2]||parseFloat(svg.style.width)||650;
-      const h=parseFloat(svg.getAttribute('height'))||box[3]||parseFloat(svg.style.height)||400;
+      const pixels=value=>/^\s*\d+(?:\.\d+)?(?:px)?\s*$/i.test(value||'')?parseFloat(value):0;
+      // Mermaid often writes width="100%". parseFloat("100%") == 100 is
+      // NOT 100 actual pixels: it made diagrams tiny in HTML/PDF exports.
+      // Measure the rendered preview SVG in the laid-out snapshot instead.
+      const measured=svg.closest('.visualization')?visualMetrics[diagramIndex++]:null;
+      const w=measured?.width||pixels(svg.getAttribute('width'))||box[2]||
+        pixels(svg.style.width)||650;
+      const h=measured?.height||pixels(svg.getAttribute('height'))||box[3]||
+        pixels(svg.style.height)||400;
       const scale=fit(w,h);
       if(!svg.hasAttribute('viewBox')&&w>0&&h>0)
         svg.setAttribute('viewBox','0 0 '+w+' '+h);
@@ -314,6 +328,11 @@
     const snapshot=await themeSnapshot(preview,theme);
     const source=snapshot.node;
     try {
+    const visualMetrics=Array.from(source.querySelectorAll('.visualization svg')).map(svg=>{
+      const rect=svg.getBoundingClientRect();
+      return {width:rect.width,height:rect.height};
+    });
+    const layoutWidth=Math.max(760,source.clientWidth||900);
     const cloned=source.cloneNode(true);
     normalizeDocumentLinks(cloned,title);
     const originals=[source,...source.querySelectorAll('*')];
@@ -342,7 +361,16 @@
         copy.replaceWith(img);
       }catch(_){ /* Keep the non-raster canvas fallback if extraction is blocked. */ }
     }
-    flattenVisualsForDocument(cloned,theme);
+    flattenVisualsForDocument(cloned,theme,layoutWidth,visualMetrics);
+    // Bases uses buttons for interactive row navigation. Removing every
+    // button from a standalone document erased the corresponding note names.
+    // Keep their plain, non-interactive labels in exported tables.
+    for(const button of cloned.querySelectorAll('.bases-open-note')){
+      const label=cloned.ownerDocument.createElement('span');
+      label.className='wiki-export-base-note';
+      label.textContent=button.textContent;
+      button.replaceWith(label);
+    }
     if (theme==='light') {
       // Explicit final guarantee for the native PDF document, independent of
       // the source theme or any user-configured stylesheet load delays.
@@ -472,7 +500,8 @@
         if (!preview.isConnected){cleanup();reject(new Error('The preview was closed during export.'));return;}
         const images=Array.from(preview.querySelectorAll('img'));
         const loading=images.some(image=>image.getAttribute('src') && !image.complete);
-        if (!loading && !isPending() && Date.now()-quietSince>=400) {
+        const visualPending=!!preview.querySelector('[data-export-pending="true"],.drawio-loading,.canvas-note-loading');
+        if (!loading && !visualPending && !isPending() && Date.now()-quietSince>=400) {
           cleanup();resolve();return;
         }
         if (Date.now()-start>=10000){
@@ -492,16 +521,49 @@
     document.body.append(link);link.click();link.remove();
     setTimeout(()=>URL.revokeObjectURL(url),15000);
   }
-  function openPrintWindow() {
+  function openPrintWindow(title='Preparing PDF preview…') {
     // Must open synchronously from the real click, before asynchronous
     // image/diagram serialization, to avoid browser popup blocking.
     const popup=global.open('','_blank');
-    if (!popup) throw new Error('The browser blocked the print window. Allow this popup and try again.');
+    if (!popup) throw new Error('The browser blocked the preview window. Allow this popup and try again.');
     popup.document.open();
-    popup.document.write('<!doctype html><html><head><title>Preparing PDF preview…</title></head>'+
-      '<body><p>Preparing the printable preview…</p></body></html>');
+    popup.document.write('<!doctype html><html><head><title>'+escapeHtml(title)+'</title></head>'+
+      '<body><p>Preparing the local document preview…</p></body></html>');
     popup.document.close();
     return popup;
+  }
+  function showHtmlPreview(html,popup,filename) {
+    if (!popup || popup.closed) throw new Error('The HTML preview tab was closed.');
+    popup.document.open();
+    popup.document.write(html);
+    popup.document.close();
+    // This toolbar exists only in the preview tab, not in the downloadable
+    // standalone HTML. Download is a user-triggered link to a local Blob.
+    const doc=popup.document;
+    const toolbar=doc.createElement('nav');
+    toolbar.setAttribute('aria-label','HTML preview actions');
+    toolbar.className='wiki-html-preview-toolbar';
+    const save=doc.createElement('a');
+    save.textContent='Download HTML';
+    save.download=filename;
+    save.href=popup.URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
+    const close=doc.createElement('button');
+    close.type='button';close.textContent='Close preview';
+    close.addEventListener('click',()=>popup.close());
+    toolbar.append(save,close);
+    const style=doc.createElement('style');
+    style.textContent='.wiki-html-preview-toolbar{position:sticky;top:0;z-index:10000;'+
+      'display:flex;gap:10px;align-items:center;justify-content:flex-end;'+
+      'padding:9px 16px;background:#f5f7f9;color:#252c34;border-bottom:1px solid #d9dde2;'+
+      'font:13px system-ui,Arial,sans-serif}'+
+      '.wiki-html-preview-toolbar a,.wiki-html-preview-toolbar button{'+
+      'display:inline-flex;align-items:center;padding:7px 12px;'+
+      'border:1px solid #58a36a;border-radius:6px;background:#fff;'+
+      'color:#24372c;text-decoration:none;cursor:pointer;font:inherit}'+
+      '@media print{.wiki-html-preview-toolbar{display:none!important}}';
+    doc.head.append(style);
+    doc.body.prepend(toolbar);
+    popup.focus();
   }
   async function printHtml(html,popup) {
     if (!popup || popup.closed) throw new Error('The PDF print window was closed.');
@@ -522,5 +584,5 @@
       popup.requestAnimationFrame(resolve)));
     if (!popup.closed){popup.focus();popup.print();}
   }
-  global.LocalWikiPreviewExport={build,downloadHtml,openPrintWindow,printHtml,waitForReady,fileName,escapeHtml};
+  global.LocalWikiPreviewExport={build,downloadHtml,openPrintWindow,showHtmlPreview,printHtml,waitForReady,fileName,escapeHtml};
 })(window);

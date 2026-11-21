@@ -32,7 +32,7 @@ with sync_playwright() as pw:
     # app's renderer, deliberately hidden by the Editor-only layout.
     page.evaluate(r"""() => {
       const preview=document.querySelector('#preview');
-      const diagram='<svg xmlns="http://www.w3.org/2000/svg" width="1250" height="360" viewBox="0 0 1250 360">'+
+      const diagram='<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="360" viewBox="0 0 1250 360">'+
         '<rect x="0" y="0" width="1250" height="360" fill="#dbedf7" stroke="#225588" stroke-width="5"/>'+
         '<text x="30" y="150" font-size="46" fill="#123456">Mermaid drawn node</text></svg>';
       const abc='<svg xmlns="http://www.w3.org/2000/svg" width="900" height="160" viewBox="0 0 900 160">'+
@@ -44,6 +44,7 @@ with sync_playwright() as pw:
         '<text x="50" y="180" font-size="54">draw.io diagram</text></svg>';
       const note='A very long multi-paragraph document. '.repeat(90);
       preview.innerHTML='<h1>Graphical export test</h1>'+
+        '<nav><a href="#after-all-graphical-content">Jump to section</a></nav>'+
         '<p>'+note+'</p><div class="visualization visualization-mermaid">'+diagram+'</div>'+
         '<div class="visualization visualization-abc">'+abc+'</div>'+
         '<div class="wiki-attachment-embed"><div class="wiki-canvas-viewer">'+
@@ -67,7 +68,7 @@ with sync_playwright() as pw:
           '<table class="bases-table" style="table-layout:fixed;min-width:1150px;width:1150px">'+
           '<colgroup><col style="width:350px"><col style="width:450px"><col style="width:350px"></colgroup>'+
           '<thead><tr><th>Very long heading</th><th>Another column</th><th>Third column</th></tr></thead>'+
-          '<tbody><tr><td>'+('Very long cell content '.repeat(10))+'</td>'+
+          '<tbody><tr><td><button class="bases-open-note">Record Alpha</button></td>'+
           '<td>'+('Text that must wrap '.repeat(8))+'</td><td>Right column</td></tr></tbody></table></div>'+
         '<pre><code>'+('averyverylongunbrokentoken'.repeat(30))+'</code></pre>'+
         '<h2>After all graphical content</h2><p>Last paragraph is not clipped.</p>';
@@ -84,6 +85,9 @@ with sync_playwright() as pw:
         assert 'Visible Canvas card title' in text
         assert 'draw.io diagram' in text
         assert 'After all graphical content' in text
+        assert 'href="#wiki-export-heading-1"' in text
+        assert 'Record Alpha' in text
+        assert 'bases-open-note' not in text
         assert 'wiki-export-static-graph' in text
         assert 'scale(' in text
         assert 'translate(-120px,-60px)' not in text
@@ -96,6 +100,9 @@ with sync_playwright() as pw:
     assert html_page.locator('.visualization svg').count()==2
     assert html_page.locator('.wiki-export-static-graph .canvas-node').count()==2
     assert html_page.locator('.wiki-drawio-viewer>svg').count()==1
+    assert html_page.locator('.visualization-mermaid svg').bounding_box()['width']>=500
+    html_page.locator('nav a[href="#wiki-export-heading-1"]').click()
+    assert html_page.evaluate('location.hash')=='#wiki-export-heading-1'
     for selector in ['.visualization-mermaid svg','.visualization-abc svg',
                      '.wiki-export-static-graph','.wiki-drawio-viewer>svg']:
         assert html_page.locator(selector).bounding_box()['height']>25,selector
@@ -117,6 +124,7 @@ with sync_playwright() as pw:
     for item in dims['items']:
         rect=item['rect']
         assert rect['width']>10 and rect['height']>10,item
+    assert printed.locator('.visualization-mermaid svg').bounding_box()['width']>=400
         assert rect['right']<=dims['main']['right']+5,(item,dims['main'])
         assert rect['left']>=dims['main']['left']-5,(item,dims['main'])
     assert dims['scroll']<=1445,dims
