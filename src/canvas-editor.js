@@ -89,7 +89,7 @@
     separator.setAttribute('aria-hidden','true');
     const saveStack = make('div','canvas-editor-save-stack');
     warning.hidden = true;
-    toolbar.append(zoomControls,separator,actions,saveStack,warning);
+    toolbar.append(zoomControls,separator,actions,saveStack);
     root.append(toolbar,board,inspector,meta);
     meta.replaceChildren(summary,hint);
     saveStack.append(message);
@@ -135,37 +135,49 @@
       } while (array.some(item => item.id === value));
       return value;
     }
+    function dismissQuestion() {
+      warning.hidden=true;warning.replaceChildren();
+      previewButton.classList.remove('canvas-exit-pending');
+      options.closeButton?.classList.remove('canvas-exit-pending');
+      delete warning.dataset.target;
+    }
     function change(action) {
       if (saving || disposed) return;
       try {
         draft.change(action);
-        warning.hidden = true;
+        dismissQuestion();
         render();
       } catch (error) { status(error.message); }
     }
-    function question(messageText, action) {
-      // Inline confirmation replaces the zoom controls; do not add a new
-      // message row or move the centered dialog while a draft is unsaved.
-      warning.replaceChildren();
+    function question(messageText,action,trigger) {
+      if(saving)return;
+      dismissQuestion();
       warning.setAttribute('role','group');
       warning.setAttribute('aria-label',messageText);
-      const confirm = make('button','canvas-control','Discard changes');
-      const cancel = make('button','canvas-control','Keep editing');
-      confirm.type = cancel.type = 'button';
-      confirm.onclick = () => { warning.hidden = true; draft.discard(); action(); };
-      cancel.onclick = () => { warning.hidden = true; };
-      warning.append(confirm,cancel);
-      warning.hidden = false;
-      cancel.focus();
+      warning.dataset.target=trigger;
+      previewButton.classList.toggle('canvas-exit-pending',trigger==='preview');
+      options.closeButton?.classList.toggle('canvas-exit-pending',trigger==='close');
+      const discard=make('button','canvas-control','Discard changes');
+      const saveChanges=make('button','canvas-control canvas-confirm-save','Save changes');
+      discard.type=saveChanges.type='button';
+      discard.onclick=()=>{
+        dismissQuestion();draft.discard();action();
+      };
+      saveChanges.onclick=async()=>{
+        discard.disabled=true;saveChanges.disabled=true;
+        if(await persistCanvas()){dismissQuestion();action();}
+        else {discard.disabled=false;saveChanges.disabled=false;}
+      };
+      warning.append(discard,saveChanges);warning.hidden=false;
     }
     function leave() {
-      if (draft.dirty) question('Unsaved canvas changes will be lost.',() => options.onPreview());
+      if (draft.dirty) question('Save or discard changes before Preview.',() => options.onPreview(),'preview');
       else options.onPreview();
     }
     function askClose() {
-      if (saving) return false;
-      if (draft.dirty) {
-        question('Save your changes or discard them before closing.',() => options.onClose());
+      if(saving)return false;
+      if(draft.dirty){
+        question('Save or discard changes before Close.',()=>options.onClose(),'close');
         return false;
       }
       return true;
@@ -174,28 +186,45 @@
     button('+ File',() => addNode('file'));
     button('+ Link',() => addNode('link'));
     button('+ Group',() => addNode('group'));
-    button('Connect →',() => {
-      if (!selected) { status('Select a source card first.'); return; }
-      connectFrom = selected;
-      status('Click the target card to create a connection.');
+    const connectButton=button('Connect →',() => {
+      if (connectFrom) {
+        connectFrom=null;updateConnectionMode();
+        status('Connection mode cancelled.');return;
+      }
+      if(!selected){status('Select a source card first.');return;}
+      dismissQuestion();
+      connectFrom=selected;updateConnectionMode();
+      status('Click another card to connect it.');
     });
+    connectButton.classList.add('canvas-connect-action');
+    function updateConnectionMode(){
+      root.dataset.connectActive=connectFrom?'true':'false';
+      connectButton.setAttribute('aria-pressed',String(Boolean(connectFrom)));
+      activeViewer?.querySelectorAll('.canvas-node').forEach(card=>
+        card.classList.toggle('canvas-connect-source',card.dataset.nodeId===connectFrom));
+    }
     const undo = iconButton('Undo','undo',() => { if (draft.undo()) render(); });
     const redo = iconButton('Redo','redo',() => { if (draft.redo()) render(); });
-    const save = iconButton('Save canvas','save',async () => {
-      if (saving || !draft.dirty) return;
-      saving = true; save.disabled = true;
+    async function persistCanvas(){
+      if(saving)return false;
+      if(!draft.dirty)return true;
+      saving=true;save.disabled=true;
       status('Checking source file and saving…');
       try {
         validate(draft.data);
-        const result = await options.onSave(draft.data,fingerprint);
-        fingerprint = result.fingerprint;
+        const result=await options.onSave(draft.data,fingerprint);
+        fingerprint=result.fingerprint;
         draft.markSaved();
         status('Canvas saved safely.');
-        warning.hidden = true;
-      } catch (error) {
-        status((error.code === 'EXTERNAL_CHANGE' ?
-          'External modification detected. Reload the file before retrying. ' : 'Save failed: ') + error.message);
-      } finally { saving = false; refreshButtons(); }
+        return true;
+      }catch(error){
+        status((error.code==='EXTERNAL_CHANGE'?
+          'External modification detected. Reload before saving. ':'Save failed: ')+error.message);
+        return false;
+      }finally{saving=false;refreshButtons();}
+    }
+    const save=iconButton('Save canvas','save',async()=>{
+      if(await persistCanvas())dismissQuestion();
     });
     // Preview belongs to the host dialog's action row next to "Insert into
     // note", not in the graph toolbar. The host inserts it in that row.
@@ -321,19 +350,23 @@
           if (!item) return id;
           const title={text:item.text,file:item.file,link:item.url,group:item.label}[item.type];
           const first=typeof title==='string'?title.split('\n')[0].trim():'';
-          return (first||item.type).slice(0,28);
+          return (first||item.type).slice(0,130);
         };
         const select=make('select','canvas-editor-edge-list');
         select.setAttribute('aria-label','Choose a Canvas connection');
         data.edges.forEach((edge,index)=>{
           const item=make('option','',nodeLabel(edge.fromNode)+' → '+nodeLabel(edge.toNode));
           item.value=String(index);
-          item.title=edge.fromNode+' → '+edge.toNode;
+          item.title=nodeLabel(edge.fromNode)+' → '+nodeLabel(edge.toNode);
           select.append(item);
         });
         const removeEdge=make('button','canvas-control canvas-delete-connection','Delete connection');
         removeEdge.type='button';
         removeEdge.onclick=()=>change(doc=>{doc.edges.splice(Number(select.value),1);});
+        select.title=select.selectedOptions[0]?.title||'Canvas connection';
+        select.addEventListener('change',()=>{
+          select.title=select.selectedOptions[0]?.title||'Canvas connection';
+        });
         row.append(select,removeEdge);
       } else {
         row.append(make('span','canvas-editor-no-connections','No connections'));
@@ -390,7 +423,7 @@
           // time in the click synthesized after pointerup/pointer capture.
           if(suppressClick){suppressClick=false;return;}
           if (connectFrom) {
-            const from=connectFrom;connectFrom=null;
+            const from=connectFrom;connectFrom=null;updateConnectionMode();
             if (from!==node.id) change(doc=>{
               doc.edges.push({id:randomId('edge',doc.edges),fromNode:from,toNode:node.id,fromSide:'right',toSide:'left',toEnd:'arrow'});
             });
@@ -407,7 +440,7 @@
         resize.type='button';resize.title='Drag to resize card';
         card.append(resize);
         const begin=(event,kind)=>{
-          if (event.button!==0 || saving) return;
+          if (event.button!==0 || saving || (connectFrom && kind==='move')) return;
           event.preventDefault();event.stopPropagation();
           const initiallySelected=selected===node.id;
           suppressClick=false;
@@ -490,7 +523,14 @@
       });
       renderInspector();
       refreshButtons();
+      updateConnectionMode();
     }
+    root.addEventListener('pointerdown',()=>{
+      if(!warning.hidden)dismissQuestion();
+    },{capture:true});
+    root.addEventListener('input',()=>{
+      if(!warning.hidden)dismissQuestion();
+    });
     root.addEventListener('keydown',event=>{
       if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase()!=='z') return;
       event.preventDefault();
@@ -502,9 +542,13 @@
       root,
       meta,
       previewButton,
+      confirmation:warning,
       get isDirty() {return draft.dirty;},
       requestClose:askClose,
-      dispose(){disposed=true;activeViewer?.dispose?.();previewButton.remove();}
+      dispose(){
+        dismissQuestion();disposed=true;
+        activeViewer?.dispose?.();previewButton.remove();warning.remove();
+      }
     };
   }
   global.LocalWikiCanvasEditor={createDraft,validate,mount};
