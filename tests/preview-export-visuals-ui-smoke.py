@@ -150,9 +150,9 @@ with sync_playwright() as pw:
     # Opening YAML must increase the native details height AND push the
     # heading down: the original fixed 36px panel overlapped the heading.
     detail_box=disclosure.bounding_box()
-    heading_box=html_page.locator('main > h1').bounding_box()
+    next_element_top=disclosure.evaluate('(el)=>el.nextElementSibling.getBoundingClientRect().top')
     assert detail_box['height']>100,detail_box
-    assert heading_box['y']>=detail_box['y']+detail_box['height'],(detail_box,heading_box)
+    assert next_element_top>=detail_box['y']+detail_box['height'],(detail_box,next_element_top)
     assert html_page.locator('p:has(.wiki-export-structured)').count()==0
     assert html_page.locator('.wiki-export-structured').count()==2
     drawio_box=html_page.locator('.wiki-export-structured:has(.wiki-drawio-viewer)').bounding_box()
