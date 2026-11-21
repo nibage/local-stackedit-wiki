@@ -68,10 +68,10 @@ with sync_playwright() as pw:
       drawio:document.querySelectorAll('#preview .wiki-drawio-viewer').length,
       placeholders:[...document.querySelectorAll('#preview .structured-embed-body')].map(e=>e.innerText.slice(0,200))
     })"""), 'html snippets', {
-      'bases-class':exported.includes('bases-table'),
-      'done-note':exported.includes('Completed'),
-      'fallback':exported.indexOf('Cannot show Bases'),
-      'loading':exported.includes('Loading local')
+      'bases-class':'bases-table' in exported,
+      'done-note':'Completed' in exported,
+      'fallback':exported.find('Cannot show Bases'),
+      'loading':'Loading local' in exported
     },flush=True)
     assert 'Canvas card visible in export' in exported, 'Canvas was empty'
     assert 'Completed' in exported and 'bases-table' in exported, 'Bases was empty'
