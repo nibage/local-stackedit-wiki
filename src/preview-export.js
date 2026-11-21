@@ -311,6 +311,16 @@
       svg.style.setProperty('margin','0 auto 12px','important');
     }
     for(const area of cloned.querySelectorAll('.bases-table-scroll')){
+      // The viewer itself inherits the *clipped onscreen viewport height*
+      // (e.g. 513px for a 1525px table). Growing just the table causes later
+      // Canvas/draw.io embeds to overlap its rows in standalone HTML.
+      const viewer=area.closest('.wiki-bases-viewer');
+      if(viewer) {
+        viewer.style.setProperty('height','auto','important');
+        viewer.style.setProperty('min-height','0','important');
+        viewer.style.setProperty('max-height','none','important');
+        viewer.style.setProperty('overflow','visible','important');
+      }
       area.style.cssText='display:block!important;width:100%!important;'+
         'max-width:100%!important;height:auto!important;max-height:none!important;'+
         'overflow:visible!important;';
