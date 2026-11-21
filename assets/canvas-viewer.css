@@ -523,3 +523,78 @@
     grid-template-columns:94px 112px minmax(0,1fr);
   }
 }
+
+/* Nov 2026: give connection names a third of the inspector and keep compact
+   geometry inputs aligned in both rows. The selected text area uses the rest. */
+@media(min-width:901px) {
+  .canvas-editor .canvas-editor-inspector {
+    grid-template-columns:minmax(0,2fr) minmax(0,1fr);
+  }
+}
+.canvas-editor .canvas-editor-properties-grid,
+.canvas-editor .canvas-editor-properties-grid.canvas-properties-multiline {
+  grid-template-columns:108px 89px minmax(0,1fr);
+}
+.canvas-editor .canvas-prop-width,
+.canvas-editor .canvas-prop-height {
+  display:grid;grid-template-columns:36px 48px;gap:4px;justify-content:start;
+}
+.canvas-editor .canvas-prop-width input,
+.canvas-editor .canvas-prop-height input {
+  width:48px!important;max-width:48px!important;min-width:0;
+}
+.canvas-editor .canvas-editor-no-connections {
+  flex:1 1 auto;min-width:0;
+}
+.canvas-editor .canvas-editor-connection-row .canvas-delete-connection {
+  margin-left:auto;
+}
+.canvas-editor .canvas-editor-edge-list {
+  text-overflow:ellipsis;
+}
+.canvas-editor .canvas-editor-connect-active {
+  border-color:#58a36a!important;
+  box-shadow:0 0 0 1px #58a36a66;
+}
+.canvas-editor[data-connecting="true"] .canvas-node {
+  cursor:pointer!important;
+}
+.canvas-editor[data-connecting="true"] .canvas-connect-target:hover {
+  outline:2px solid #58a36a;outline-offset:2px;
+}
+/* The confirmation lives immediately above the dialog action trio so the
+   preview/close choice stays visible without replacing the graph zoom bar. */
+.attachment-dialog.canvas-dialog-open > .canvas-editor-confirm {
+  display:flex;align-items:center;justify-content:flex-end;gap:8px;
+  min-height:36px;margin:3px 0 5px;padding:3px 0;
+  border:0;background:transparent;
+}
+.attachment-dialog.canvas-dialog-open > .canvas-editor-confirm[hidden] {display:none!important;}
+.attachment-dialog.canvas-dialog-open > .canvas-editor-confirm .canvas-control {
+  font-size:12px;min-height:29px;
+}
+.attachment-dialog.canvas-dialog-open > .canvas-editor-confirm .canvas-confirm-save {
+  border-color:#58a36a!important;
+  box-shadow:0 0 0 1px #58a36a44;
+}
+.attachment-dialog.canvas-dialog-open .dialog-actions .canvas-exit-pending {
+  border-color:#58a36a!important;
+  box-shadow:0 0 0 1px #58a36a66;
+}
+@media(max-width:900px) {
+  .canvas-editor .canvas-editor-inspector {
+    grid-template-columns:minmax(0,1fr);
+    height:auto;min-height:0;max-height:none;flex:0 0 auto;
+  }
+  .canvas-editor .canvas-editor-inspector-connections {
+    border-left:0;padding-left:0;
+    border-top:1px solid var(--line);padding-top:6px;
+  }
+}
+@media(max-width:590px) {
+  .canvas-editor .canvas-editor-properties-grid,
+  .canvas-editor .canvas-editor-properties-grid.canvas-properties-multiline {
+    grid-template-columns:95px 89px minmax(0,1fr);
+  }
+  .attachment-dialog.canvas-dialog-open > .canvas-editor-confirm {flex-wrap:wrap;}
+}
