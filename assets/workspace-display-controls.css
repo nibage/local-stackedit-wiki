@@ -152,3 +152,52 @@
   border-color:#58a36a!important;
   box-shadow:0 0 0 1px #58a36a55;
 }
+
+/* Shared bottom actions for Canvas, Bases YAML and raw JSON/XML dialogs.
+   The action row remains the same height as modes change. */
+#attachment-dialog .dialog-actions {
+  display:flex;align-items:center;justify-content:flex-start;
+  gap:7px;min-height:37px;flex-wrap:wrap;
+}
+#attachment-dialog .dialog-actions #attachment-edit-canvas,
+#attachment-dialog .dialog-actions #attachment-edit-canvas-source,
+#attachment-dialog .dialog-actions #attachment-edit-drawio-source,
+#attachment-dialog .dialog-actions #attachment-edit-base,
+#attachment-dialog .dialog-actions .canvas-preview-exit,
+#attachment-dialog .dialog-actions .asset-back-to-preview {
+  order:0;white-space:nowrap;
+}
+#attachment-dialog .dialog-actions #attachment-insert {order:1;white-space:nowrap;}
+#attachment-dialog .dialog-actions .asset-footer-save {
+  order:2;margin-left:auto;white-space:nowrap;
+  border-color:#58a36a!important;
+  box-shadow:inset 0 0 0 1px #58a36a40;
+}
+#attachment-dialog .dialog-actions .bases-edit-confirm {
+  display:inline-flex;order:2;flex:0 0 auto;align-items:center;
+  justify-content:flex-end;gap:6px;
+  border:0!important;background:transparent!important;box-shadow:none!important;
+  margin:0 0 0 auto!important;padding:0!important;min-height:0;
+  flex-wrap:nowrap;
+}
+#attachment-dialog .dialog-actions .bases-edit-confirm[hidden] {display:none!important;}
+#attachment-dialog .dialog-actions .bases-edit-confirm .canvas-control {
+  box-sizing:border-box;white-space:nowrap;min-height:29px;
+  font-size:12px;padding:5px 9px;
+}
+#attachment-dialog .dialog-actions .bases-edit-confirm .asset-confirm-save {
+  border-color:#58a36a!important;box-shadow:0 0 0 1px #58a36a55;
+}
+#attachment-dialog .dialog-actions:has(.bases-edit-confirm:not([hidden]))>.asset-footer-save {
+  display:none!important;
+}
+#attachment-dialog .dialog-actions #attachment-close {order:3;white-space:nowrap;}
+#attachment-dialog .bases-source-editor>.bases-edit-footer {
+  min-height:32px;max-height:32px;flex:0 0 32px;
+}
+
+/* Clipboard-style Markdown notes remain recognizable in every theme; the
+   former white page glyph disappeared on bright backgrounds. */
+:root[data-theme] .tree-row .glyph-note {
+  font-size:16px!important;filter:saturate(1.3) contrast(1.1);
+}
