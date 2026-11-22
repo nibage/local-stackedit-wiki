@@ -108,7 +108,7 @@ with sync_playwright() as pw:
       wrap:document.querySelector('#line-wrap-toggle').getBoundingClientRect().x,
       sync:document.querySelector('#scroll-sync-toggle').getBoundingClientRect().x
     })""")
-    assert positions['center']<positions['lines']<positions['size']<positions['wrap']<positions['sync'],positions
+    assert positions['lines']<positions['center']<positions['wrap']<positions['sync']<positions['size'],positions
     for theme in ['light','dark','stackedit']:
         page.locator('#theme-select').select_option(theme)
         page.locator('#view-preview').click()

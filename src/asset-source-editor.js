@@ -91,7 +91,7 @@
       clearConfirm();
       const discard=document.createElement('button');
       discard.type='button';discard.className='canvas-control asset-confirm-discard';
-      discard.textContent='Discard changes';
+      discard.textContent='Discard';
       discard.onclick=()=>{
         textarea.value=saved;
         clearConfirm();message.textContent='';update();
@@ -99,7 +99,7 @@
       };
       const saveExit=document.createElement('button');
       saveExit.type='button';saveExit.className='canvas-control asset-confirm-save';
-      saveExit.textContent='💾 Save changes';
+      saveExit.textContent='Save';
       saveExit.setAttribute('aria-label','Save changes');
       saveExit.onclick=async()=>{if(await persist())action();};
       confirm.replaceChildren(discard,saveExit);

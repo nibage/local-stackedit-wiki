@@ -3,30 +3,155 @@
 << /Type /Catalog /Pages 2 0 R >>
 endobj
 2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>
 endobj
 3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 4 0 R >>
 endobj
 4 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
-endobj
-5 0 obj
-<< /Length 199 >>
+<< /Length 3305 >>
 stream
-BT /F1 20 Tf 60 725 Td (Local StackEdit Wiki - sample PDF) Tj /F1 11 Tf 0 -34 Td (PDF preview from the offline demo-wiki.) Tj 0 -19 Td (This document is intentionally small and self-contained.) Tj ET
+0 g
+BT /F2 20 Tf 1 0 0 1 48 787 Tm (Local StackEdit Wiki - sample PDF) Tj ET
+.72 G 0.8 w 48 774 m 547 774 l S
+BT /F1 11 Tf 1 0 0 1 48 750 Tm (This small, self-contained PDF tests offline preview and export.) Tj ET
+BT /F1 11 Tf 1 0 0 1 48 731 Tm (It deliberately contains two complete A4 pages with different content.) Tj ET
+BT /F2 15 Tf 1 0 0 1 48 696 Tm (Page 1 / 2 - Text, lists and a table) Tj ET
+.82 G 0.8 w 48 685 m 547 685 l S
+BT /F1 11 Tf 1 0 0 1 48 659 Tm (The local PDF viewer should display page 1 and page 2 without re-rendering.) Tj ET
+BT /F1 11 Tf 1 0 0 1 48 640 Tm (The HTML export should contain both page images, in their correct order.) Tj ET
+BT /F1 11 Tf 1 0 0 1 48 618 Tm (Verify that paragraphs, borders, rows and page footers remain readable.) Tj ET
+BT /F2 13 Tf 1 0 0 1 48 587 Tm (What this sample covers) Tj ET
+BT /F1 10.5 Tf 1 0 0 1 60 567 Tm (- Multiline text in a standard PDF font) Tj ET
+BT /F1 10.5 Tf 1 0 0 1 60 549 Tm (- A table that keeps full-width cells and borders) Tj ET
+BT /F1 10.5 Tf 1 0 0 1 60 531 Tm (- Simple vector drawing, arrows and labels) Tj ET
+BT /F1 10.5 Tf 1 0 0 1 60 513 Tm (- Clear page numbers and a bottom-page footer) Tj ET
+BT /F1 10.5 Tf 1 0 0 1 60 495 Tm (- No scripts, remote resources or network access) Tj ET
+BT /F2 13 Tf 1 0 0 1 48 458 Tm (Example table) Tj ET
+.91 g 48 426 499 24 re f
+0.38 G 1 w 48 306 499 144 re S
+.62 G 0.8 w 170 306 m 170 450 l S
+.62 G 0.8 w 352 306 m 352 450 l S
+.77 G 0.8 w 48 426 m 547 426 l S
+.77 G 0.8 w 48 402 m 547 402 l S
+.77 G 0.8 w 48 378 m 547 378 l S
+.77 G 0.8 w 48 354 m 547 354 l S
+.77 G 0.8 w 48 330 m 547 330 l S
+BT /F2 10 Tf 1 0 0 1 58 434 Tm (Section) Tj ET
+BT /F2 10 Tf 1 0 0 1 180 434 Tm (Format) Tj ET
+BT /F2 10 Tf 1 0 0 1 362 434 Tm (Expected result) Tj ET
+BT /F1 10 Tf 1 0 0 1 58 410 Tm (First page) Tj ET
+BT /F1 10 Tf 1 0 0 1 180 410 Tm (Plain text) Tj ET
+BT /F1 10 Tf 1 0 0 1 362 410 Tm (Readable lines) Tj ET
+BT /F1 10 Tf 1 0 0 1 58 386 Tm (Table) Tj ET
+BT /F1 10 Tf 1 0 0 1 180 386 Tm (Vector rules) Tj ET
+BT /F1 10 Tf 1 0 0 1 362 386 Tm (No cropped cells) Tj ET
+BT /F1 10 Tf 1 0 0 1 58 362 Tm (Illustration) Tj ET
+BT /F1 10 Tf 1 0 0 1 180 362 Tm (Shapes) Tj ET
+BT /F1 10 Tf 1 0 0 1 362 362 Tm (Diagram intact) Tj ET
+BT /F1 10 Tf 1 0 0 1 58 338 Tm (Next page) Tj ET
+BT /F1 10 Tf 1 0 0 1 180 338 Tm (Two pages) Tj ET
+BT /F1 10 Tf 1 0 0 1 362 338 Tm (No missing content) Tj ET
+BT /F1 10 Tf 1 0 0 1 58 314 Tm (Offline) Tj ET
+BT /F1 10 Tf 1 0 0 1 180 314 Tm (No network) Tj ET
+BT /F1 10 Tf 1 0 0 1 362 314 Tm (Standalone PDF) Tj ET
+BT /F2 13 Tf 1 0 0 1 48 270 Tm (Flow diagram) Tj ET
+.94 g 56 181 125 55 re f
+0.38 G 1 w 56 181 125 55 re S
+.94 g 242 181 125 55 re f
+0.38 G 1 w 242 181 125 55 re S
+.94 g 428 181 118 55 re f
+0.38 G 1 w 428 181 118 55 re S
+BT /F1 10 Tf 1 0 0 1 66 211 Tm (Markdown note) Tj ET
+BT /F1 10 Tf 1 0 0 1 260 211 Tm (PDF preview) Tj ET
+BT /F1 10 Tf 1 0 0 1 437 211 Tm (Save as PDF) Tj ET
+0.35 G 2 w 181 209 m 242 209 l S 237 213 m 242 209 l 237 205 l S
+0.35 G 2 w 367 209 m 428 209 l S 423 213 m 428 209 l 423 205 l S
+BT /F1 10 Tf 1 0 0 1 48 145 Tm (All elements on this page are standard PDF objects rendered fully offline.) Tj ET
+.74 G 0.8 w 48 65 m 547 65 l S
+BT /F1 10 Tf 1 0 0 1 48 48 Tm (Local StackEdit Wiki / sample.pdf) Tj ET
+BT /F2 10 Tf 1 0 0 1 510 48 Tm (1 / 2) Tj ET
 endstream
 endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 2995 >>
+stream
+0 g
+BT /F2 20 Tf 1 0 0 1 48 787 Tm (Local StackEdit Wiki - sample PDF) Tj ET
+.72 G 0.8 w 48 774 m 547 774 l S
+BT /F2 15 Tf 1 0 0 1 48 747 Tm (Page 2 / 2 - Shapes and pagination) Tj ET
+BT /F1 11 Tf 1 0 0 1 48 717 Tm (This second page verifies that multipage PDF attachments are shown in full.) Tj ET
+BT /F1 11 Tf 1 0 0 1 48 698 Tm (Reloading Markdown or printing the offline HTML must keep both pages.) Tj ET
+BT /F1 11 Tf 1 0 0 1 48 676 Tm (Compare the section rules, vector graphics and lower page footer.) Tj ET
+BT /F2 13 Tf 1 0 0 1 48 638 Tm (Two-column information) Tj ET
+.955 g 48 504 242 109 re f
+.955 g 305 504 242 109 re f
+0.38 G 1 w 48 504 242 109 re S
+0.38 G 1 w 305 504 242 109 re S
+BT /F2 12 Tf 1 0 0 1 62 591 Tm (Preview mode) Tj ET
+BT /F2 12 Tf 1 0 0 1 320 591 Tm (Export mode) Tj ET
+BT /F1 10 Tf 1 0 0 1 62 567 Tm (Both pages visible) Tj ET
+BT /F1 10 Tf 1 0 0 1 62 544 Tm (No blank first render) Tj ET
+BT /F1 10 Tf 1 0 0 1 62 521 Tm (No browser extension needed) Tj ET
+BT /F1 10 Tf 1 0 0 1 320 567 Tm (Standalone and offline) Tj ET
+BT /F1 10 Tf 1 0 0 1 320 544 Tm (HTML embeds both pages) Tj ET
+BT /F1 10 Tf 1 0 0 1 320 521 Tm (Print with proper sizing) Tj ET
+BT /F2 13 Tf 1 0 0 1 48 468 Tm (Vector shapes) Tj ET
+.96 g 60 346 102 76 re f
+0.38 G 1 w 60 346 102 76 re S
+BT /F2 12 Tf 1 0 0 1 74 390 Tm (Step 1) Tj ET
+BT /F1 9.5 Tf 1 0 0 1 74 370 Tm (Open file) Tj ET
+0.35 G 1.6 w 162 383 m 184 383 l S
+.89 g 184 346 102 76 re f
+0.38 G 1 w 184 346 102 76 re S
+BT /F2 12 Tf 1 0 0 1 198 390 Tm (Step 2) Tj ET
+BT /F1 9.5 Tf 1 0 0 1 198 370 Tm (Render PDF) Tj ET
+0.35 G 1.6 w 286 383 m 308 383 l S
+.96 g 308 346 102 76 re f
+0.38 G 1 w 308 346 102 76 re S
+BT /F2 12 Tf 1 0 0 1 322 390 Tm (Step 3) Tj ET
+BT /F1 9.5 Tf 1 0 0 1 322 370 Tm (Check both) Tj ET
+0.35 G 1.6 w 410 383 m 432 383 l S
+.89 g 432 346 102 76 re f
+0.38 G 1 w 432 346 102 76 re S
+BT /F2 12 Tf 1 0 0 1 446 390 Tm (Step 4) Tj ET
+BT /F1 9.5 Tf 1 0 0 1 446 370 Tm (Save output) Tj ET
+BT /F2 13 Tf 1 0 0 1 48 307 Tm (A short checklist) Tj ET
+BT /F1 10.5 Tf 1 0 0 1 60 285 Tm (- Use the local sample PDF in the Attachments folder.) Tj ET
+BT /F1 10.5 Tf 1 0 0 1 60 264 Tm (- Confirm the first page shows a table and a connected diagram.) Tj ET
+BT /F1 10.5 Tf 1 0 0 1 60 243 Tm (- Confirm the second page shows four labelled vector cards.) Tj ET
+BT /F1 10.5 Tf 1 0 0 1 60 222 Tm (- Check that the PDF print preview never clips the outer page edges.) Tj ET
+BT /F1 10.5 Tf 1 0 0 1 60 201 Tm (- The application stays usable until you explicitly open the print dialog.) Tj ET
+BT /F1 11 Tf 1 0 0 1 48 153 Tm (This is an intentionally generated demonstration document.) Tj ET
+BT /F1 11 Tf 1 0 0 1 48 132 Tm (Replace it with your own files when you have verified the preview behavior.) Tj ET
+BT /F1 11 Tf 1 0 0 1 48 111 Tm (No files are modified by opening or exporting this sample.) Tj ET
+.74 G 0.8 w 48 65 m 547 65 l S
+BT /F1 10 Tf 1 0 0 1 48 48 Tm (Local StackEdit Wiki / sample.pdf) Tj ET
+BT /F2 10 Tf 1 0 0 1 510 48 Tm (2 / 2) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+8 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
 xref
-0 6
+0 9
 0000000000 65535 f 
 0000000009 00000 n 
 0000000058 00000 n 
-0000000115 00000 n 
-0000000241 00000 n 
-0000000311 00000 n 
+0000000121 00000 n 
+0000000257 00000 n 
+0000003613 00000 n 
+0000003749 00000 n 
+0000006795 00000 n 
+0000006865 00000 n 
 trailer
-<< /Size 6 /Root 1 0 R >>
+<< /Size 9 /Root 1 0 R >>
 startxref
-561
+6940
 %%EOF

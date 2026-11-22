@@ -53,14 +53,17 @@ with sync_playwright() as pw:
     assert 'wiki-export-pdf-pages' in exported
     assert 'Embedded PDF cannot be displayed' not in exported
     assert 'Embedded PDF · page 1' in exported
+    assert 'Embedded PDF · page 2' in exported
     assert 'data:image/jpeg;base64,' in exported
     target=browser.new_page(viewport={'width':1300,'height':900})
     network=[]
     target.route('**/*',lambda r:(network.append(r.request.url),r.abort()))
     target.set_content(exported,wait_until='load')
     assert target.locator('.bases-table tr').count()==46
-    assert target.locator('.wiki-export-pdf-pages img').count()>=1
-    # The sample PDF has three text lines. A JPEG with only white pixels is a
+    assert target.locator('.wiki-export-pdf-pages img').count()==2
+    assert 'page 2 of 2' in target.locator('.wiki-export-pdf-pages img').last.get_attribute('alt')
+    # Each of the demo PDF's two complete pages must contain visible content.
+    # A JPEG with only white pixels is a
     # rendering failure, not a successful export, even if its dimensions look
     # like a full PDF page. Decode and inspect actual output pixels.
     ink=target.locator('.wiki-export-pdf-pages img').first.evaluate("""async img=>{
@@ -75,6 +78,7 @@ with sync_playwright() as pw:
       return {dark,width:canvas.width,height:canvas.height};
     }""")
     assert ink['dark']>250,ink
+    assert target.locator('.wiki-export-pdf-pages img').last.evaluate('(img)=>img.naturalHeight>900')
     locations=target.evaluate("""()=>{
       const t=document.querySelector('.bases-table').getBoundingClientRect();
       const svg=document.querySelector('.visualization svg').getBoundingClientRect();

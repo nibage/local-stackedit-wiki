@@ -84,11 +84,11 @@ with sync_playwright() as pw:
     confirmation=page.locator('#attachment-dialog .dialog-actions .bases-edit-confirm')
     assert confirmation.is_visible()
     assert confirmation.locator('button').count()==2
-    assert 'Discard changes' in confirmation.inner_text()
-    assert 'Save changes' in confirmation.inner_text()
+    assert 'Discard' in confirmation.inner_text()
+    assert 'Save' in confirmation.inner_text()
     assert confirmation.locator('.asset-confirm-save').count()==1
     assert 'asset-exit-pending' in (page.locator('#attachment-close').get_attribute('class') or '')
-    page.locator('#attachment-dialog .dialog-actions .bases-edit-confirm button',has_text='Discard changes').click()
+    page.locator('#attachment-dialog .dialog-actions .bases-edit-confirm button',has_text='Discard').click()
     page.wait_for_function("!document.querySelector('#attachment-dialog').open")
     assert page.evaluate("window.mockWiki.entries.get('Readme.md').body")==original_note
     assert not errors,errors

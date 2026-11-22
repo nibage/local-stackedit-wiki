@@ -836,8 +836,17 @@
       element.addEventListener('error', () => { element.title = 'Browser codec or format may be unsupported'; });
     } else if (kind === 'pdf') {
       element = document.createElement('object');
-      element.type = 'application/pdf'; element.data = url;
+      element.type = 'application/pdf';
       element.textContent = 'PDF preview is unavailable in this browser.';
+      // Chrome's built-in PDF viewer can remain blank if object.data is set
+      // before the object is attached to the document. Assign it after the
+      // caller inserts the object into the live preview/dialog DOM.
+      element.dataset.exportPending = 'true';
+      requestAnimationFrame(() => {
+        if (!element.isConnected) return;
+        element.data = url;
+        delete element.dataset.exportPending;
+      });
     }
     return element || null;
   }
@@ -930,6 +939,7 @@
     $('attachment-dialog-path').textContent = path;
     const canvasInfo=$('attachment-dialog-canvas-info');
     canvasInfo.replaceChildren();canvasInfo.hidden=true;
+    $('attachment-insert').hidden = ['base','canvas','drawio'].includes(types.kind(path));
     $('attachment-insert').disabled = bridge.getMode() !== 'readwrite' || !activePath || operations.isBusy();
     $('attachment-insert').onclick = () => { if (insertAttachment(path)) dialog.close(); };
     const editCanvas = $('attachment-edit-canvas');
@@ -1133,6 +1143,7 @@
     $('attachment-edit-drawio-source').hidden=true;
     $('attachment-edit-base').hidden = true;
     $('attachment-edit-canvas').hidden = true;
+    $('attachment-insert').hidden = false;
     $('attachment-dialog-viewer').querySelector('.wiki-canvas-viewer')?.dispose?.();
     $('attachment-dialog-viewer').querySelector('.wiki-bases-viewer')?.dispose?.();
     $('attachment-dialog-viewer').querySelector('.wiki-drawio-viewer')?.dispose?.();
@@ -1306,7 +1317,7 @@
       // and triangles. Only the current Markdown note gets the edit glyph.
       // Other attachment-format icons are intentionally unchanged.
       glyph.textContent = node.kind === 'directory' ? (open ? '📂' : '📁') :
-        node.kind === 'file' ? (node.path === activePath ? '📝' : '📘') :
+        node.kind === 'file' ? (node.path === activePath ? '📝' : '📄') :
         icons[node.kind] || '◆';
       const label = document.createElement('span'); label.textContent = node.name;
       row.append(glyph, label);
@@ -1785,8 +1796,8 @@
       });
       notice('HTML opened in a new tab. Use Download HTML there to save the standalone file.','success');
     } else {
-      await exporter.printHtml(html,popup);
-      notice('In the print dialog, choose Save as PDF. PDF always uses the light theme; the app theme stays unchanged.','success');
+      await exporter.showPdfPreview(html,popup);
+      notice('PDF preview opened in a separate tab. Click Print / Save PDF there when ready; the editor remains available.','success');
     }
   }
   function startPreviewExport(kind) {
