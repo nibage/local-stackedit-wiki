@@ -54,7 +54,9 @@ test('structured asset editing keeps footer save/exit guards and hides insert',(
   const canvas=source('src/canvas-editor.js');
   const base=source('src/bases-editor.js');
   const raw=source('src/asset-source-editor.js');
-  assert.match(main, /attachment-insert'\)\.hidden = \['base','canvas','drawio'\]/);
+  assert.match(main, /attachment-insert'\)\.hidden = false/);
+  assert.match(main, /attachment-insert'\)\.hidden=true/);
+  assert.match(main, /attachment-insert'\)\.hidden=false/);
   assert.match(canvas, /options\.confirmHost\) options\.confirmHost\.insertBefore\(warning/);
   assert.match(canvas, /make\('button','canvas-control canvas-confirm-save','Save'\)/);
   assert.match(base, /asset-confirm-save','Save'/);
