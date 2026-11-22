@@ -191,7 +191,13 @@
 #attachment-dialog .dialog-actions:has(.bases-edit-confirm:not([hidden]))>.asset-footer-save {
   display:none!important;
 }
-#attachment-dialog .dialog-actions #attachment-close {order:3;white-space:nowrap;}
+#attachment-dialog .dialog-actions #attachment-close {
+  order:3;white-space:nowrap;margin-left:auto;
+}
+#attachment-dialog .dialog-actions:has(.asset-footer-save:not([hidden])) #attachment-close,
+#attachment-dialog .dialog-actions:has(.bases-edit-confirm:not([hidden])) #attachment-close {
+  margin-left:0;
+}
 #attachment-dialog .bases-source-editor>.bases-edit-footer {
   min-height:32px;max-height:32px;flex:0 0 32px;
 }
