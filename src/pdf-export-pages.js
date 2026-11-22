@@ -49,6 +49,15 @@
     paragraph.replaceWith(...(meaningful(before)?[before]:[]),block,
       ...(meaningful(after)?[after]:[]));
   }
+  function pageHasVisiblePixels(context,width,height){
+    const pixels=context.getImageData(0,0,width,height).data;
+    // One readable pass is cheaper than embedding a giant blank page.
+    // Alpha is opaque because page.render uses a white canvas background.
+    for(let i=0;i<pixels.length;i+=4){
+      if(pixels[i]<245||pixels[i+1]<245||pixels[i+2]<245)return true;
+    }
+    return false;
+  }
   async function render(cloned,budget,{maxBytes=64*1024*1024}={}){
     const pdfs=Array.from(cloned.querySelectorAll('object[data]')).filter(el=>
       /^data:application\/pdf;base64,/i.test(el.getAttribute('data')||''));
@@ -65,7 +74,12 @@
         if(!pdfjs)throw new Error('offline PDF renderer unavailable');
         const data=object.getAttribute('data');
         const bytes=Uint8Array.from(atob(data.slice(data.indexOf(',')+1)),c=>c.charCodeAt(0));
-        pdf=await pdfjs.getDocument({data:bytes,isEvalSupported:false,disableFontFace:true}).promise;
+        // Font face loading must remain enabled. With disableFontFace=true
+        // the demo's ordinary Type1 Helvetica text rasterized as a wholly
+        // white JPEG even though the PDF had valid nonempty text operators.
+        // Use local/browser fonts, without fetching remote assets.
+        pdf=await pdfjs.getDocument({data:bytes,isEvalSupported:false,
+          disableFontFace:false,useSystemFonts:true}).promise;
         if(pdf.numPages>80)throw new Error('PDF contains more than 80 pages');
         for(let n=1;n<=pdf.numPages;n++){
           const page=await pdf.getPage(n);
@@ -80,6 +94,20 @@
           const context=canvas.getContext('2d',{alpha:false});
           if(!context)throw new Error('PDF canvas is unavailable');
           await page.render({canvasContext:context,viewport,background:'#ffffff'}).promise;
+          if(!pageHasVisiblePixels(context,canvas.width,canvas.height)){
+            const textLayer=await page.getTextContent();
+            const hasText=textLayer.items.some(item=>typeof item.str==='string'&&item.str.trim());
+            if(hasText)throw new Error(
+              'PDF page '+n+' has text but produced a blank image. Check the local PDF renderer.');
+            // A genuinely blank PDF page need not occupy an entire white
+            // sheet in the exported HTML, especially before other embeds.
+            const note=document.createElement('p');
+            note.className='wiki-export-pdf-empty-page';
+            note.textContent='Embedded PDF · page '+n+' of '+pdf.numPages+' is blank.';
+            section.append(note);
+            canvas.width=0;canvas.height=0;
+            continue;
+          }
           const image=document.createElement('img');
           image.src=canvas.toDataURL('image/jpeg',.90);
           image.alt='Embedded PDF · page '+n+' of '+pdf.numPages;
