@@ -66,7 +66,7 @@ with sync_playwright() as pw:
     page.locator('#recent-folder-options [role="menuitem"]',has_text='Wiki').click()
     page.wait_for_function("document.querySelector('#mode').textContent==='Read/write'")
     page.locator('.tree-row[aria-label="Guide.md"]').click()
-    page.wait_for_function("document.querySelector('#filename').textContent==='Guide.md'"
+    page.wait_for_function("document.querySelector('#filename').textContent==='Guide.md'")
     page.locator('[data-side="toc"]').click()
     target=page.locator('#toc .toc-item',has_text='Section 79')
     assert target.count()==1
