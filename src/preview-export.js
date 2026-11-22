@@ -158,6 +158,18 @@
     }
     // SVG graphs contain their own inline geometry and marker definitions.
   }
+  // Keep safe wiki-relative document paths in exported standalone HTML.
+  // The old filter deleted all paths except http/mailto/#, silently turning
+  // Markdown hyperlinks into ordinary, unclickable text. A relative target
+  // only resolves if the corresponding file is available next to the HTML.
+  function safeDocumentHref(href) {
+    const value=String(href||'').trim();
+    if(!value || /[\\\x00-\x1f\x7f]/.test(value))return false;
+    if (/^(?:https?:\/\/|mailto:|#)/i.test(value))return true;
+    if(value.startsWith('//')||value.startsWith('/')||value.startsWith('\\'))return false;
+    if(/^[a-z][a-z0-9+.-]*:/i.test(value))return false;
+    return true; // relative Markdown, documents, safe query/fragment paths
+  }
   function cleanUrls(element) {
     Array.from(element.attributes).forEach(attribute=>{
       const name=attribute.name.toLowerCase();
@@ -167,7 +179,7 @@
     });
     if (element.matches('a')) {
       const href=element.getAttribute('href')||'';
-      if (!/^(?:https?:\/\/|mailto:|#)/i.test(href)) element.removeAttribute('href');
+      if (!safeDocumentHref(href)) element.removeAttribute('href');
       element.setAttribute('rel','noopener noreferrer');
       element.removeAttribute('target');
     }
@@ -236,6 +248,8 @@
       }
       if (target) anchor.setAttribute('href','#'+target);
       else if (raw.startsWith('#') || /^wiki:/i.test(raw)) anchor.removeAttribute('href');
+      // Other wiki-relative Markdown hrefs are intentionally retained; PDF
+      // within-document destinations above still use stable heading IDs.
     }
   }
 
