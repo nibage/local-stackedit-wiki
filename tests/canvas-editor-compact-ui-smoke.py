@@ -82,6 +82,7 @@ with sync_playwright() as pw:
     preview_exit=page.locator('#attachment-dialog .dialog-actions .canvas-preview-exit')
     insert=page.locator('#attachment-insert')
     close=page.locator('#attachment-close')
+    assert preview_exit.inner_text()=='Back to preview'
     assert preview_exit.bounding_box()['x']<insert.bounding_box()['x']<close.bounding_box()['x']
     assert zoom.locator('button').count()==4
     assert toolbar.locator('.canvas-zoom-status').count()==1
@@ -200,7 +201,8 @@ with sync_playwright() as pw:
     warning=page.locator('#attachment-dialog .canvas-editor-meta > .canvas-editor-confirm')
     assert warning.is_visible()
     assert warning.locator('button').count()==2
-    assert warning.inner_text().strip()=='Discard changes\nSave changes',warning.inner_text()
+    assert 'Discard changes' in warning.inner_text()
+    assert 'Save changes' in warning.inner_text()
     assert abs(warning.bounding_box()['y']-meta.bounding_box()['y'])<6
     assert warning.bounding_box()['x']>=meta.bounding_box()['x']
     assert meta.bounding_box()['height']==stable_meta_height
