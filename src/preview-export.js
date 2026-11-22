@@ -9,6 +9,29 @@
     'button','link','meta','base','.diagram-export','.structured-embed-open',
     '.bases-toolbar','.bases-filter-panel'
   ].join(',');
+  // The standalone exported HTML cannot refer back to assets/ CSS.
+  // These rules match assets/preview-media-centering.css without changing
+  // prose or table-cell alignment.
+  const CENTER_MEDIA_STYLES =
+    '.wiki-export-preview .visualization > svg,'+
+    '.wiki-export-preview .wiki-drawio-viewer > svg,'+
+    '.wiki-export-preview .wiki-export-pdf-pages > img {'+
+    'display:block!important;max-width:100%!important;height:auto!important;'+
+    'margin-left:auto!important;margin-right:auto!important;}'+
+    '.wiki-export-preview p:has(> img:only-child) > img:only-child {'+
+    'display:block!important;max-width:100%!important;height:auto!important;'+
+    'margin-left:auto!important;margin-right:auto!important;}'+
+    '.wiki-export-preview table:not(.bases-table) {'+
+    'width:max-content!important;max-width:100%!important;'+
+    'margin-left:auto!important;margin-right:auto!important;overflow-x:auto!important;}'+
+    '.wiki-export-preview .wiki-attachment-embed > :is(img,audio,video,object) {'+
+    'display:block!important;max-width:100%!important;'+
+    'margin-left:auto!important;margin-right:auto!important;}'+
+    '.wiki-export-preview .wiki-attachment-embed > video {height:auto!important;}'+
+    '.wiki-export-preview :is(.wiki-export-structured,.wiki-export-static-graph,'+
+    '.wiki-export-pdf-pages) {margin-left:auto!important;margin-right:auto!important;}'+
+    '.wiki-export-preview :is(.canvas-viewport,.drawio-viewport,.bases-table-scroll) {'+
+    'margin-left:auto!important;margin-right:auto!important;}';
   // Print only: use the full A4 reading area while retaining a comfortable
   // editorial type size. HTML exports keep their unchanged screen layout.
   const PRINT_STYLES = `@page { size:A4; margin:10mm 11mm 12mm; }
@@ -86,6 +109,15 @@
     width:100%!important;max-width:100%!important;min-width:0!important;
     table-layout:auto!important;border-collapse:collapse!important;
     overflow:visible!important;break-inside:auto!important;
+  }
+  /* Center narrow Markdown tables, but keep wide tables within printable
+     width and preserve repeated headings/row pagination on multiple pages. */
+  .wiki-export-preview table:not(.bases-table) {
+    width:fit-content!important;max-width:100%!important;
+    margin-left:auto!important;margin-right:auto!important;
+  }
+  .wiki-export-preview .bases-table {
+    width:100%!important;margin-left:auto!important;margin-right:auto!important;
   }
   .wiki-export-preview thead {display:table-header-group!important;}
   .wiki-export-preview tfoot {display:table-footer-group!important;}
@@ -626,6 +658,7 @@
       '.wiki-export-preview .wiki-export-pdf-pages{height:auto!important;'+
       'max-height:none!important;overflow:visible!important;}'+
       'img,svg{max-width:100%;}'+
+      CENTER_MEDIA_STYLES+
       PRINT_STYLES+
       '</style></head><body>\n'+
       '<main class="wiki-export-preview markdown-preview" style="'+escapeHtml(cloned.style.cssText)+'">'+cloned.innerHTML+
