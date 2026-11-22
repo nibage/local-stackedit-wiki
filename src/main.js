@@ -1768,7 +1768,25 @@
       throw new Error('The selected note changed during export. Please retry.');
     const html=await exporter.build(ui.preview,{title:basename(path),theme:kind==='pdf'?'light':'current'});
     if (kind==='html') {
-      exporter.showHtmlPreview(html,popup,exporter.fileName(path,'html'));
+      exporter.showHtmlPreview(html,popup,exporter.fileName(path,'html'),async href=>{
+        // A live export preview can navigate the currently opened local wiki.
+        // No script or opener dependency is placed in the downloaded HTML.
+        const parsed=window.LocalWikiNavigation.splitTarget(href);
+        const next=findDoc(href);
+        if(next){
+          if(!(await navigateTo(next)))return;
+          await exportRenderedPreview('html',popup,next);
+          if(parsed.anchor){
+            const heading=window.LocalWikiNavigation.findHeading(popup.document.body,parsed.anchor);
+            heading?.scrollIntoView({block:'start',behavior:'instant'});
+          }
+          popup.focus();
+          return;
+        }
+        const asset=resolveAttachment(parsed.path||href,activePath,Boolean(parsed.isWiki));
+        if(asset){await showAttachment(asset);return;}
+        throw new Error('The linked file is not present in the opened wiki: '+href);
+      });
       notice('HTML opened in a new tab. Use Download HTML there to save the standalone file.','success');
     } else {
       await exporter.printHtml(html,popup);

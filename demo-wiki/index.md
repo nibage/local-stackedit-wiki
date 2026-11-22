@@ -2,6 +2,16 @@
 
 This folder is a **safe example wiki**. Open it in Chrome or Edge with read/write access to test the editor without changing your personal notes.
 
+## Contents
+
+Use these in-document links to verify the navigation both in the **HTML export** and in the **printed PDF**. They should jump directly to the heading rather than merely scroll to the next paragraph.
+
+- [Links between notes](#Links%20between%20notes)
+- [Links to headings](#Links%20to%20headings)
+- [Mathematics](#Mathematics)
+- [Obsidian-compatible attachments](#Obsidian-compatible%20attachments)
+- [draw.io / diagrams.net (offline)](#draw.io%20%2F%20diagrams.net%20(offline))
+
 ## Links between notes
 
 - [Python – relative Markdown link](Programming/Python.md)
@@ -55,3 +65,5 @@ Open the [two-page diagram](Attachments/example.drawio). Page one contains plain
 ![[Attachments/sample.pdf]]
 ![[Attachments/video.webm]]
 ![[Attachments/tone.wav]]
+
+[Back to contents](#Contents)

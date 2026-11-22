@@ -158,6 +158,18 @@
     }
     // SVG graphs contain their own inline geometry and marker definitions.
   }
+  // Keep safe wiki-relative document paths in exported standalone HTML.
+  // The old filter deleted all paths except http/mailto/#, silently turning
+  // Markdown hyperlinks into ordinary, unclickable text. A relative target
+  // only resolves if the corresponding file is available next to the HTML.
+  function safeDocumentHref(href) {
+    const value=String(href||'').trim();
+    if(!value || /[\\\x00-\x1f\x7f]/.test(value))return false;
+    if (/^(?:https?:\/\/|mailto:|#)/i.test(value))return true;
+    if(value.startsWith('//')||value.startsWith('/')||value.startsWith('\\'))return false;
+    if(/^[a-z][a-z0-9+.-]*:/i.test(value))return false;
+    return true; // relative Markdown, documents, safe query/fragment paths
+  }
   function cleanUrls(element) {
     Array.from(element.attributes).forEach(attribute=>{
       const name=attribute.name.toLowerCase();
@@ -167,7 +179,7 @@
     });
     if (element.matches('a')) {
       const href=element.getAttribute('href')||'';
-      if (!/^(?:https?:\/\/|mailto:|#)/i.test(href)) element.removeAttribute('href');
+      if (!safeDocumentHref(href)) element.removeAttribute('href');
       element.setAttribute('rel','noopener noreferrer');
       element.removeAttribute('target');
     }
@@ -236,6 +248,8 @@
       }
       if (target) anchor.setAttribute('href','#'+target);
       else if (raw.startsWith('#') || /^wiki:/i.test(raw)) anchor.removeAttribute('href');
+      // Other wiki-relative Markdown hrefs are intentionally retained; PDF
+      // within-document destinations above still use stable heading IDs.
     }
   }
 
@@ -621,7 +635,7 @@
     popup.document.close();
     return popup;
   }
-  function showHtmlPreview(html,popup,filename) {
+  function showHtmlPreview(html,popup,filename,onLocalLink) {
     if (!popup || popup.closed) throw new Error('The HTML preview tab was closed.');
     popup.document.open();
     popup.document.write(html);
@@ -652,6 +666,26 @@
       '@media print{.wiki-html-preview-toolbar{display:none!important}}';
     doc.head.append(style);
     doc.body.prepend(toolbar);
+    // Only the live HTML preview tab can ask its opener to show another wiki
+    // note. Downloaded HTML stays script-free and fully standalone. Relative
+    // destinations still work there if the user keeps files alongside it.
+    if(typeof onLocalLink==='function'){
+      doc.body.addEventListener('click',event=>{
+        const anchor=event.target.closest?.('a[href]');
+        if(!anchor || !doc.body.contains(anchor))return;
+        const href=anchor.getAttribute('href')||'';
+        if(!safeDocumentHref(href)||href.startsWith('#')||
+          /^(?:https?:\/\/|mailto:)/i.test(href))return;
+        event.preventDefault();
+        Promise.resolve().then(()=>onLocalLink(href)).catch(error=>{
+          // Browser preview remains available even if a linked note is missing.
+          const message=doc.createElement('span');
+          message.setAttribute('role','status');
+          message.textContent='Cannot open linked wiki note: '+error.message;
+          toolbar.append(message);
+        });
+      });
+    }
     popup.focus();
   }
   async function printHtml(html,popup) {

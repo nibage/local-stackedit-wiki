@@ -34,9 +34,10 @@ with sync_playwright() as pw:
         async getFile(){return new File([this.data],name,{type:this.mime,lastModified:this.lastModified})},
         async createWritable(){throw Error('No writes expected')}
       }}
-      const text='# Preview export heading\\n\\nHello **world** with a local image.\\n\\n![[photo.png]]\\n\\n| Name | Value |\\n| --- | --- |\\n| Alpha | 42 |\\n\\n> A quoted sentence.\\n\\n[Read external docs](https://example.org/article)\\n\\n[Jump to details](#Details)\\n\\n## Details\\n\\nThis is the target section.';
+      const text='# Preview export heading\\n\\nHello **world** with a local image.\\n\\n![[photo.png]]\\n\\n| Name | Value |\\n| --- | --- |\\n| Alpha | 42 |\\n\\n> A quoted sentence.\\n\\n[Read external docs](https://example.org/article)\\n\\n[Relative Python note](Programming/Python.md)\\n\\n[Relative heading](Programming/Python.md#Introduction)\\n\\n[Open linked note](Guide.md)\\n\\n[Jump to details](#Details)\\n\\n## Details\\n\\nThis is the target section.';
       const entries=new Map([
         file('Preview.md',text,'text/markdown'),
+        file('Guide.md','# Linked guide\\n\\nThe target of a relative link.','text/markdown'),
         file('photo.png',Uint8Array.from(atob(png),x=>x.charCodeAt(0)),'image/png')
       ].map(item=>[item.name,item]));
       window.mockWiki={kind:'directory',name:'Wiki',entries,
@@ -92,7 +93,14 @@ with sync_playwright() as pw:
     download=capture.value
     assert download.suggested_filename=='Preview.html'
     exported=Path(download.path()).read_text(encoding='utf-8')
+    # Live HTML preview links into the wiki; standalone export stays no-JS.
+    html_tab.locator('a',has_text='Open linked note').click()
+    html_tab.wait_for_function("document.querySelector('main h1')?.textContent==='Linked guide'")
+    page.wait_for_function("document.querySelector('#filename').textContent==='Guide.md'")
+    assert html_tab.locator('p',has_text='The target of a relative link.').count()==1
     html_tab.close()
+    page.locator('.tree-row[aria-label="Preview.md"]').click()
+    page.wait_for_function("document.querySelector('#filename').textContent==='Preview.md'")
     assert 'Preview export heading' in exported
     assert 'Hello' in exported and 'world' in exported
     assert 'data:image/png;base64,' in exported
@@ -103,6 +111,12 @@ with sync_playwright() as pw:
     assert 'http-equiv="refresh"' not in exported
     assert 'href="#wiki-heading-1"' in exported
     assert 'href="https://example.org/article"' in exported
+    assert 'href="Programming/Python.md"' in exported
+    assert 'href="Programming/Python.md#Introduction"' in exported
+    assert 'href="Guide.md"' in exported
+    demo=(ROOT/'demo-wiki/index.md').read_text(encoding='utf-8')
+    assert '[Back to contents](#Contents)' in demo
+    assert '[Mathematics](#Mathematics)' in demo
     # Generated HTML can be opened as a completely standalone document.
     offline=context.new_page()
     standalone_requests=[]
@@ -113,6 +127,10 @@ with sync_playwright() as pw:
     assert offline.locator('table td').count()==2
     assert offline.locator('a',has_text='Jump to details').get_attribute('href')=='#wiki-heading-1'
     assert offline.locator('a',has_text='Read external docs').get_attribute('href')=='https://example.org/article'
+    assert offline.locator('a',has_text='Relative Python note').get_attribute('href')=='Programming/Python.md'
+    assert offline.locator('a',has_text='Relative heading').get_attribute('href')=='Programming/Python.md#Introduction'
+    offline.locator('a',has_text='Jump to details').click()
+    assert offline.evaluate('location.hash')=='#wiki-heading-1'
     assert offline.locator('#wiki-heading-1').inner_text()=='Details'
     html_theme=offline.locator('main').evaluate('(el)=>getComputedStyle(el).backgroundColor')
     assert html_theme!='rgb(255, 255, 255)',html_theme
@@ -150,6 +168,7 @@ with sync_playwright() as pw:
     # Chromium's print backend generates a real PDF from the same document.
     pdf=printable.pdf(print_background=True,format='A4')
     assert pdf.startswith(b'%PDF') and len(pdf)>3500,len(pdf)
+    assert b'/Subtype /Link' in pdf,'Print PDF lost clickable internal TOC link annotations'
     printable.close()
     assert not errors,errors
     assert not unexpected,unexpected
