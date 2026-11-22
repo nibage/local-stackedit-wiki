@@ -47,8 +47,29 @@ with sync_playwright() as pw:
     # when IndexedDB has no recent-folders record yet.
     page.evaluate("window.LocalWikiRecent.recentFolders=async()=>[]")
     page.locator('#recent-folder-toggle').click()
-    page.locator('#recent-folder-options [role="menuitem"]',has_text='Wiki').wait_for()
+    current=page.locator('#recent-folder-options [role="menuitem"]',has_text='Wiki')
+    current.wait_for()
+    assert current.get_attribute('aria-current')=='true'
+    # Clicking the already open wiki intentionally reloads it, allowing
+    # the read-only checkbox to change its access mode without a new picker.
+    page.evaluate("window.LocalWikiRecent.ensurePermission=async()=>true")
+    page.locator('#read-only-toggle').check()
+    # Choosing a checkbox closes the dropdown on outside pointerdown.
     page.locator('#recent-folder-toggle').click()
+    current=page.locator('#recent-folder-options [role="menuitem"]',has_text='Wiki')
+    current.click()
+    page.wait_for_function("document.querySelector('#mode').textContent==='Read-only'")
+    highlighted=page.locator('.readonly-option').evaluate("""el=>({
+      border:getComputedStyle(el).borderColor,
+      background:getComputedStyle(el).backgroundColor
+    })""")
+    assert highlighted['border']=='rgb(88, 163, 106)',highlighted
+    page.locator('#read-only-toggle').uncheck()
+    page.locator('#recent-folder-toggle').click()
+    page.locator('#recent-folder-options [role="menuitem"]',has_text='Wiki').click()
+    page.wait_for_function("document.querySelector('#mode').textContent==='Read/write'")
+    page.locator('.tree-row[aria-label="Guide.md"]').click()
+    page.wait_for_function("document.querySelector('#filename').textContent==='Guide.md'")
     page.locator('[data-side="toc"]').click()
     target=page.locator('#toc .toc-item',has_text='Section 79')
     assert target.count()==1
@@ -109,32 +130,48 @@ with sync_playwright() as pw:
         assert page.locator('#center-content-toggle').is_disabled()
         assert page.locator('#line-numbers-toggle').is_enabled()
         assert page.locator('html').get_attribute('data-centered')=='true'
-        page.locator('#workspace-text-size').select_option('22')
-        assert page.locator('#preview').evaluate('(el)=>getComputedStyle(el).fontSize')=='22px'
-        assert page.locator('.edit-pane .CodeMirror').evaluate('(el)=>getComputedStyle(el).fontSize')=='22px'
-        # The digit itself uses the editor font size, and must not cross
-        # the vertical gutter separator into the source text.
-        numbers=page.locator('.edit-pane .CodeMirror-linenumber').first
-        assert numbers.evaluate('(el)=>getComputedStyle(el).fontSize')=='22px'
-        page.wait_for_function("""() => {
-          const gutter=document.querySelector('.edit-pane .CodeMirror-gutters');
-          const digit=document.querySelector(
-            '.edit-pane .CodeMirror-code .CodeMirror-gutter-wrapper .CodeMirror-linenumber');
-          return gutter&&digit&&Math.abs(
-            digit.getBoundingClientRect().right-gutter.getBoundingClientRect().right)<1.5;
-        }""")
-        geometry=page.evaluate("""() => {
-          const gutter=document.querySelector('.edit-pane .CodeMirror-gutters');
-          const digit=document.querySelector(
-            '.edit-pane .CodeMirror-code .CodeMirror-gutter-wrapper .CodeMirror-linenumber');
-          return {right:digit.getBoundingClientRect().right,
-            separator:gutter.getBoundingClientRect().right};
-        }""")
-        assert abs(geometry['right']-geometry['separator'])<=1.5,geometry
+        # The native CodeMirror gutter remains fixed, with every digit fully
+        # before the separator, for all sizes and both wrapping modes.
+        def gutter_geometry():
+            return page.evaluate("""() => {
+              const root=document.querySelector('.edit-pane .CodeMirror');
+              const gutter=root.querySelector('.CodeMirror-gutters').getBoundingClientRect();
+              const digit=root.querySelector('.CodeMirror-code .CodeMirror-gutter-wrapper .CodeMirror-linenumber');
+              const d=digit.getBoundingClientRect();
+              const lines=root.querySelector('.CodeMirror-lines').getBoundingClientRect();
+              const scroller=root.querySelector('.CodeMirror-scroll');
+              return {gutterLeft:gutter.left,separator:gutter.right,
+                left:d.left,right:d.right,font:getComputedStyle(digit).fontSize,
+                transform:getComputedStyle(root.querySelector('.CodeMirror-gutters')).transform,
+                linesX:lines.x,scrollLeft:scroller.scrollLeft};
+            }""")
+        for size in ['12','22','26']:
+            page.locator('#workspace-text-size').select_option(size)
+            assert page.locator('#preview').evaluate('(el)=>getComputedStyle(el).fontSize')==size+'px'
+            assert page.locator('.edit-pane .CodeMirror').evaluate('(el)=>getComputedStyle(el).fontSize')==size+'px'
+            for wrap in [True,False]:
+                if wrap:page.locator('#line-wrap-toggle').check()
+                else:page.locator('#line-wrap-toggle').uncheck()
+                assert page.evaluate("window.LocalWikiDebug.editor.cm.getOption('lineWrapping')")==wrap
+                geom=gutter_geometry()
+                assert geom['font']==size+'px',geom
+                assert geom['left']>=geom['gutterLeft']-1,geom
+                assert geom['right']<=geom['separator']+1,geom
+                assert geom['separator']-geom['right']<16,geom
+                assert geom['transform']=='none',geom
+                assert abs(geom['linesX']-geom['gutterLeft'])<75,geom
+        # A horizontal scrollbar may move the markdown, but never the gutter.
         page.locator('#line-wrap-toggle').uncheck()
-        assert page.evaluate("window.LocalWikiDebug.editor.cm.getOption('lineWrapping')===false")
+        page.evaluate("""() => {
+          const cm=window.LocalWikiDebug.editor.cm;
+          cm.replaceRange('UNWRAPPED LONG LINE '.repeat(130),{line:0,ch:0},{line:0,ch:cm.getLine(0).length});
+          cm.scrollTo(650,null);
+        }""")
+        page.wait_for_timeout(200)
+        after=gutter_geometry()
+        assert after['scrollLeft']>100,after
+        assert after['left']>=after['gutterLeft']-1 and after['right']<=after['separator']+1,after
         page.locator('#line-wrap-toggle').check()
-        assert page.evaluate("window.LocalWikiDebug.editor.cm.getOption('lineWrapping')===true")
         page.locator('#line-numbers-toggle').uncheck()
         assert page.evaluate("window.LocalWikiDebug.editor.cm.getOption('lineNumbers')===false")
         page.locator('#line-numbers-toggle').check()

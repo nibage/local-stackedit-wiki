@@ -184,37 +184,27 @@
     linesToggle.parentElement.title=linesToggle.disabled
       ?'Line numbers are available in Editor and Side by side modes.':'Show or hide source line numbers';
   }
-  // The CodeMirror gutter background is anchored to the scroller, whereas
-  // the digits live in individually centered CodeMirror-lines. Align the
-  // separator with the actual digits rather than drawing it over "46".
-  // Recompute after width, theme, text-size and viewport changes.
-  let gutterAlignQueued=false;
+  // Let CodeMirror place its gutter natively. Never move the gutter to follow
+  // text: centered or horizontally scrolled lines must NOT move line numbers.
+  // The matching CSS keeps .CodeMirror-lines at full scroller width, and uses
+  // per-line padding for the source text instead of centering the line wrapper.
   function alignLineNumberGutter(){
-    if(gutterAlignQueued)return;
-    gutterAlignQueued=true;
-    requestAnimationFrame(()=>{
-      gutterAlignQueued=false;
-      const root=editor.cm.getWrapperElement();
-      const gutter=root.querySelector('.CodeMirror-gutters');
-      if(!gutter)return;
-      gutter.style.transform='';
-      if(!linesToggle.checked)return;
-      const digits=Array.from(root.querySelectorAll(
-        '.CodeMirror-code .CodeMirror-gutter-wrapper .CodeMirror-linenumber'))
-        .find(el=>el.getBoundingClientRect().width>0);
-      if(!digits)return;
-      const difference=digits.getBoundingClientRect().right-
-        gutter.getBoundingClientRect().right;
-      if(Number.isFinite(difference)&&Math.abs(difference)>.5)
-        gutter.style.transform='translateX('+Math.round(difference*100)/100+'px)';
-    });
+    const root=editor.cm.getWrapperElement();
+    root.querySelector('.CodeMirror-gutters')?.style.removeProperty('transform');
+    // Center only the text inside the source lines. CodeMirror's gutters and
+    // line wrapper remain pinned to the scroll origin, not inside a centered
+    // 990px-wide block. Use the scroller viewport, never an unwrapped line's
+    // potentially enormous scrollWidth, to compute the reading inset.
+    const viewport=editor.cm.getScrollerElement().clientWidth;
+    const target=themeSelect.value==='stackedit'?990:960;
+    const center=centerToggle.checked && selectedMode!=='split';
+    const inset=center?Math.max(12,Math.floor((viewport-target)/2)):12;
+    root.style.setProperty('--wiki-editor-inset',inset+'px');
   }
   editor.cm.on('refresh',alignLineNumberGutter);
-  editor.cm.on('viewportChange',alignLineNumberGutter);
   window.addEventListener('resize',alignLineNumberGutter);
   if(window.ResizeObserver){
-    const alignObserver=new ResizeObserver(alignLineNumberGutter);
-    alignObserver.observe(editor.cm.getWrapperElement());
+    new ResizeObserver(alignLineNumberGutter).observe(editor.cm.getWrapperElement());
   }
   themeSelect.addEventListener('change',()=>requestAnimationFrame(()=>editor.refresh()));
   function applyDisplaySettings() {
@@ -2129,9 +2119,20 @@
       for(const {name,handle} of folders){
         const item=document.createElement('button');
         item.type='button';item.setAttribute('role','menuitem');
-        item.textContent=name;item.title=name;
+        let alreadyOpen=false;
+        if(current){
+          try{alreadyOpen=typeof current.isSameEntry==='function'
+            ?await current.isSameEntry(handle):current===handle;}
+          catch(_){alreadyOpen=current===handle;}
+        }
+        item.textContent=name;
+        item.title=alreadyOpen?name+' · already open':name;
+        if(alreadyOpen)item.setAttribute('aria-current','true');
         item.addEventListener('click',async()=>{
           closeRecentFolderMenu();
+          // Reloading the current wiki is intentional: the read-only toggle
+          // may have changed since it was opened, so reuse the same handle
+          // while requesting the currently selected permission mode.
           if(!confirmDiscard() || operations.isBusy())return;
           try {
             // Ask again if the browser revoked a previous folder grant.

@@ -74,8 +74,16 @@ with sync_playwright() as pw:
     page.locator('#view-edit').click()
     width=page.locator('.CodeMirror-lines').evaluate('(e)=>e.getBoundingClientRect().toJSON()')
     cm=page.locator('.edit-pane .CodeMirror').evaluate('(e)=>e.getBoundingClientRect().toJSON()')
-    assert width['width']<=992 and width['width']>=960,(width,cm)
-    assert abs(width['x']+width['width']/2-(cm['x']+cm['width']/2))<25,(width,cm)  # CodeMirror gutter adds ~18px
+    # The CodeMirror line container now fills its scroller, fixing floating
+    # line numbers. The Markdown text alone is inset to the centered article.
+    source=page.locator('.edit-pane .CodeMirror-line').first.evaluate("""el=>({
+      padding:parseFloat(getComputedStyle(el).paddingLeft),
+      x:el.getBoundingClientRect().x
+    })""")
+    assert width['width']>1400,(width,cm)
+    assert source['padding']>200,source
+    assert abs(source['x']+source['padding']+495-
+               (cm['x']+cm['width']/2))<85,(source,cm)
     gutter=page.locator('.CodeMirror-linenumber').first
     gutter.wait_for(state='attached')
     assert gutter.evaluate('(el)=>getComputedStyle(el).visibility')=='visible'
