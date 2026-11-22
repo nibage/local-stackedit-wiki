@@ -189,8 +189,22 @@
   // The matching CSS keeps .CodeMirror-lines at full scroller width, and uses
   // per-line padding for the source text instead of centering the line wrapper.
   function alignLineNumberGutter(){
-    const gutter=editor.cm.getWrapperElement().querySelector('.CodeMirror-gutters');
-    gutter?.style.removeProperty('transform');
+    const root=editor.cm.getWrapperElement();
+    root.querySelector('.CodeMirror-gutters')?.style.removeProperty('transform');
+    // Center only the text inside the source lines. CodeMirror's gutters and
+    // line wrapper remain pinned to the scroll origin, not inside a centered
+    // 990px-wide block. Use the scroller viewport, never an unwrapped line's
+    // potentially enormous scrollWidth, to compute the reading inset.
+    const viewport=editor.cm.getScrollerElement().clientWidth;
+    const target=themeSelect.value==='stackedit'?990:960;
+    const center=centerToggle.checked && selectedMode!=='split';
+    const inset=center?Math.max(12,Math.floor((viewport-target)/2)):12;
+    root.style.setProperty('--wiki-editor-inset',inset+'px');
+  }
+  editor.cm.on('refresh',alignLineNumberGutter);
+  window.addEventListener('resize',alignLineNumberGutter);
+  if(window.ResizeObserver){
+    new ResizeObserver(alignLineNumberGutter).observe(editor.cm.getWrapperElement());
   }
   themeSelect.addEventListener('change',()=>requestAnimationFrame(()=>editor.refresh()));
   function applyDisplaySettings() {
@@ -2098,9 +2112,9 @@
         if(alreadyOpen)item.setAttribute('aria-current','true');
         item.addEventListener('click',async()=>{
           closeRecentFolderMenu();
-          // Clicking the current folder must not rescan disk, reopen index.md,
-          // or reset the active editor / scroll / unsaved state.
-          if(alreadyOpen)return;
+          // Reloading the current wiki is intentional: the read-only toggle
+          // may have changed since it was opened, so reuse the same handle
+          // while requesting the currently selected permission mode.
           if(!confirmDiscard() || operations.isBusy())return;
           try {
             // Ask again if the browser revoked a previous folder grant.
