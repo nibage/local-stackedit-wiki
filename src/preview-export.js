@@ -16,7 +16,7 @@
     // Renderers may snapshot a narrower onscreen parent even when the HTML
     // export body has a wider reading column. Center in the *export* column,
     // not in that stale parent width.
-    '.wiki-export-preview .visualization {'+
+    '.wiki-export-preview :is(.visualization,.wiki-attachment-embed,.wiki-bases-viewer) {'+
     'box-sizing:border-box!important;width:100%!important;max-width:100%!important;}'+
     '.wiki-export-preview .visualization > svg,'+
     '.wiki-export-preview .wiki-drawio-viewer > svg,'+
