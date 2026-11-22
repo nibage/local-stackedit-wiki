@@ -148,6 +148,11 @@ with sync_playwright() as pw:
     assert printable.evaluate("window.__wikiPrintInvoked") is not True
     assert page.locator('#editor').count()==1
     assert page.locator('#filename').inner_text()=='Preview.md'
+    # The original StackEdit tab remains interactive while the PDF preview is open.
+    page.locator('#view-edit').click()
+    assert page.locator('#editor-grid').get_attribute('data-layout')=='edit'
+    page.locator('#view-preview').click()
+    assert page.locator('#editor-grid').get_attribute('data-layout')=='preview'
     printable.locator('.wiki-pdf-preview-toolbar button',has_text='Print / Save PDF').click()
     printable.wait_for_function("window.__wikiPrintInvoked===true")
     pdf_background=printable.locator('main').evaluate('(el)=>getComputedStyle(el).backgroundColor')
