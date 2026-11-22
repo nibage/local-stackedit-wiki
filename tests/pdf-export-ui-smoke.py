@@ -60,6 +60,21 @@ with sync_playwright() as pw:
     target.set_content(exported,wait_until='load')
     assert target.locator('.bases-table tr').count()==46
     assert target.locator('.wiki-export-pdf-pages img').count()>=1
+    # The sample PDF has three text lines. A JPEG with only white pixels is a
+    # rendering failure, not a successful export, even if its dimensions look
+    # like a full PDF page. Decode and inspect actual output pixels.
+    ink=target.locator('.wiki-export-pdf-pages img').first.evaluate("""async img=>{
+      await img.decode();
+      const canvas=document.createElement('canvas');
+      canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+      const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);
+      const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+      let dark=0;
+      for(let i=0;i<pixels.length;i+=4)
+        if(pixels[i]<220||pixels[i+1]<220||pixels[i+2]<220)dark++;
+      return {dark,width:canvas.width,height:canvas.height};
+    }""")
+    assert ink['dark']>250,ink
     locations=target.evaluate("""()=>{
       const t=document.querySelector('.bases-table').getBoundingClientRect();
       const svg=document.querySelector('.visualization svg').getBoundingClientRect();
