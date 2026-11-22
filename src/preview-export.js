@@ -747,6 +747,8 @@
     close.type='button';close.textContent='Close preview';
     close.addEventListener('click',()=>popup.close());
     controls.append(message,print,close);
+    print.disabled=true;
+    message.textContent='Preparing PDF preview images…';
     const styles=doc.createElement('style');
     styles.textContent='.wiki-pdf-preview-toolbar{position:sticky;top:0;z-index:10000;'+
       'display:flex;gap:10px;align-items:center;justify-content:flex-end;'+
@@ -758,6 +760,20 @@
       '@media print{.wiki-pdf-preview-toolbar{display:none!important}}';
     doc.head.append(styles);
     doc.body.prepend(controls);
+    // Wait for all inline images and fonts before enabling print. This retains
+    // the old export's readiness guarantee without blocking the opener tab.
+    const images=Array.from(doc.images);
+    await Promise.all(images.map(img=>img.complete?Promise.resolve():
+      new Promise(resolve=>{
+        img.addEventListener('load',resolve,{once:true});
+        img.addEventListener('error',resolve,{once:true});
+      })));
+    try{await doc.fonts.ready;}catch(_){}
+    await new Promise(resolve=>popup.requestAnimationFrame(()=>
+      popup.requestAnimationFrame(resolve)));
+    if(popup.closed)return;
+    print.disabled=false;
+    message.textContent='A4 print preview · ready to save as PDF';
     print.addEventListener('click',()=>{
       if(!popup.closed){popup.focus();popup.print();}
     });
