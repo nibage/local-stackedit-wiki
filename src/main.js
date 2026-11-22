@@ -939,7 +939,7 @@
     $('attachment-dialog-path').textContent = path;
     const canvasInfo=$('attachment-dialog-canvas-info');
     canvasInfo.replaceChildren();canvasInfo.hidden=true;
-    $('attachment-insert').hidden = ['base','canvas','drawio'].includes(types.kind(path));
+    $('attachment-insert').hidden = false;
     $('attachment-insert').disabled = bridge.getMode() !== 'readwrite' || !activePath || operations.isBusy();
     $('attachment-insert').onclick = () => { if (insertAttachment(path)) dialog.close(); };
     const editCanvas = $('attachment-edit-canvas');
@@ -982,6 +982,7 @@
               editCanvas.hidden=kind!=='canvas';
               editCanvasSource.hidden=kind!=='canvas';
               editDrawioSource.hidden=kind!=='drawio';
+              $('attachment-insert').hidden=false;
               $('attachment-insert').disabled=bridge.getMode()!=='readwrite'||!activePath||operations.isBusy();
             }else display.querySelector('.wiki-canvas-viewer,.wiki-drawio-viewer')?.dispose?.();
           },
@@ -994,6 +995,7 @@
         $('attachment-insert').before(editor.previewButton);
         $('attachment-close').before(editor.saveButton);
         editCanvas.hidden=true;editCanvasSource.hidden=true;editDrawioSource.hidden=true;
+        $('attachment-insert').hidden=true;
         $('attachment-insert').disabled=true;
       }catch(error){
         notice('Cannot edit source: '+error.message,'error');
@@ -1037,6 +1039,7 @@
               viewer.replaceChildren(display);
               editCanvas.hidden=false;
               editCanvasSource.hidden=false;
+              $('attachment-insert').hidden=false;
             } else display.querySelector('.wiki-canvas-viewer')?.dispose?.();
           },
           onClose:() => dialog.close()
@@ -1049,6 +1052,7 @@
         $('attachment-insert').before(canvasEditor.previewButton);
         editCanvas.hidden=true;
         editCanvasSource.hidden=true;
+        $('attachment-insert').hidden=true;
       } catch (error) {
         viewer.textContent='Cannot edit Canvas: '+error.message+' The file has not been changed.';
       } finally { editCanvas.disabled=false; }
@@ -1081,6 +1085,7 @@
             if (dialog.open && $('attachment-dialog-path').textContent===path) {
               viewer.replaceChildren(display);
               editBase.hidden=false;
+              $('attachment-insert').hidden=false;
               $('attachment-insert').disabled=bridge.getMode()!=='readwrite' || !activePath || operations.isBusy();
             } else display.querySelector('.wiki-bases-viewer')?.dispose?.();
           },
@@ -1092,6 +1097,7 @@
         $('attachment-insert').before(editor.previewButton);
         $('attachment-close').before(editor.saveButton);
         editBase.hidden=true;
+        $('attachment-insert').hidden=true;
         $('attachment-insert').disabled=true;
       } catch(error) {
         viewer.textContent='Cannot edit Base YAML: '+error.message+' The source file was not modified.';
