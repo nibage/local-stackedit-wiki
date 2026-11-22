@@ -1,0 +1,66 @@
+/* Center rich Markdown blocks without centering prose or table cell text.
+   Scope the rules to preview documents: they must not change dialogs, editing
+   tools, Canvas card coordinates, or code blocks. The exporter ships the
+   equivalent CSS inline so standalone HTML remains fully offline. */
+
+/* Mermaid and ABC sheet music may render to natural-width SVGs. Their
+   download buttons stay right-aligned; only the artwork is centered. */
+.markdown-preview .visualization > svg {
+  display:block;
+  max-width:100%;
+  height:auto;
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
+
+/* Center standalone Markdown images, including local SVG files, while
+   leaving ordinary paragraphs and embedded inline icons untouched. */
+.markdown-preview p:has(> img:only-child) > img:only-child {
+  display:block;
+  max-width:100%;
+  height:auto;
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
+
+/* Tables use their natural width when they fit; overly wide tables keep the
+   existing horizontal scrollbar rather than spilling beyond the preview. */
+.markdown-preview table:not(.bases-table) {
+  width:max-content;
+  max-width:100%;
+  margin-left:auto !important;
+  margin-right:auto !important;
+  overflow-x:auto;
+}
+
+/* Media players in Obsidian attachment embeds are centered within their
+   container; labels and the actual player controls remain legible. */
+.markdown-preview .wiki-attachment-embed > :is(img,audio,video,object) {
+  display:block;
+  max-width:100%;
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
+.markdown-preview .wiki-attachment-embed > video {height:auto;}
+
+/* Keep the interactive viewers' coordinate systems completely intact:
+   center outer holders only, never transform Canvas/draw.io boards. */
+.markdown-preview .wiki-structured-embed,
+.markdown-preview .wiki-export-structured,
+.markdown-preview .wiki-export-static-graph,
+.markdown-preview .wiki-export-pdf-pages {
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
+.markdown-preview :is(.canvas-viewport,.drawio-viewport,.bases-table-scroll) {
+  margin-left:auto;
+  margin-right:auto;
+}
+.markdown-preview .wiki-drawio-viewer > svg,
+.markdown-preview .wiki-export-pdf-pages > img {
+  display:block;
+  max-width:100%;
+  height:auto;
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
