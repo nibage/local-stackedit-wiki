@@ -83,7 +83,7 @@ with sync_playwright() as pw:
     page.locator('#attachment-dialog .dialog-actions .asset-footer-save').click()
     page.wait_for_function("document.querySelector('.bases-edit-message')?.textContent.includes('External modification detected')")
     assert 'Attempted view' not in page.evaluate("window.mockWiki.entries.get('sample.base').body")
-    # Same compact Save/Discard decision as Canvas; no extra dialog row.
+    # One visible Discard/Save decision row ABOVE the lower-right Close button.
     footer=page.locator('.bases-edit-footer')
     footer_height=footer.bounding_box()['height']
     dialog_height=page.locator('#attachment-dialog').bounding_box()['height']
@@ -92,14 +92,16 @@ with sync_playwright() as pw:
     confirm=page.locator('#attachment-dialog .dialog-actions .bases-edit-confirm')
     assert confirm.is_visible()
     assert confirm.locator('button').count()==2
-    assert 'Discard changes' in confirm.inner_text()
-    assert 'Save changes' in confirm.inner_text()
+    assert 'Discard' in confirm.inner_text()
+    assert 'Save' in confirm.inner_text()
     assert confirm.locator('.asset-confirm-save').evaluate(
       '(el)=>getComputedStyle(el).borderTopColor')=='rgb(88, 163, 106)'
     assert 'asset-exit-pending' in (page.locator('#attachment-close').get_attribute('class') or '')
     assert footer.bounding_box()['height']==footer_height
-    assert abs(page.locator('#attachment-dialog').bounding_box()['height']-dialog_height)<3
-    page.locator('.bases-edit-confirm button',has_text='Discard changes').click()
+    assert confirm.bounding_box()['y'] < page.locator('#attachment-close').bounding_box()['y']
+    assert page.locator('#attachment-dialog').bounding_box()['height'] >= dialog_height-3
+    assert page.locator('#attachment-dialog').bounding_box()['height'] < dialog_height+100
+    page.locator('.bases-edit-confirm button',has_text='Discard').click()
     page.wait_for_function("!document.querySelector('#attachment-dialog').open")
     assert not errors,errors
     browser.close()

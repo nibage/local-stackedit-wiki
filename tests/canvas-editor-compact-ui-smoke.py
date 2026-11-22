@@ -83,7 +83,8 @@ with sync_playwright() as pw:
     insert=page.locator('#attachment-insert')
     close=page.locator('#attachment-close')
     assert preview_exit.inner_text()=='Back to preview'
-    assert preview_exit.bounding_box()['x']<insert.bounding_box()['x']<close.bounding_box()['x']
+    assert not insert.is_visible()
+    assert preview_exit.bounding_box()['x']<close.bounding_box()['x']
     assert zoom.locator('button').count()==4
     assert toolbar.locator('.canvas-zoom-status').count()==1
     assert toolbar.locator('.canvas-editor-toolbar-separator').count()==1
@@ -198,15 +199,15 @@ with sync_playwright() as pw:
     stable_dialog_height=page.locator('#attachment-dialog').bounding_box()['height']
     page.locator('#attachment-close').click()
     assert page.locator('#attachment-dialog').evaluate('(el)=>el.open')
-    warning=page.locator('#attachment-dialog .canvas-editor-meta > .canvas-editor-confirm')
+    warning=page.locator('#attachment-dialog .dialog-actions > .canvas-editor-confirm')
     assert warning.is_visible()
     assert warning.locator('button').count()==2
-    assert 'Discard changes' in warning.inner_text()
-    assert 'Save changes' in warning.inner_text()
-    assert abs(warning.bounding_box()['y']-meta.bounding_box()['y'])<6
-    assert warning.bounding_box()['x']>=meta.bounding_box()['x']
+    assert 'Discard' in warning.inner_text()
+    assert 'Save' in warning.inner_text()
+    assert warning.bounding_box()['y']<close.bounding_box()['y']
+    assert warning.bounding_box()['x']>=page.locator('#attachment-dialog .dialog-actions').bounding_box()['x']
     assert meta.bounding_box()['height']==stable_meta_height
-    assert abs(page.locator('#attachment-dialog').bounding_box()['height']-stable_dialog_height)<3
+    assert page.locator('#attachment-dialog').bounding_box()['height']>=stable_dialog_height-3
     assert zoom.is_visible() and save.is_visible()
     assert toolbar.bounding_box()['height']<49
     assert 'canvas-exit-pending' in (close.get_attribute('class') or '')
@@ -215,7 +216,7 @@ with sync_playwright() as pw:
     assert not warning.is_visible()
     assert 'canvas-exit-pending' not in (close.get_attribute('class') or '')
     page.locator('#attachment-close').click()
-    warning.locator('button',has_text='Discard changes').click()
+    warning.locator('button',has_text='Discard').click()
     page.wait_for_function("!document.querySelector('#attachment-dialog').open")
     assert not errors,errors
     print('PASS: Canvas compact inspector, green Connect mode and footer confirmation')

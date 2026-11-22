@@ -140,13 +140,18 @@
           <button type="button" data-asset-kind="canvas" aria-label="Insert Canvas" title="Embed JSON Canvas">◇</button>
           <button type="button" data-asset-kind="base" aria-label="Insert Base" title="Embed Obsidian Base">▤</button>
           <button type="button" data-asset-kind="drawio" aria-label="Insert draw.io" title="Embed draw.io diagram">⬡</button>
+          <span class="toolbar-divider" aria-hidden="true"></span>
           </div>
           <div class="workspace-display-controls" role="group" aria-label="Editor and preview display settings">
             <button id="toolbar-back" type="button" class="toolbar-history-back" title="Back to previous note" aria-label="Back to previous note" hidden>← Back</button>
+            <label class="workspace-display-check" title="Show or hide editor line numbers"><input id="line-numbers-toggle" type="checkbox" checked> Line numbers</label>
             <label class="workspace-display-check" title="Center editor and preview text in the available pane"><input id="center-content-toggle" type="checkbox" checked> Center</label>
+            <label class="workspace-display-check" title="Wrap long editor lines without inserting newlines"><input id="line-wrap-toggle" type="checkbox" checked> Wrap lines</label>
+            <span class="workspace-display-divider" aria-hidden="true">|</span>
             <label class="workspace-display-check" title="Automatically re-render the Markdown preview 3 seconds after editing"><input id="auto-rerender-toggle" type="checkbox" checked> Auto re-render</label>
             <button id="render-now" class="workspace-render-now" type="button" title="Rebuild preview now from current editor text (does not reread or change files)">Render</button>
-            <label class="workspace-display-check" title="Show or hide editor line numbers"><input id="line-numbers-toggle" type="checkbox" checked> Line numbers</label>
+            <button id="scroll-sync-toggle" class="scroll-sync-toggle" type="button" aria-pressed="false" title="Synchronize scrolling between editor and preview in Side by side mode">Scroll sync: Off</button>
+            <span class="workspace-display-divider" aria-hidden="true">|</span>
             <label class="workspace-display-size" title="Font size for editor and preview">Text size
               <select id="workspace-text-size" aria-label="Editor and preview text size">
                 <option value="default">Default</option>
@@ -156,9 +161,7 @@
                 <option value="24">24 px</option><option value="26">26 px</option>
               </select>
             </label>
-            <label class="workspace-display-check" title="Wrap long editor lines without inserting newlines"><input id="line-wrap-toggle" type="checkbox" checked> Wrap lines</label>
           </div>
-          <button id="scroll-sync-toggle" class="scroll-sync-toggle" type="button" aria-pressed="false" title="Synchronize scrolling between editor and preview in Side by side mode">Scroll sync: Off</button>
         </div>
       <div class="editor-grid" id="editor-grid" data-layout="split">
         <section class="pane edit-pane" aria-label="Markdown source"><textarea id="editor" spellcheck="false" disabled placeholder="Open a note or start typing to create one in the wiki root."></textarea></section>
@@ -213,7 +216,7 @@
   <h2 id="attachment-dialog-title">Attachment</h2>
   <div class="attachment-dialog-info"><p id="attachment-dialog-path" class="dialog-hint"></p><div id="attachment-dialog-canvas-info" class="attachment-dialog-canvas-info" hidden></div></div>
   <div id="attachment-dialog-viewer" class="attachment-dialog-viewer" aria-live="polite"></div>
-  <div class="dialog-actions"><button id="attachment-edit-canvas" type="button" hidden>Interactive edit</button><button id="attachment-edit-canvas-source" type="button" hidden>Edit base Canvas</button><button id="attachment-edit-drawio-source" type="button" hidden>Edit base XML</button><button id="attachment-edit-base" type="button" hidden>Edit Base YAML</button><button id="attachment-insert" type="button">📎 Insert into note</button><button id="attachment-close" type="button">✕ Close</button></div>
+  <div class="dialog-actions"><button id="attachment-edit-canvas-source" type="button" hidden>Edit base Canvas</button><button id="attachment-edit-canvas" type="button" hidden>Interactive edit</button><button id="attachment-edit-drawio-source" type="button" hidden>Edit base XML</button><button id="attachment-edit-base" type="button" hidden>Edit Base YAML</button><button id="attachment-insert" type="button">📎 Insert into note</button><button id="attachment-close" type="button">✕ Close</button></div>
 </dialog>
 <dialog id="toolbar-asset-dialog" class="wiki-dialog toolbar-asset-dialog" aria-labelledby="toolbar-asset-title">
   <h2 id="toolbar-asset-title">Insert local attachment</h2>

@@ -52,3 +52,58 @@
 :root[data-theme] .tree-row .glyph-note {
   font-size:16px!important;filter:saturate(1.3) contrast(1.1);
 }
+
+
+/* Dialog exits and saves stay together at bottom-right. When leaving with
+   changes, the decision appears on its own narrow row ABOVE the buttons. */
+#attachment-dialog .dialog-actions{
+  justify-content:flex-end;align-content:center;column-gap:8px;row-gap:6px;
+}
+#attachment-dialog .dialog-actions #attachment-edit-canvas-source{order:0;}
+#attachment-dialog .dialog-actions #attachment-edit-canvas{order:1;}
+#attachment-dialog .dialog-actions #attachment-edit-drawio-source,
+#attachment-dialog .dialog-actions #attachment-edit-base{order:1;}
+#attachment-dialog .dialog-actions .canvas-preview-exit,
+#attachment-dialog .dialog-actions .asset-back-to-preview{order:2;margin-left:auto;}
+#attachment-dialog .dialog-actions .asset-footer-save{
+  order:3;margin-left:0!important;
+}
+#attachment-dialog .dialog-actions #attachment-close{order:4;margin-left:0!important;}
+#attachment-dialog .dialog-actions .bases-edit-confirm:not([hidden]),
+#attachment-dialog .dialog-actions .canvas-editor-confirm:not([hidden]){
+  order:-1;flex:0 0 100%;width:100%;margin:0!important;
+  display:flex;align-items:center;justify-content:flex-end;
+  padding:0!important;border:0!important;background:transparent!important;
+  box-shadow:none!important;min-height:28px;gap:7px;
+}
+#attachment-dialog .dialog-actions .bases-edit-confirm[hidden],
+#attachment-dialog .dialog-actions .canvas-editor-confirm[hidden]{display:none!important;}
+#attachment-dialog .dialog-actions .asset-confirm-save,
+#attachment-dialog .dialog-actions .canvas-confirm-save,
+#attachment-dialog .dialog-actions .asset-footer-save:not(:disabled),
+#attachment-dialog .dialog-actions .canvas-preview-exit,
+#attachment-dialog .dialog-actions .asset-back-to-preview,
+#attachment-dialog .dialog-actions #attachment-close{
+  border-color:#58a36a!important;
+  box-shadow:inset 0 0 0 1px #58a36a44!important;
+}
+#attachment-dialog .dialog-actions .asset-confirm-save,
+#attachment-dialog .dialog-actions .canvas-confirm-save{
+  background:color-mix(in srgb,#58a36a 13%,var(--panel))!important;
+}
+#attachment-dialog .dialog-actions #attachment-insert[hidden]{display:none!important;}
+
+/* Keep the compact save affordance visibly disabled until a real edit. */
+#attachment-dialog .dialog-actions .asset-footer-save:disabled{
+  border-color:var(--line)!important;box-shadow:none!important;
+  opacity:.45!important;
+}
+#attachment-dialog .canvas-editor-save-stack button:disabled{
+  border-color:var(--line)!important;box-shadow:none!important;
+  opacity:.45!important;
+}
+#attachment-dialog .canvas-editor-save-stack button:not(:disabled){
+  border-color:#58a36a!important;
+  background:color-mix(in srgb,#58a36a 11%,var(--panel))!important;
+  box-shadow:inset 0 0 0 1px #58a36a66!important;
+}

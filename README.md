@@ -8,6 +8,14 @@ A fully offline, portable Markdown knowledge base for Chrome and Edge. Write in 
 
 > **Offline first:** Unzip the completed GitHub Actions artifact, open `index.html` in Chrome/Edge, then use **Open folder** to choose the wiki directory. No server, cloud storage or external runtime dependencies.
 
+## PDF exports and attachment editor controls
+
+The preview's **PDF…** export opens a standalone light A4 preview tab first. It no longer calls the modal print dialog automatically; click **Print / Save PDF** in that tab when you want to print. HTML export remains independent. Printing uses nearly the full A4 page width (11 mm horizontal margins), compact but legible headings, consistent heading rules, table headers repeated on subsequent pages, and page-break protection for images, SVG diagrams and table rows. Chrome's actual print dialogue is browser-modal and can still briefly block interaction while open; closing the print dialog restores the original tab.
+
+The bundled `demo-wiki/Attachments/sample.pdf` is now a **real two-page PDF** containing text, table and vector illustrations on both pages. It is a test of multipage inline preview and offline HTML/PDF export. PDF attachment objects are connected to the DOM before setting their Blob URL to avoid the first-render blank-preview behavior observed in Chromium. Exact page counts for printing an entire Markdown note vary with its text and embedded attachments; the demo's PDF attachment itself always has two pages.
+
+The formatting toolbar groups **Line numbers · Center · Wrap lines | Auto re-render · Render · Scroll sync | Text size**, with a separator after **Insert draw.io diagram**. Unopened Markdown notes retain their visible blue-book icon. In Canvas, draw.io and Base YAML attachment dialogs, the unavailable **Insert into note** action is hidden. Source editor exit prompts use text-only **Discard / Save** in a separate row above the bottom-right preview/save/close actions. Canvas retains its icon-bearing toolbar Save control, disabled until the Canvas document actually changes.
+
 ## The experience
 
 ![Latest Local StackEdit Wiki in dark mode, showing Markdown, Mermaid diagrams and offline previews](docs/app-dark-diagrams.jpg)

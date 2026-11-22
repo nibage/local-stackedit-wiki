@@ -836,8 +836,17 @@
       element.addEventListener('error', () => { element.title = 'Browser codec or format may be unsupported'; });
     } else if (kind === 'pdf') {
       element = document.createElement('object');
-      element.type = 'application/pdf'; element.data = url;
+      element.type = 'application/pdf';
       element.textContent = 'PDF preview is unavailable in this browser.';
+      // Chrome's built-in PDF viewer can remain blank if object.data is set
+      // before the object is attached to the document. Assign it after the
+      // caller inserts the object into the live preview/dialog DOM.
+      element.dataset.exportPending = 'true';
+      requestAnimationFrame(() => {
+        if (!element.isConnected) return;
+        element.data = url;
+        delete element.dataset.exportPending;
+      });
     }
     return element || null;
   }
@@ -930,6 +939,7 @@
     $('attachment-dialog-path').textContent = path;
     const canvasInfo=$('attachment-dialog-canvas-info');
     canvasInfo.replaceChildren();canvasInfo.hidden=true;
+    $('attachment-insert').hidden = false;
     $('attachment-insert').disabled = bridge.getMode() !== 'readwrite' || !activePath || operations.isBusy();
     $('attachment-insert').onclick = () => { if (insertAttachment(path)) dialog.close(); };
     const editCanvas = $('attachment-edit-canvas');
@@ -972,6 +982,7 @@
               editCanvas.hidden=kind!=='canvas';
               editCanvasSource.hidden=kind!=='canvas';
               editDrawioSource.hidden=kind!=='drawio';
+              $('attachment-insert').hidden=false;
               $('attachment-insert').disabled=bridge.getMode()!=='readwrite'||!activePath||operations.isBusy();
             }else display.querySelector('.wiki-canvas-viewer,.wiki-drawio-viewer')?.dispose?.();
           },
@@ -984,6 +995,7 @@
         $('attachment-insert').before(editor.previewButton);
         $('attachment-close').before(editor.saveButton);
         editCanvas.hidden=true;editCanvasSource.hidden=true;editDrawioSource.hidden=true;
+        $('attachment-insert').hidden=true;
         $('attachment-insert').disabled=true;
       }catch(error){
         notice('Cannot edit source: '+error.message,'error');
@@ -1027,6 +1039,7 @@
               viewer.replaceChildren(display);
               editCanvas.hidden=false;
               editCanvasSource.hidden=false;
+              $('attachment-insert').hidden=false;
             } else display.querySelector('.wiki-canvas-viewer')?.dispose?.();
           },
           onClose:() => dialog.close()
@@ -1039,6 +1052,7 @@
         $('attachment-insert').before(canvasEditor.previewButton);
         editCanvas.hidden=true;
         editCanvasSource.hidden=true;
+        $('attachment-insert').hidden=true;
       } catch (error) {
         viewer.textContent='Cannot edit Canvas: '+error.message+' The file has not been changed.';
       } finally { editCanvas.disabled=false; }
@@ -1071,6 +1085,7 @@
             if (dialog.open && $('attachment-dialog-path').textContent===path) {
               viewer.replaceChildren(display);
               editBase.hidden=false;
+              $('attachment-insert').hidden=false;
               $('attachment-insert').disabled=bridge.getMode()!=='readwrite' || !activePath || operations.isBusy();
             } else display.querySelector('.wiki-bases-viewer')?.dispose?.();
           },
@@ -1082,6 +1097,7 @@
         $('attachment-insert').before(editor.previewButton);
         $('attachment-close').before(editor.saveButton);
         editBase.hidden=true;
+        $('attachment-insert').hidden=true;
         $('attachment-insert').disabled=true;
       } catch(error) {
         viewer.textContent='Cannot edit Base YAML: '+error.message+' The source file was not modified.';
@@ -1133,6 +1149,7 @@
     $('attachment-edit-drawio-source').hidden=true;
     $('attachment-edit-base').hidden = true;
     $('attachment-edit-canvas').hidden = true;
+    $('attachment-insert').hidden = false;
     $('attachment-dialog-viewer').querySelector('.wiki-canvas-viewer')?.dispose?.();
     $('attachment-dialog-viewer').querySelector('.wiki-bases-viewer')?.dispose?.();
     $('attachment-dialog-viewer').querySelector('.wiki-drawio-viewer')?.dispose?.();
@@ -1785,8 +1802,8 @@
       });
       notice('HTML opened in a new tab. Use Download HTML there to save the standalone file.','success');
     } else {
-      await exporter.printHtml(html,popup);
-      notice('In the print dialog, choose Save as PDF. PDF always uses the light theme; the app theme stays unchanged.','success');
+      await exporter.showPdfPreview(html,popup);
+      notice('PDF preview opened in a separate tab. Click Print / Save PDF there when ready; the editor remains available.','success');
     }
   }
   function startPreviewExport(kind) {

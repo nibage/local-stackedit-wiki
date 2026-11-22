@@ -143,6 +143,17 @@ with sync_playwright() as pw:
     printable=new_tab.value
     printable.wait_for_load_state('domcontentloaded')
     printable.wait_for_function("document.querySelector('h1')?.textContent==='Preview export heading'")
+    printable.wait_for_function("document.querySelector('.wiki-pdf-preview-toolbar button') !== null")
+    # The new tab must not start a modal print dialog automatically.
+    assert printable.evaluate("window.__wikiPrintInvoked") is not True
+    assert page.locator('#editor').count()==1
+    assert page.locator('#filename').inner_text()=='Preview.md'
+    # The original StackEdit tab remains interactive while the PDF preview is open.
+    page.locator('#view-edit').click()
+    assert page.locator('#editor-grid').get_attribute('data-layout')=='edit'
+    page.locator('#view-preview').click()
+    assert page.locator('#editor-grid').get_attribute('data-layout')=='preview'
+    printable.locator('.wiki-pdf-preview-toolbar button',has_text='Print / Save PDF').click()
     printable.wait_for_function("window.__wikiPrintInvoked===true")
     pdf_background=printable.locator('main').evaluate('(el)=>getComputedStyle(el).backgroundColor')
     assert pdf_background=='rgb(255, 255, 255)',(pdf_background,printable.locator('main').get_attribute('style'))
@@ -160,13 +171,13 @@ with sync_playwright() as pw:
       headingFont:getComputedStyle(el.querySelector('h1')).fontSize,
       anchor:el.querySelector('a[href="#wiki-heading-1"]')?.getAttribute('href')
     })""")
-    assert 615<=layout['rect']['width']<=640,layout
+    assert layout['rect']['width']>640 and layout['rect']['width']<=layout['viewport'],layout
     assert abs(layout['rect']['x']-(layout['viewport']-layout['rect']['width'])/2)<2,layout
     assert layout['bodyFont']=='16px',layout
-    assert layout['headingFont']=='30px',layout
+    assert layout['headingFont']=='27px',layout
     assert layout['anchor']=='#wiki-heading-1',layout
     # Chromium's print backend generates a real PDF from the same document.
-    pdf=printable.pdf(print_background=True,format='A4')
+    pdf=printable.pdf(print_background=True,format='A4',prefer_css_page_size=True)
     assert pdf.startswith(b'%PDF') and len(pdf)>3500,len(pdf)
     assert b'/Subtype /Link' in pdf,'Print PDF lost clickable internal TOC link annotations'
     printable.close()

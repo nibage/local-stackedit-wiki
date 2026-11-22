@@ -98,7 +98,7 @@ with sync_playwright() as pw:
     # The Close button must not lose an unsaved draft without explicit Discard.
     page.locator('#attachment-close').click()
     assert page.locator('#attachment-dialog').evaluate("(el)=>el.open")
-    page.locator('.canvas-editor-confirm button',has_text='Discard changes').click()
+    page.locator('.canvas-editor-confirm button',has_text='Discard').click()
     page.wait_for_function("!document.querySelector('#attachment-dialog').open")
     assert not errors, errors
     browser.close()

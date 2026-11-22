@@ -94,7 +94,11 @@
     // Reserve ONE fixed-height status row for both hint and exit choices.
     // Do not inject an extra row before the host footer: it caused a
     // vertical scrollbar to appear as soon as Preview/Close was clicked.
-    meta.replaceChildren(summary,hint,warning);
+    meta.replaceChildren(summary,hint);
+    // Exit decisions belong in a dedicated row above the Close/Preview
+    // buttons, not in the narrow Canvas status line.
+    if (options.confirmHost) options.confirmHost.insertBefore(warning,options.closeButton||null);
+    else meta.append(warning);
     saveStack.append(message);
 
     function status(text) { message.textContent = text; }
@@ -166,8 +170,8 @@
       warning.replaceChildren();
       warning.setAttribute('role','group');
       warning.setAttribute('aria-label',messageText);
-      const discard = make('button','canvas-control','Discard changes');
-      const saveChanges = make('button','canvas-control canvas-confirm-save','💾 Save changes');
+      const discard = make('button','canvas-control','Discard');
+      const saveChanges = make('button','canvas-control canvas-confirm-save','Save');
       saveChanges.setAttribute('aria-label','Save changes');
       discard.type = saveChanges.type = 'button';
       discard.onclick = () => { clearExitChoice(); draft.discard(); action(); };
@@ -228,6 +232,7 @@
       } finally { saving = false; refreshButtons(); }
     }
     const save = iconButton('Save canvas','save',()=>void persist());
+    save.title='Save Canvas changes';
     // Preview belongs to the host dialog's action row next to "Insert into
     // note", not in the graph toolbar. The host inserts it in that row.
     const previewButton=iconButton('Back to preview','forward',leave);

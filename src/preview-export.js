@@ -9,6 +9,122 @@
     'button','link','meta','base','.diagram-export','.structured-embed-open',
     '.bases-toolbar','.bases-filter-panel'
   ].join(',');
+  // Print only: use the full A4 reading area while retaining a comfortable
+  // editorial type size. HTML exports keep their unchanged screen layout.
+  const PRINT_STYLES = `@page { size:A4; margin:10mm 11mm 12mm; }
+@media print {
+  html,body {
+    background:#fff!important;color:#2b3035!important;
+    font-family:Arial,"Helvetica Neue",Helvetica,sans-serif!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .wiki-export-preview {
+    display:block!important;box-sizing:border-box!important;
+    width:100%!important;max-width:100%!important;
+    min-height:0!important;height:auto!important;overflow:visible!important;
+    margin:0 auto!important;padding:0!important;flex:none!important;
+    background:#fff!important;color:#2b3035!important;
+    font-family:Arial,"Helvetica Neue",Helvetica,sans-serif!important;
+    font-size:16px!important;line-height:1.47!important;
+  }
+  .wiki-export-preview p,.wiki-export-preview h1,.wiki-export-preview h2,
+  .wiki-export-preview h3,.wiki-export-preview h4,.wiki-export-preview h5,
+  .wiki-export-preview h6,.wiki-export-preview ul,.wiki-export-preview ol,
+  .wiki-export-preview li,.wiki-export-preview blockquote,
+  .wiki-export-preview pre,.wiki-export-preview details {
+    box-sizing:border-box!important;min-width:0!important;
+    width:auto!important;max-width:100%!important;
+  }
+  .wiki-export-preview p,.wiki-export-preview li,.wiki-export-preview blockquote {
+    font-size:16px!important;line-height:1.47!important;letter-spacing:normal!important;
+  }
+  .wiki-export-preview p {margin:0 0 .62em!important;orphans:3;widows:3;}
+  .wiki-export-preview ul,.wiki-export-preview ol {
+    padding-left:1.5em!important;margin:.22em 0 .72em!important;
+  }
+  .wiki-export-preview li { margin:.08em 0!important; }
+  .wiki-export-preview h1,.wiki-export-preview h2,.wiki-export-preview h3,
+  .wiki-export-preview h4,.wiki-export-preview h5,.wiki-export-preview h6 {
+    font-family:Arial,"Helvetica Neue",Helvetica,sans-serif!important;
+    color:#292e34!important;font-weight:700!important;line-height:1.22!important;
+    border:0!important;border-bottom:1px solid #c9d0d8!important;
+    padding:0 0 .19em!important;margin:.95em 0 .4em!important;
+    break-after:avoid-page!important;page-break-after:avoid!important;
+  }
+  .wiki-export-preview h1 {font-size:27px!important;}
+  .wiki-export-preview h2 {font-size:21px!important;}
+  .wiki-export-preview h3 {font-size:18px!important;}
+  .wiki-export-preview h4,.wiki-export-preview h5,.wiki-export-preview h6 {font-size:16px!important;}
+  .wiki-export-preview>h1:first-child,.wiki-export-preview>h2:first-child {
+    margin-top:0!important;
+  }
+  .wiki-export-preview hr {
+    border:0!important;border-top:1px solid #c9d0d8!important;
+    margin:.75em 0!important;box-shadow:none!important;
+  }
+  .wiki-export-preview a[href] {
+    color:#1675aa!important;text-decoration:underline!important;
+    overflow-wrap:anywhere!important;
+  }
+  .wiki-export-preview blockquote {
+    color:#555!important;background:transparent!important;
+    border-left:3px solid #cfd5da!important;
+    padding:.1em .8em!important;margin:.4em 0 .65em!important;
+  }
+  .wiki-export-preview pre,.wiki-export-preview pre code {
+    max-width:100%!important;white-space:pre-wrap!important;
+    overflow-wrap:anywhere!important;word-break:break-word!important;
+    overflow:visible!important;
+    font-size:12px!important;line-height:1.4!important;
+  }
+  .wiki-export-preview pre {
+    padding:8px 11px!important;margin:.4em 0 .75em!important;
+    background:#f6f7f8!important;border:1px solid #e1e4e7!important;
+  }
+  .wiki-export-preview table {
+    display:table!important;box-sizing:border-box!important;
+    width:100%!important;max-width:100%!important;min-width:0!important;
+    table-layout:auto!important;border-collapse:collapse!important;
+    overflow:visible!important;break-inside:auto!important;
+  }
+  .wiki-export-preview thead {display:table-header-group!important;}
+  .wiki-export-preview tfoot {display:table-footer-group!important;}
+  .wiki-export-preview tr {break-inside:avoid-page!important;page-break-inside:avoid!important;}
+  .wiki-export-preview th,.wiki-export-preview td {
+    position:static!important;white-space:normal!important;
+    max-width:none!important;overflow:visible!important;
+    overflow-wrap:anywhere!important;word-break:break-word!important;
+    padding:5px 8px!important;line-height:1.4!important;
+    font-size:12px!important;vertical-align:top!important;
+    border-bottom:1px solid #dfe4e8!important;
+  }
+  .wiki-export-preview th {
+    background:#f1f3f5!important;color:#292e34!important;font-weight:700!important;
+  }
+  .wiki-export-preview .visualization,
+  .wiki-export-preview .wiki-export-static-graph,
+  .wiki-export-preview .wiki-export-structured,
+  .wiki-export-preview .wiki-drawio-viewer,
+  .wiki-export-preview .wiki-export-pdf-pages img {
+    box-sizing:border-box!important;max-width:100%!important;
+    overflow:visible!important;break-inside:avoid-page!important;
+    page-break-inside:avoid!important;
+  }
+  .wiki-export-preview img,.wiki-export-preview svg {
+    display:inline-block;max-width:100%!important;
+    max-height:245mm!important;object-fit:contain!important;
+    break-inside:avoid-page!important;page-break-inside:avoid!important;
+  }
+  .wiki-export-preview .wiki-export-pdf-pages img {display:block!important;margin:0 auto 8px!important;}
+  .wiki-export-preview .wiki-bases-viewer,.wiki-export-preview .bases-table-scroll {
+    height:auto!important;min-height:0!important;max-height:none!important;
+    overflow:visible!important;
+  }
+  .wiki-export-preview .wiki-drawio-viewer svg,
+  .wiki-export-preview .visualization svg {overflow:visible!important;}
+  .wiki-export-preview .canvas-node {box-sizing:border-box!important;}
+  .wiki-export-preview .MathJax_MathML {max-width:100%!important;}
+}`;
   // Computed CSS retains the current theme and syntax highlighting, without
   // requiring relative stylesheets or active scripts in the exported document.
   const STYLES = [
@@ -510,84 +626,7 @@
       '.wiki-export-preview .wiki-export-pdf-pages{height:auto!important;'+
       'max-height:none!important;overflow:visible!important;}'+
       'img,svg{max-width:100%;}'+
-      /* StackEdit-like printed article: centred ~470pt reading column,
-         12pt body text and generous headings. Inline snapshots use fixed
-         computed values, so printed typography must override them. */
-      '@media print{@page{size:A4;margin:12mm 17mm 17mm;}'+
-      'html,body{background:#fff!important;color:#333!important;'+
-      'font-family:Arial,"Helvetica Neue",sans-serif!important;'+
-      '-webkit-print-color-adjust:exact;print-color-adjust:exact;}'+
-      '.wiki-export-preview{box-sizing:border-box!important;display:block!important;'+
-      'width:100%!important;max-width:470pt!important;margin:0 auto!important;'+
-      'padding:0!important;height:auto!important;min-height:0!important;'+
-      'overflow:visible!important;flex:none!important;'+
-      'background:#fff!important;color:#333!important;'+
-      'font-family:Arial,"Helvetica Neue",sans-serif!important;'+
-      'font-size:16px!important;line-height:1.72!important;}'+
-      '.wiki-export-preview p,.wiki-export-preview h1,.wiki-export-preview h2,'+
-      '.wiki-export-preview h3,.wiki-export-preview h4,.wiki-export-preview h5,'+
-      '.wiki-export-preview h6,.wiki-export-preview ul,.wiki-export-preview ol,'+
-      '.wiki-export-preview li,.wiki-export-preview blockquote,'+
-      '.wiki-export-preview pre,.wiki-export-preview details{'+
-      'box-sizing:border-box!important;width:auto!important;'+
-      'min-width:0!important;max-width:100%!important;}'+
-      '.wiki-export-preview p,.wiki-export-preview li,.wiki-export-preview blockquote{'+
-      'font-size:16px!important;line-height:1.72!important;letter-spacing:normal!important;}'+
-      '.wiki-export-preview p{margin:0 0 1.25em!important;}'+
-      '.wiki-export-preview ul,.wiki-export-preview ol{margin:0 0 1.35em!important;'+
-      'padding-left:1.8em!important;}'+
-      '.wiki-export-preview h1,.wiki-export-preview h2,.wiki-export-preview h3,'+
-      '.wiki-export-preview h4,.wiki-export-preview h5,.wiki-export-preview h6{'+
-      'font-family:Arial,"Helvetica Neue",sans-serif!important;color:#333!important;'+
-      'font-weight:700!important;line-height:1.25!important;'+
-      'margin:1.85em 0 .76em!important;padding-bottom:.27em!important;'+
-      'border-bottom:1px solid #d9d9d9!important;break-after:avoid;}'+
-      '.wiki-export-preview h1{font-size:30px!important;}'+
-      '.wiki-export-preview h2{font-size:25px!important;}'+
-      '.wiki-export-preview>h1:first-child,.wiki-export-preview>h2:first-child{margin-top:0!important;}'+
-      '.wiki-export-preview h1,.wiki-export-preview h2{margin-bottom:1.25em!important;}'+
-      '.wiki-export-preview h3{font-size:21px!important;}'+
-      '.wiki-export-preview h4,.wiki-export-preview h5{font-size:18px!important;}'+
-      '.wiki-export-preview a[href]{color:#247fb9!important;text-decoration:underline!important;}'+
-      '.wiki-export-preview blockquote{background:transparent!important;'+
-      'border-left:4px solid #dedede!important;color:#666!important;'+
-      'padding:.15em 1.1em!important;}'+
-      '.wiki-export-preview pre{font-size:13px!important;line-height:1.5!important;'+
-      'white-space:pre-wrap!important;overflow:visible!important;'+
-      'background:#f6f6f6!important;border-color:#ddd!important;}'+
-      '.wiki-export-preview table{display:table!important;max-width:100%!important;'+
-      'width:auto!important;overflow:visible!important;break-inside:auto;}'+
-      '.wiki-export-preview tr{break-inside:avoid;}'+
-      '.wiki-export-preview th{background:#f4f4f4!important;color:#333!important;}'+
-      '.wiki-export-preview .visualization{overflow:visible!important;'+
-      'break-inside:avoid;page-break-inside:avoid;}'+
-      '.wiki-export-preview img,.wiki-export-preview svg{max-width:100%!important;'+
-      'height:auto;break-inside:avoid;page-break-inside:avoid;}'+
-      '.wiki-export-preview .wiki-export-static-graph,'+
-      '.wiki-export-preview .visualization,'+
-      '.wiki-export-preview .wiki-drawio-viewer{'+
-      'box-sizing:border-box!important;max-width:100%!important;'+
-      'overflow:visible!important;break-inside:avoid-page!important;}'+
-      '.wiki-export-preview .wiki-bases-viewer,'+
-      '.wiki-export-preview .bases-table-scroll{max-height:none!important;'+
-      'min-height:0!important;height:auto!important;overflow:visible!important;}'+
-      '.wiki-export-preview table{min-width:0!important;'+
-      'table-layout:auto!important;width:100%!important;}'+
-      '.wiki-export-preview table th,.wiki-export-preview table td{'+
-      'position:static!important;white-space:normal!important;'+
-      'overflow:visible!important;overflow-wrap:anywhere!important;'+
-      'word-break:break-word!important;max-width:none!important;'+
-      'font-size:11px!important;line-height:1.4!important;'+
-      'padding:5px 7px!important;}'+
-      '.wiki-export-preview pre,.wiki-export-preview pre code{'+
-      'max-width:100%!important;white-space:pre-wrap!important;'+
-      'overflow-wrap:anywhere!important;overflow:visible!important;}'+
-      '.wiki-export-preview .wiki-drawio-viewer svg,'+
-      '.wiki-export-preview .visualization svg{max-width:100%!important;'+
-      'overflow:visible!important;}'+
-      '.wiki-export-preview .canvas-node{box-sizing:border-box!important;}'+
-      '.wiki-export-preview .MathJax_MathML{max-width:100%!important;}'+
-      '}'+
+      PRINT_STYLES+
       '</style></head><body>\n'+
       '<main class="wiki-export-preview markdown-preview" style="'+escapeHtml(cloned.style.cssText)+'">'+cloned.innerHTML+
       '</main>\n</body></html>';
@@ -688,6 +727,60 @@
     }
     popup.focus();
   }
+  // A ready PDF preview is opened in its own tab without immediately running
+  // window.print(). Chromium's modal print dialog can suspend other tabs in
+  // the same browser process: the user invokes it only when they choose.
+  async function showPdfPreview(html,popup) {
+    if (!popup || popup.closed) throw new Error('The PDF preview tab was closed.');
+    popup.document.open();
+    popup.document.write(html);
+    popup.document.close();
+    const doc=popup.document;
+    const controls=doc.createElement('nav');
+    controls.className='wiki-pdf-preview-toolbar';
+    controls.setAttribute('aria-label','PDF export actions');
+    const message=doc.createElement('span');
+    message.textContent='A4 print preview · ready to save as PDF';
+    const print=doc.createElement('button');
+    print.type='button';print.textContent='Print / Save PDF';
+    const close=doc.createElement('button');
+    close.type='button';close.textContent='Close preview';
+    close.addEventListener('click',()=>popup.close());
+    controls.append(message,print,close);
+    print.disabled=true;
+    message.textContent='Preparing PDF preview images…';
+    const styles=doc.createElement('style');
+    styles.textContent='.wiki-pdf-preview-toolbar{position:sticky;top:0;z-index:10000;'+
+      'display:flex;gap:10px;align-items:center;justify-content:flex-end;'+
+      'padding:10px 15px;background:#f5f7f9;border-bottom:1px solid #d9dde2;'+
+      'font:13px system-ui,Arial,sans-serif;color:#2b3035}'+
+      '.wiki-pdf-preview-toolbar span{margin-right:auto}'+
+      '.wiki-pdf-preview-toolbar button{padding:7px 12px;border:1px solid #58a36a;'+
+      'border-radius:6px;background:#fff;color:#26382c;font:inherit;cursor:pointer}'+
+      '@media print{.wiki-pdf-preview-toolbar{display:none!important}}';
+    doc.head.append(styles);
+    doc.body.prepend(controls);
+    // Wait for all inline images and fonts before enabling print. This retains
+    // the old export's readiness guarantee without blocking the opener tab.
+    const images=Array.from(doc.images);
+    await Promise.all(images.map(img=>img.complete?Promise.resolve():
+      new Promise(resolve=>{
+        img.addEventListener('load',resolve,{once:true});
+        img.addEventListener('error',resolve,{once:true});
+      })));
+    try{await doc.fonts.ready;}catch(_){}
+    await new Promise(resolve=>popup.requestAnimationFrame(()=>
+      popup.requestAnimationFrame(resolve)));
+    if(popup.closed)return;
+    print.disabled=false;
+    message.textContent='A4 print preview · ready to save as PDF';
+    print.addEventListener('click',()=>{
+      if(!popup.closed){popup.focus();popup.print();}
+    });
+    // The print dialog is deliberately NOT auto-opened; keep the original
+    // StackEdit tab interactive during PDF preparation and review.
+    popup.focus();
+  }
   async function printHtml(html,popup) {
     if (!popup || popup.closed) throw new Error('The PDF print window was closed.');
     popup.document.open();
@@ -707,5 +800,5 @@
       popup.requestAnimationFrame(resolve)));
     if (!popup.closed){popup.focus();popup.print();}
   }
-  global.LocalWikiPreviewExport={build,downloadHtml,openPrintWindow,showHtmlPreview,printHtml,waitForReady,fileName,escapeHtml};
+  global.LocalWikiPreviewExport={build,downloadHtml,openPrintWindow,showHtmlPreview,showPdfPreview,printHtml,waitForReady,fileName,escapeHtml};
 })(window);

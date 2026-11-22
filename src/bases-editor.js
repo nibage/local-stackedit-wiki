@@ -93,14 +93,14 @@
     save.remove();
     function showConfirm(action,trigger){
       clearConfirm();
-      const discard=create('button','canvas-control asset-confirm-discard','Discard changes');
+      const discard=create('button','canvas-control asset-confirm-discard','Discard');
       discard.type='button';
       discard.onclick=()=>{
         draft.discard();textarea.value=draft.value;
         clearConfirm();refresh();
         action?.();
       };
-      const saveChanges=create('button','canvas-control asset-confirm-save','💾 Save changes');
+      const saveChanges=create('button','canvas-control asset-confirm-save','Save');
       saveChanges.setAttribute('aria-label','Save changes');
       saveChanges.type='button';
       saveChanges.onclick=async()=>{if(await persist())action?.();};
