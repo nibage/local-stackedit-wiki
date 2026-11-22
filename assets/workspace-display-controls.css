@@ -170,7 +170,7 @@
 /* A checked Open read-only option is an unmistakable, stable-width status. */
 :root[data-theme] .topbar .readonly-option {
   box-sizing:border-box;border:1px solid transparent;border-radius:6px;
-  padding:5px 7px;margin:0;transition:background-color .12s,border-color .12s;
+  padding:5px 7px;margin:0;
 }
 :root[data-theme] .topbar .readonly-option:has(#read-only-toggle:checked) {
   color:var(--text);border-color:#58a36a;
