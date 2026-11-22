@@ -206,13 +206,13 @@
   <h2 id="image-dialog-title">Image</h2>
   <img id="image-dialog-preview" alt="Image preview">
   <p id="image-dialog-path" class="dialog-hint"></p>
-  <div class="dialog-actions"><button id="image-insert" type="button">Insert into note</button><button id="image-close" type="button">Close</button></div>
+  <div class="dialog-actions"><button id="image-insert" type="button">📎 Insert into note</button><button id="image-close" type="button">✕ Close</button></div>
 </dialog>
 <dialog id="attachment-dialog" class="wiki-dialog attachment-dialog" aria-labelledby="attachment-dialog-title">
   <h2 id="attachment-dialog-title">Attachment</h2>
   <div class="attachment-dialog-info"><p id="attachment-dialog-path" class="dialog-hint"></p><div id="attachment-dialog-canvas-info" class="attachment-dialog-canvas-info" hidden></div></div>
   <div id="attachment-dialog-viewer" class="attachment-dialog-viewer" aria-live="polite"></div>
-  <div class="dialog-actions"><button id="attachment-edit-canvas" type="button" hidden>Edit canvas</button><button id="attachment-edit-canvas-source" type="button" hidden>Edit base Canvas</button><button id="attachment-edit-drawio-source" type="button" hidden>Edit base XML</button><button id="attachment-edit-base" type="button" hidden>Edit Base YAML</button><button id="attachment-insert" type="button">Insert into note</button><button id="attachment-close" type="button">Close</button></div>
+  <div class="dialog-actions"><button id="attachment-edit-canvas" type="button" hidden>Interactive edit</button><button id="attachment-edit-canvas-source" type="button" hidden>Edit base Canvas</button><button id="attachment-edit-drawio-source" type="button" hidden>Edit base XML</button><button id="attachment-edit-base" type="button" hidden>Edit Base YAML</button><button id="attachment-insert" type="button">📎 Insert into note</button><button id="attachment-close" type="button">✕ Close</button></div>
 </dialog>
 <dialog id="toolbar-asset-dialog" class="wiki-dialog toolbar-asset-dialog" aria-labelledby="toolbar-asset-title">
   <h2 id="toolbar-asset-title">Insert local attachment</h2>
@@ -232,7 +232,7 @@
     <div class="renderer-dialog-actions"><button id="renderer-install" type="button">Install offline renderers…</button><label for="renderer-local-files" class="renderer-file-label">Or choose downloaded .js files:</label><input id="renderer-local-files" type="file" accept=".js,application/javascript,text/javascript" multiple><button id="renderer-install-local" type="button" disabled>Install selected JS offline…</button></div>
   </div>
   <p class="panel-note">Diagnostics do not contain wiki content, file names, or paths. They are saved only to your computer.</p>
-  <div class="renderer-dialog-actions"><button id="renderer-smoke" type="button">Test real rendering</button><button id="diagnostics-export" type="button">Save diagnostic JSON</button><button id="renderer-close" type="button">Close</button></div>
+  <div class="renderer-dialog-actions"><button id="renderer-smoke" type="button">Test real rendering</button><button id="diagnostics-export" type="button">Save diagnostic JSON</button><button id="renderer-close" type="button">✕ Close</button></div>
 </dialog>
 <script src="vendor/marked/marked.js"></script>
 <script src="vendor/codemirror/lib/codemirror.js"></script>
