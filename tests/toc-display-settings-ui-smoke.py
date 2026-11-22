@@ -50,15 +50,23 @@ with sync_playwright() as pw:
     current=page.locator('#recent-folder-options [role="menuitem"]',has_text='Wiki')
     current.wait_for()
     assert current.get_attribute('aria-current')=='true'
-    page.evaluate("""() => {
-      window.reopenedSameFolder=0;
-      window.LocalWikiRecent.ensurePermission=async()=>{
-        window.reopenedSameFolder++;throw new Error('Current wiki must never reopen');
-      };
-    }""")
+    # Clicking the already open wiki intentionally reloads it, allowing
+    # the read-only checkbox to change its access mode without a new picker.
+    page.evaluate("window.LocalWikiRecent.ensurePermission=async()=>true")
+    page.locator('#read-only-toggle').check()
     current.click()
-    assert page.evaluate('window.reopenedSameFolder')==0
-    assert page.locator('#filename').inner_text()=='Guide.md'
+    page.wait_for_function("document.querySelector('#mode').textContent==='Read-only'")
+    highlighted=page.locator('.readonly-option').evaluate("""el=>({
+      border:getComputedStyle(el).borderColor,
+      background:getComputedStyle(el).backgroundColor
+    })""")
+    assert highlighted['border']=='rgb(88, 163, 106)',highlighted
+    page.locator('#read-only-toggle').uncheck()
+    page.locator('#recent-folder-toggle').click()
+    page.locator('#recent-folder-options [role="menuitem"]',has_text='Wiki').click()
+    page.wait_for_function("document.querySelector('#mode').textContent==='Read/write'")
+    page.locator('.tree-row[aria-label="Guide.md"]').click()
+    page.wait_for_function("document.querySelector('#filename').textContent==='Guide.md'"
     page.locator('[data-side="toc"]').click()
     target=page.locator('#toc .toc-item',has_text='Section 79')
     assert target.count()==1
