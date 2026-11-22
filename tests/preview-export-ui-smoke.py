@@ -34,9 +34,10 @@ with sync_playwright() as pw:
         async getFile(){return new File([this.data],name,{type:this.mime,lastModified:this.lastModified})},
         async createWritable(){throw Error('No writes expected')}
       }}
-      const text='# Preview export heading\\n\\nHello **world** with a local image.\\n\\n![[photo.png]]\\n\\n| Name | Value |\\n| --- | --- |\\n| Alpha | 42 |\\n\\n> A quoted sentence.\\n\\n[Read external docs](https://example.org/article)\\n\\n[Relative Python note](Programming/Python.md)\\n\\n[Relative heading](Programming/Python.md#Introduction)\\n\\n[Jump to details](#Details)\\n\\n## Details\\n\\nThis is the target section.';
+      const text='# Preview export heading\\n\\nHello **world** with a local image.\\n\\n![[photo.png]]\\n\\n| Name | Value |\\n| --- | --- |\\n| Alpha | 42 |\\n\\n> A quoted sentence.\\n\\n[Read external docs](https://example.org/article)\\n\\n[Relative Python note](Programming/Python.md)\\n\\n[Relative heading](Programming/Python.md#Introduction)\\n\\n[Open linked note](Guide.md)\\n\\n[Jump to details](#Details)\\n\\n## Details\\n\\nThis is the target section.';
       const entries=new Map([
         file('Preview.md',text,'text/markdown'),
+        file('Guide.md','# Linked guide\\n\\nThe target of a relative link.','text/markdown'),
         file('photo.png',Uint8Array.from(atob(png),x=>x.charCodeAt(0)),'image/png')
       ].map(item=>[item.name,item]));
       window.mockWiki={kind:'directory',name:'Wiki',entries,
@@ -92,7 +93,14 @@ with sync_playwright() as pw:
     download=capture.value
     assert download.suggested_filename=='Preview.html'
     exported=Path(download.path()).read_text(encoding='utf-8')
+    # Live HTML preview links into the wiki; standalone export stays no-JS.
+    html_tab.locator('a',has_text='Open linked note').click()
+    html_tab.wait_for_function("document.querySelector('main h1')?.textContent==='Linked guide'")
+    page.wait_for_function("document.querySelector('#filename').textContent==='Guide.md'")
+    assert html_tab.locator('p',has_text='The target of a relative link.').count()==1
     html_tab.close()
+    page.locator('.tree-row[aria-label="Preview.md"]').click()
+    page.wait_for_function("document.querySelector('#filename').textContent==='Preview.md'")
     assert 'Preview export heading' in exported
     assert 'Hello' in exported and 'world' in exported
     assert 'data:image/png;base64,' in exported
@@ -105,6 +113,7 @@ with sync_playwright() as pw:
     assert 'href="https://example.org/article"' in exported
     assert 'href="Programming/Python.md"' in exported
     assert 'href="Programming/Python.md#Introduction"' in exported
+    assert 'href="Guide.md"' in exported
     demo=(ROOT/'demo-wiki/index.md').read_text(encoding='utf-8')
     assert '[Back to contents](#Contents)' in demo
     assert '[Mathematics](#Mathematics)' in demo
