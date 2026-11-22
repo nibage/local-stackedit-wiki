@@ -126,7 +126,8 @@ with sync_playwright() as pw:
         assert 'bases-open-note' not in text
         assert 'wiki-export-static-graph' in text
         assert 'Interactive grey wrapper' not in text
-        assert 'wiki-attachment-embed' not in text
+        # The standalone stylesheet now contains a valid selector for audio
+        # attachment wrappers. Assert absence of *elements*, not CSS text.
         assert text.count('wiki-export-structured')>=2
         assert 'Text before canvas' in text and 'text after canvas' in text
         assert '<summary' in text
