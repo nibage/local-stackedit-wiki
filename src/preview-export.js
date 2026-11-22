@@ -635,7 +635,7 @@
     popup.document.close();
     return popup;
   }
-  function showHtmlPreview(html,popup,filename) {
+  function showHtmlPreview(html,popup,filename,onLocalLink) {
     if (!popup || popup.closed) throw new Error('The HTML preview tab was closed.');
     popup.document.open();
     popup.document.write(html);
@@ -666,6 +666,26 @@
       '@media print{.wiki-html-preview-toolbar{display:none!important}}';
     doc.head.append(style);
     doc.body.prepend(toolbar);
+    // Only the live HTML preview tab can ask its opener to show another wiki
+    // note. Downloaded HTML stays script-free and fully standalone. Relative
+    // destinations still work there if the user keeps files alongside it.
+    if(typeof onLocalLink==='function'){
+      doc.body.addEventListener('click',event=>{
+        const anchor=event.target.closest?.('a[href]');
+        if(!anchor || !doc.body.contains(anchor))return;
+        const href=anchor.getAttribute('href')||'';
+        if(!safeDocumentHref(href)||href.startsWith('#')||
+          /^(?:https?:\/\/|mailto:)/i.test(href))return;
+        event.preventDefault();
+        Promise.resolve().then(()=>onLocalLink(href)).catch(error=>{
+          // Browser preview remains available even if a linked note is missing.
+          const message=doc.createElement('span');
+          message.setAttribute('role','status');
+          message.textContent='Cannot open linked wiki note: '+error.message;
+          toolbar.append(message);
+        });
+      });
+    }
     popup.focus();
   }
   async function printHtml(html,popup) {
