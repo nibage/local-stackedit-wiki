@@ -28,6 +28,7 @@
     'display:block!important;max-width:100%!important;height:auto!important;'+
     'margin-left:auto!important;margin-right:auto!important;}'+
     '.wiki-export-preview table:not(.bases-table) {'+
+    'box-sizing:border-box!important;min-width:0!important;'+
     'width:max-content!important;max-width:100%!important;'+
     'margin-left:auto!important;margin-right:auto!important;overflow-x:auto!important;}'+
     '.wiki-export-preview .wiki-attachment-embed > :is(img,audio,video,object) {'+
@@ -119,8 +120,15 @@
   /* Center narrow Markdown tables, but keep wide tables within printable
      width and preserve repeated headings/row pagination on multiple pages. */
   .wiki-export-preview table:not(.bases-table) {
+    box-sizing:border-box!important;min-width:0!important;
     width:fit-content!important;max-width:100%!important;
     margin-left:auto!important;margin-right:auto!important;
+  }
+  /* A nested no-wrap span can force a whole table wider than A4, even when
+     td itself wraps. Printable tables must be allowed to break long content. */
+  .wiki-export-preview table:not(.bases-table) :is(span,code,a,strong,em) {
+    white-space:normal!important;overflow-wrap:anywhere!important;
+    word-break:break-word!important;
   }
   .wiki-export-preview .bases-table {
     width:100%!important;margin-left:auto!important;margin-right:auto!important;
