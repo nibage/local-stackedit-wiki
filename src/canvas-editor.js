@@ -134,7 +134,8 @@
         redo:['M21 7v6h-6','M21 13a9 9 0 1 1-2.6-6.4L21 9'],
         save:['M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z',
           'M17 21v-8H7v8','M7 3v5h8'],
-        back:['M12 19l-7-7 7-7','M5 12h14']
+        back:['M12 19l-7-7 7-7','M5 12h14'],
+        forward:['M12 5l7 7-7 7','M19 12H5']
       };
       for (const d of paths[name]||[]) {
         const path=document.createElementNS('http://www.w3.org/2000/svg','path');
@@ -166,7 +167,8 @@
       warning.setAttribute('role','group');
       warning.setAttribute('aria-label',messageText);
       const discard = make('button','canvas-control','Discard changes');
-      const saveChanges = make('button','canvas-control canvas-confirm-save','Save changes');
+      const saveChanges = make('button','canvas-control canvas-confirm-save','💾 Save changes');
+      saveChanges.setAttribute('aria-label','Save changes');
       discard.type = saveChanges.type = 'button';
       discard.onclick = () => { clearExitChoice(); draft.discard(); action(); };
       saveChanges.onclick = async () => {
@@ -228,7 +230,7 @@
     const save = iconButton('Save canvas','save',()=>void persist());
     // Preview belongs to the host dialog's action row next to "Insert into
     // note", not in the graph toolbar. The host inserts it in that row.
-    const previewButton=iconButton('Preview','back',leave);
+    const previewButton=iconButton('Back to preview','forward',leave);
     previewButton.classList.add('canvas-preview-exit');
     previewButton.remove();
     saveStack.append(save);
