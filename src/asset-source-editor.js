@@ -17,7 +17,7 @@
     }else throw new Error('Unsupported source editor kind.');
     return true;
   }
-  function mount(source,{kind,fingerprint,onSave,onPreview,onClose,closeButton}={}){
+  function mount(source,{kind,fingerprint,onSave,onPreview,onClose,closeButton,confirmHost}={}){
     validate(source,kind);
     const root=document.createElement('section');
     root.className='bases-source-editor asset-source-editor';
@@ -42,6 +42,7 @@
     footer.className='bases-edit-footer';
     footer.append(message,confirm);
     root.append(hint,toolbar,textarea,footer);
+    if(confirmHost)confirmHost.insertBefore(confirm,closeButton||null);
     let saved=source,disposed=false,saving=false,actualFingerprint=fingerprint;
     let pendingTrigger=null;
     function clearConfirm(){
@@ -80,7 +81,10 @@
         return false;
       }finally{saving=false;update();}
     }
-    const save=button('Save '+title,()=>void persist());
+    const save=button('💾 Save changes',()=>void persist());
+    save.classList.add('asset-footer-save');
+    save.setAttribute('aria-label','Save changes');
+    save.remove();
     function askBeforeLeaving(action,trigger){
       if(saving)return false;
       if(!dirty()){action();return true;}
@@ -95,7 +99,8 @@
       };
       const saveExit=document.createElement('button');
       saveExit.type='button';saveExit.className='canvas-control asset-confirm-save';
-      saveExit.textContent='Save changes';
+      saveExit.textContent='💾 Save changes';
+      saveExit.setAttribute('aria-label','Save changes');
       saveExit.onclick=async()=>{if(await persist())action();};
       confirm.replaceChildren(discard,saveExit);
       confirm.hidden=false;
@@ -108,15 +113,17 @@
       if(dirty())askBeforeLeaving(()=>{message.textContent='Unsaved changes discarded.';});
       else message.textContent='Nothing to discard.';
     });
-    const preview=button('Preview',()=>{
+    const preview=button('↪ Back to preview',()=>{
       askBeforeLeaving(()=>onPreview?.(),preview);
     });
+    preview.classList.add('asset-back-to-preview');
+    preview.remove();
     textarea.addEventListener('input',()=>{
       clearConfirm();message.textContent='';update();
     });
     update();
     return {
-      root,validate,
+      root,validate,previewButton:preview,saveButton:save,
       get isDirty(){return dirty();},
       requestClose(){
         if(saving)return false;
@@ -124,7 +131,7 @@
         askBeforeLeaving(()=>onClose?.(),closeButton);
         return false;
       },
-      dispose(){disposed=true;clearConfirm();},
+      dispose(){disposed=true;clearConfirm();preview.remove();save.remove();confirm.remove();},
       get disposed(){return disposed;}
     };
   }
