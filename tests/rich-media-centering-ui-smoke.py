@@ -120,8 +120,9 @@ with sync_playwright() as pw:
             assert_centered(out,'.wiki-export-preview',selector,tolerance=10)
         assert out.locator('.wiki-export-preview td').first.evaluate(
             '(el)=>getComputedStyle(el).textAlign')!='center'
-        assert out.locator('#wide').bounding_box()['width'] <= (
-            out.locator('main').bounding_box()['width']+2)
+        wide_box=out.locator('#wide').bounding_box()
+        main_box=out.locator('main').bounding_box()
+        assert wide_box['width']<=main_box['width']+2,(printing,wide_box,main_box)
         if printing:
             pdf=out.pdf(format='A4',print_background=True,prefer_css_page_size=True)
             assert pdf.startswith(b'%PDF') and len(pdf)>2000
