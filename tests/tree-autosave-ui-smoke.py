@@ -58,12 +58,12 @@ with sync_playwright() as pw:
     page.locator('#collapse-all').click()
     assert page.locator('.tree-row[aria-label="Deep/Nested/Child.md"]').count()==0
     assert page.locator('.tree-row[aria-label="Deep"]').locator('.glyph-folder').inner_text()=='📁'
-    assert page.locator('.tree-row[aria-label="Intro.md"]').locator('.glyph-note').inner_text()=='📄'
+    assert page.locator('.tree-row[aria-label="Intro.md"]').locator('.glyph-note').inner_text()=='📘'
     page.locator('.tree-row[aria-label="Intro.md"]').click()
     page.wait_for_function("document.querySelector('#filename').textContent==='Intro.md'")
     assert page.locator('.tree-row[aria-label="Intro.md"] .glyph-note').inner_text()=='📝'
     page.locator('#expand-all').click()
-    assert page.locator('.tree-row[aria-label="Deep/Nested/Child.md"] .glyph-note').inner_text()=='📄'
+    assert page.locator('.tree-row[aria-label="Deep/Nested/Child.md"] .glyph-note').inner_text()=='📘'
     page.locator('#collapse-all').click()
     assert 'Opened note:' not in page.locator('#notice').text_content()
     assert page.locator('#notice').evaluate("(el)=>getComputedStyle(el).position")=='static'

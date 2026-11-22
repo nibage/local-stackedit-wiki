@@ -53,6 +53,10 @@
     confirm.hidden=true;
     footer.append(message,confirm);
     root.append(note,toolbar,textarea,footer);
+    // Keep exit decisions alongside the host's bottom buttons, not inside
+    // the source editor viewport (which introduced a second scrolling row).
+    if(options.confirmHost)options.confirmHost.insertBefore(
+      confirm,options.closeButton||null);
     let fingerprint=options.fingerprint,disposed=false,saving=false,pendingTrigger=null;
     function button(label,cb){
       const el=create('button','canvas-control',label);
@@ -83,7 +87,10 @@
         return false;
       }finally{saving=false;refresh();}
     }
-    const save=button('Save Base',()=>void persist());
+    const save=button('💾 Save changes',()=>void persist());
+    save.classList.add('asset-footer-save');
+    save.setAttribute('aria-label','Save changes');
+    save.remove();
     function showConfirm(action,trigger){
       clearConfirm();
       const discard=create('button','canvas-control asset-confirm-discard','Discard changes');
@@ -93,7 +100,8 @@
         clearConfirm();refresh();
         action?.();
       };
-      const saveChanges=create('button','canvas-control asset-confirm-save','Save changes');
+      const saveChanges=create('button','canvas-control asset-confirm-save','💾 Save changes');
+      saveChanges.setAttribute('aria-label','Save changes');
       saveChanges.type='button';
       saveChanges.onclick=async()=>{if(await persist())action?.();};
       confirm.replaceChildren(discard,saveChanges);
@@ -106,10 +114,12 @@
       if(!draft.dirty){message.textContent='Nothing to discard.';return;}
       showConfirm(()=>{message.textContent='Unsaved changes discarded.';});
     });
-    const preview=button('Preview',()=>{
+    const preview=button('↪ Back to preview',()=>{
       if(draft.dirty)showConfirm(()=>options.onPreview?.(),preview);
       else options.onPreview?.();
     });
+    preview.classList.add('asset-back-to-preview');
+    preview.remove();
     function refresh(){
       save.disabled=saving||!draft.dirty;
       root.dataset.dirty=draft.dirty?'true':'false';
@@ -131,9 +141,9 @@
     }
     refresh();
     return {
-      root,requestClose,
+      root,requestClose,previewButton:preview,saveButton:save,
       get isDirty(){return draft.dirty;},
-      dispose(){disposed=true;clearConfirm();},
+      dispose(){disposed=true;clearConfirm();preview.remove();save.remove();confirm.remove();},
       get disposed(){return disposed;}
     };
   }

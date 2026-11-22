@@ -55,13 +55,13 @@ with sync_playwright() as pw:
     assert 'unknownSetting: preserve-me' in area.input_value()
     area.fill(area.input_value().replace('Old view','New view'))
     assert page.locator('.bases-source-editor').get_attribute('data-dirty')=='true'
-    page.locator('.bases-edit-toolbar button',has_text='Save Base').click()
+    page.locator('#attachment-dialog .dialog-actions .asset-footer-save').click()
     page.wait_for_function("document.querySelector('.bases-edit-message')?.textContent.includes('saved safely')")
     body=page.evaluate("window.mockWiki.entries.get('sample.base').body")
     assert 'New view' in body and '# preserved comment' in body
     assert 'unknownSetting: preserve-me' in body
     assert page.evaluate("window.mockWiki.entries.get('Note.md').body")==initial_note
-    page.locator('.bases-edit-toolbar button',has_text='Preview').click()
+    page.locator('#attachment-dialog .dialog-actions .asset-back-to-preview').click()
     page.wait_for_function("document.querySelector('#attachment-dialog .bases-tab')?.textContent==='New view'")
     page.locator('#attachment-close').click()
 
@@ -70,7 +70,7 @@ with sync_playwright() as pw:
     page.locator('#attachment-edit-base').click()
     area=page.locator('#attachment-dialog .bases-edit-text')
     area.fill(area.input_value()+'unsafe: !execute\\n')
-    page.locator('.bases-edit-toolbar button',has_text='Save Base').click()
+    page.locator('#attachment-dialog .dialog-actions .asset-footer-save').click()
     page.wait_for_function("document.querySelector('.bases-edit-message')?.textContent.includes('Save failed')")
     assert 'unsafe: !execute' not in page.evaluate("window.mockWiki.entries.get('sample.base').body")
     # Repair YAML but detect a new external version.
@@ -80,7 +80,7 @@ with sync_playwright() as pw:
       file.body=file.body+'# external revision\\n';
       file.lastModified++;
     }""")
-    page.locator('.bases-edit-toolbar button',has_text='Save Base').click()
+    page.locator('#attachment-dialog .dialog-actions .asset-footer-save').click()
     page.wait_for_function("document.querySelector('.bases-edit-message')?.textContent.includes('External modification detected')")
     assert 'Attempted view' not in page.evaluate("window.mockWiki.entries.get('sample.base').body")
     # Same compact Save/Discard decision as Canvas; no extra dialog row.
@@ -89,10 +89,11 @@ with sync_playwright() as pw:
     dialog_height=page.locator('#attachment-dialog').bounding_box()['height']
     page.locator('#attachment-close').click()
     assert page.locator('#attachment-dialog').evaluate("(el)=>el.open")
-    confirm=footer.locator('.bases-edit-confirm')
+    confirm=page.locator('#attachment-dialog .dialog-actions .bases-edit-confirm')
     assert confirm.is_visible()
     assert confirm.locator('button').count()==2
-    assert confirm.inner_text().strip()=='Discard changes\nSave changes'
+    assert 'Discard changes' in confirm.inner_text()
+    assert 'Save changes' in confirm.inner_text()
     assert confirm.locator('.asset-confirm-save').evaluate(
       '(el)=>getComputedStyle(el).borderTopColor')=='rgb(88, 163, 106)'
     assert 'asset-exit-pending' in (page.locator('#attachment-close').get_attribute('class') or '')

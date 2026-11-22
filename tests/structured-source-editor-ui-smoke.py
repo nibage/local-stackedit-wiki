@@ -48,17 +48,17 @@ with sync_playwright() as pw:
 
     page.locator('.tree-row[aria-label="graph.canvas"]').click()
     page.wait_for_function("document.querySelector('#attachment-dialog').open")
-    page.locator('#attachment-edit-canvas').click()
-    page.locator('.canvas-editor-board .canvas-node').first.wait_for()
+    assert page.locator('#attachment-edit-canvas').is_visible()
+    assert page.locator('#attachment-edit-canvas').inner_text()=='Interactive edit'
     page.locator('#attachment-edit-canvas-source').wait_for(state='visible')
     page.locator('#attachment-edit-canvas-source').click()
     source=page.locator('.asset-source-editor textarea')
     source.wait_for()
     source.fill(source.input_value().replace('Hello canvas','Edited JSON'))
-    page.locator('.asset-source-editor button',has_text='Save Canvas JSON').click()
+    page.locator('#attachment-dialog .dialog-actions .asset-footer-save').click()
     page.wait_for_function("document.querySelector('.asset-source-editor .bases-edit-message').textContent.includes('saved safely')")
     assert 'Edited JSON' in page.evaluate("window.mockWiki.entries.get('graph.canvas').body")
-    page.locator('.asset-source-editor button',has_text='Preview').click()
+    page.locator('#attachment-dialog .dialog-actions .asset-back-to-preview').click()
     page.wait_for_function("document.querySelector('#attachment-dialog .canvas-node')!==null")
     page.locator('#attachment-close').click()
 
@@ -71,23 +71,24 @@ with sync_playwright() as pw:
     before=source.input_value()
     assert '<mxfile' in before
     source.fill(before.replace('Start','Start via XML',1))
-    page.locator('.asset-source-editor button',has_text='Save draw.io XML').click()
+    page.locator('#attachment-dialog .dialog-actions .asset-footer-save').click()
     page.wait_for_function("document.querySelector('.asset-source-editor .bases-edit-message').textContent.includes('saved safely')")
     assert 'Start via XML' in page.evaluate("window.mockWiki.entries.get('diagram.drawio').body")
     # Bad XML must be refused before any disk write.
     source.fill('<!DOCTYPE unsafe>'+source.input_value())
-    page.locator('.asset-source-editor button',has_text='Save draw.io XML').click()
+    page.locator('#attachment-dialog .dialog-actions .asset-footer-save').click()
     page.wait_for_function("document.querySelector('.asset-source-editor .bases-edit-message').textContent.includes('Save failed')")
     assert '<!DOCTYPE' not in page.evaluate("window.mockWiki.entries.get('diagram.drawio').body")
     page.locator('#attachment-close').click()
     assert page.locator('#attachment-dialog').evaluate('(el)=>el.open')
-    confirmation=page.locator('.asset-source-editor .bases-edit-footer .bases-edit-confirm')
+    confirmation=page.locator('#attachment-dialog .dialog-actions .bases-edit-confirm')
     assert confirmation.is_visible()
     assert confirmation.locator('button').count()==2
-    assert confirmation.inner_text().strip()=='Discard changes\nSave changes'
+    assert 'Discard changes' in confirmation.inner_text()
+    assert 'Save changes' in confirmation.inner_text()
     assert confirmation.locator('.asset-confirm-save').count()==1
     assert 'asset-exit-pending' in (page.locator('#attachment-close').get_attribute('class') or '')
-    page.locator('.asset-source-editor .bases-edit-confirm button',has_text='Discard changes').click()
+    page.locator('#attachment-dialog .dialog-actions .bases-edit-confirm button',has_text='Discard changes').click()
     page.wait_for_function("!document.querySelector('#attachment-dialog').open")
     assert page.evaluate("window.mockWiki.entries.get('Readme.md').body")==original_note
     assert not errors,errors

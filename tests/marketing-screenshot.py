@@ -163,7 +163,7 @@ def capture(root, output, chromium=None):
         assert page.locator("#preview .visualization-mermaid svg").count()==2
         assert page.locator("#preview .visualization-mermaid .diagram-export").count()==2
         assert page.locator(".tree-row[aria-label='Knowledge-dashboard.md'] .glyph-note").inner_text()=="📝"
-        assert page.locator(".tree-row[aria-label='Getting-started.md'] .glyph-note").inner_text()=="📄"
+        assert page.locator(".tree-row[aria-label='Getting-started.md'] .glyph-note").inner_text()=="📘"
         assert page.locator(".tree-row[aria-label='Engineering'] .glyph-folder").inner_text()=="📂"
         page.wait_for_timeout(700)  # allow fonts/math layout to settle
 

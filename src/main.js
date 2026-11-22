@@ -937,7 +937,7 @@
     editCanvas.disabled = operations.isBusy();
     const editCanvasSource=$('attachment-edit-canvas-source');
     const editDrawioSource=$('attachment-edit-drawio-source');
-    editCanvasSource.hidden=true;
+    editCanvasSource.hidden=types.kind(path)!=='canvas'||bridge.getMode()!=='readwrite';
     editCanvasSource.disabled=operations.isBusy();
     editDrawioSource.hidden=types.kind(path)!=='drawio'||bridge.getMode()!=='readwrite';
     editDrawioSource.disabled=operations.isBusy();
@@ -957,6 +957,7 @@
         const editor=window.LocalWikiAssetSourceEditor.mount(source.replace(/\r\n?/g,'\n'),{
           kind,fingerprint:snapshot.fingerprint,
           closeButton:$('attachment-close'),
+          confirmHost:dialog.querySelector('.dialog-actions'),
           onSave:async(body,expected)=>{
             if(operations.isBusy())throw new Error('Finish the current wiki operation before saving source.');
             const content=(snapshot.hasBOM?'\uFEFF':'')+body.replace(/\n/g,lineEnding);
@@ -969,7 +970,7 @@
             if(dialog.open&&$('attachment-dialog-path').textContent===path){
               viewer.replaceChildren(display);
               editCanvas.hidden=kind!=='canvas';
-              editCanvasSource.hidden=true;
+              editCanvasSource.hidden=kind!=='canvas';
               editDrawioSource.hidden=kind!=='drawio';
               $('attachment-insert').disabled=bridge.getMode()!=='readwrite'||!activePath||operations.isBusy();
             }else display.querySelector('.wiki-canvas-viewer,.wiki-drawio-viewer')?.dispose?.();
@@ -980,6 +981,8 @@
         activeAssetSourceEditor=editor;
         viewer.querySelector('.wiki-canvas-viewer,.wiki-drawio-viewer')?.dispose?.();
         viewer.replaceChildren(editor.root);
+        $('attachment-insert').before(editor.previewButton);
+        $('attachment-close').before(editor.saveButton);
         editCanvas.hidden=true;editCanvasSource.hidden=true;editDrawioSource.hidden=true;
         $('attachment-insert').disabled=true;
       }catch(error){
@@ -1023,7 +1026,7 @@
             if (dialog.open && $('attachment-dialog-path').textContent===path) {
               viewer.replaceChildren(display);
               editCanvas.hidden=false;
-              editCanvasSource.hidden=true;
+              editCanvasSource.hidden=false;
             } else display.querySelector('.wiki-canvas-viewer')?.dispose?.();
           },
           onClose:() => dialog.close()
@@ -1035,7 +1038,7 @@
         canvasInfo.hidden=true;
         $('attachment-insert').before(canvasEditor.previewButton);
         editCanvas.hidden=true;
-        editCanvasSource.hidden=false;
+        editCanvasSource.hidden=true;
       } catch (error) {
         viewer.textContent='Cannot edit Canvas: '+error.message+' The file has not been changed.';
       } finally { editCanvas.disabled=false; }
@@ -1054,6 +1057,7 @@
         const editor = window.LocalWikiBasesEditor.mount(source.replace(/\r\n?/g,'\n'), {
           fingerprint:snapshot.fingerprint,
           closeButton:$('attachment-close'),
+          confirmHost:dialog.querySelector('.dialog-actions'),
           onSave:async (content,expected) => {
             if (operations.isBusy()) throw new Error('Finish the current wiki operation before saving Bases.');
             const bytes=(snapshot.hasBOM ? '\uFEFF' : '')+content.replace(/\n/g,lineEnding);
@@ -1075,6 +1079,8 @@
         viewer.querySelector('.wiki-bases-viewer')?.dispose?.();
         activeBaseEditor=editor;
         viewer.replaceChildren(editor.root);
+        $('attachment-insert').before(editor.previewButton);
+        $('attachment-close').before(editor.saveButton);
         editBase.hidden=true;
         $('attachment-insert').disabled=true;
       } catch(error) {
@@ -1300,7 +1306,7 @@
       // and triangles. Only the current Markdown note gets the edit glyph.
       // Other attachment-format icons are intentionally unchanged.
       glyph.textContent = node.kind === 'directory' ? (open ? '📂' : '📁') :
-        node.kind === 'file' ? (node.path === activePath ? '📝' : '📄') :
+        node.kind === 'file' ? (node.path === activePath ? '📝' : '📘') :
         icons[node.kind] || '◆';
       const label = document.createElement('span'); label.textContent = node.name;
       row.append(glyph, label);
