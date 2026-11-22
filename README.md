@@ -14,7 +14,7 @@ The preview's **PDF…** export opens a standalone light A4 preview tab first. I
 
 The bundled `demo-wiki/Attachments/sample.pdf` is now a **real two-page PDF** containing text, table and vector illustrations on both pages. It is a test of multipage inline preview and offline HTML/PDF export. PDF attachment objects are connected to the DOM before setting their Blob URL to avoid the first-render blank-preview behavior observed in Chromium. Exact page counts for printing an entire Markdown note vary with its text and embedded attachments; the demo's PDF attachment itself always has two pages.
 
-The formatting toolbar groups **Line numbers · Center · Wrap lines | Auto re-render · Render · Scroll sync | Text size**, with a separator after **Insert draw.io diagram**. Unopened Markdown files have a visible page icon again. In Canvas, draw.io and Base YAML attachment dialogs, the unavailable **Insert into note** action is hidden. Source editor exit prompts use text-only **Discard / Save** in a separate row above the bottom-right preview/save/close actions. Canvas retains its icon-bearing toolbar Save control, disabled until the Canvas document actually changes.
+The formatting toolbar groups **Line numbers · Center · Wrap lines | Auto re-render · Render · Scroll sync | Text size**, with a separator after **Insert draw.io diagram**. Unopened Markdown notes retain their visible blue-book icon. In Canvas, draw.io and Base YAML attachment dialogs, the unavailable **Insert into note** action is hidden. Source editor exit prompts use text-only **Discard / Save** in a separate row above the bottom-right preview/save/close actions. Canvas retains its icon-bearing toolbar Save control, disabled until the Canvas document actually changes.
 
 ## The experience
 
