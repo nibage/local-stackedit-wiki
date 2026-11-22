@@ -54,6 +54,9 @@ with sync_playwright() as pw:
     # the read-only checkbox to change its access mode without a new picker.
     page.evaluate("window.LocalWikiRecent.ensurePermission=async()=>true")
     page.locator('#read-only-toggle').check()
+    # Choosing a checkbox closes the dropdown on outside pointerdown.
+    page.locator('#recent-folder-toggle').click()
+    current=page.locator('#recent-folder-options [role="menuitem"]',has_text='Wiki')
     current.click()
     page.wait_for_function("document.querySelector('#mode').textContent==='Read-only'")
     highlighted=page.locator('.readonly-option').evaluate("""el=>({
